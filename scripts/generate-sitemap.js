@@ -18,7 +18,9 @@ const staticPages = [
   '/lumi',
   '/meteor',
   '/meteor/privacy',
+  '/perkaholic',
   '/risk-of-anticheat',
+  '/sleepr',
   '/super-hacker-golf',
 ];
 

@@ -66,6 +66,8 @@ export const metadata: Metadata = {
     "Android",
     "Kotlin",
     "Meteor",
+    "Sleepr",
+    "Sleep App",
     "Habit Tracker",
     "Task App",
     "Linux",

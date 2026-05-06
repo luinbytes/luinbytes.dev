@@ -2,61 +2,73 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://luinbytes.github.io</loc>
-    <lastmod>2026-05-05</lastmod>
+    <lastmod>2026-05-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://luinbytes.github.io/brc-trainer</loc>
-    <lastmod>2026-05-05</lastmod>
+    <lastmod>2026-05-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://luinbytes.github.io/dagger-fall</loc>
-    <lastmod>2026-05-05</lastmod>
+    <lastmod>2026-05-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://luinbytes.github.io/file-deduplicator</loc>
-    <lastmod>2026-05-05</lastmod>
+    <lastmod>2026-05-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://luinbytes.github.io/linux-sonar</loc>
-    <lastmod>2026-05-05</lastmod>
+    <lastmod>2026-05-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://luinbytes.github.io/lumi</loc>
-    <lastmod>2026-05-05</lastmod>
+    <lastmod>2026-05-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://luinbytes.github.io/meteor</loc>
-    <lastmod>2026-05-05</lastmod>
+    <lastmod>2026-05-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://luinbytes.github.io/meteor/privacy</loc>
-    <lastmod>2026-05-05</lastmod>
+    <lastmod>2026-05-06</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://luinbytes.github.io/perkaholic</loc>
+    <lastmod>2026-05-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://luinbytes.github.io/risk-of-anticheat</loc>
-    <lastmod>2026-05-05</lastmod>
+    <lastmod>2026-05-06</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://luinbytes.github.io/sleepr</loc>
+    <lastmod>2026-05-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://luinbytes.github.io/super-hacker-golf</loc>
-    <lastmod>2026-05-05</lastmod>
+    <lastmod>2026-05-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>

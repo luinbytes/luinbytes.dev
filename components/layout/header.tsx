@@ -3,7 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Command, Menu, X } from "lucide-react";
+import {
+  ChevronDown,
+  Command,
+  Gamepad2,
+  Menu,
+  Smartphone,
+  X,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navLinks = [
@@ -13,14 +20,64 @@ const navLinks = [
   { name: "Contact", href: "#contact" },
 ];
 
+const productGroups = [
+  {
+    label: "Android Apps",
+    icon: Smartphone,
+    items: [
+      {
+        name: "Meteor",
+        href: "/meteor",
+        description: "Tasks and habits in one local-first daily view.",
+      },
+      {
+        name: "Sleepr",
+        href: "/sleepr",
+        description: "Sleep-cycle wake windows and on-device rhythm learning.",
+      },
+    ],
+  },
+  {
+    label: "Game Mods",
+    icon: Gamepad2,
+    items: [
+      {
+        name: "Risk of Anticheat",
+        href: "/risk-of-anticheat",
+        description: "Risk of Rain 2 ESP, aim tools, and runtime systems.",
+      },
+      {
+        name: "BrcTrainer",
+        href: "/brc-trainer",
+        description: "Bomb Rush Cyberfunk trainer with controller support.",
+      },
+      {
+        name: "DaggerFall",
+        href: "/dagger-fall",
+        description: "External Linux trainer for Devil Daggers.",
+      },
+      {
+        name: "SuperHackerGolf",
+        href: "/super-hacker-golf",
+        description: "Super Battle Golf assist, ESP, and physics tooling.",
+      },
+    ],
+  },
+] as const;
+
 export function Header() {
   const [activeSection, setActiveSection] = useState("home");
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [productMenuOpen, setProductMenuOpen] = useState(false);
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const productMenuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const isMainPage = pathname === "/";
+  const productIsActive = productGroups.some((group) =>
+    group.items.some((item) => pathname === item.href)
+  );
 
   useEffect(() => {
     const handleScroll = () => {
@@ -94,6 +151,31 @@ export function Header() {
     };
   }, [mobileMenuOpen]);
 
+  useEffect(() => {
+    if (!productMenuOpen) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (
+        productMenuRef.current &&
+        !productMenuRef.current.contains(event.target as Node)
+      ) {
+        setProductMenuOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setProductMenuOpen(false);
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [productMenuOpen]);
+
   const openCommandMenu = () => {
     window.dispatchEvent(new CustomEvent("lu:open-command-menu"));
     setMobileMenuOpen(false);
@@ -145,6 +227,71 @@ export function Header() {
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex">
+          <div ref={productMenuRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setProductMenuOpen((open) => !open)}
+              aria-expanded={productMenuOpen}
+              aria-controls="products-menu"
+              className={cn(
+                "inline-flex items-center gap-1 px-3 py-2 font-mono text-[11px] uppercase tracking-label nd-focus nd-transition",
+                productIsActive
+                  ? "text-nd-text-display"
+                  : "text-nd-text-disabled hover:text-nd-text-secondary"
+              )}
+            >
+              /products
+              <ChevronDown
+                className={cn(
+                  "h-3 w-3 nd-transition",
+                  productMenuOpen && "rotate-180"
+                )}
+              />
+            </button>
+
+            {productMenuOpen && (
+              <div
+                id="products-menu"
+                className="absolute right-0 top-full mt-2 w-[360px] border border-nd-border-visible bg-nd-black p-3 shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
+              >
+                <div className="grid gap-3">
+                  {productGroups.map((group) => {
+                    const Icon = group.icon;
+                    return (
+                      <div key={group.label}>
+                        <div className="mb-2 flex items-center gap-2 px-2 font-mono text-[10px] uppercase tracking-label text-nd-text-disabled">
+                          <Icon className="h-3.5 w-3.5" />
+                          {group.label}
+                        </div>
+                        <div className="grid gap-1">
+                          {group.items.map((item) => (
+                            <Link
+                              key={item.href}
+                              href={item.href}
+                              onClick={() => setProductMenuOpen(false)}
+                              className={cn(
+                                "block border border-transparent px-3 py-2 nd-focus nd-transition hover:border-nd-border-visible hover:bg-nd-surface",
+                                pathname === item.href &&
+                                  "border-nd-border-visible bg-nd-surface"
+                              )}
+                            >
+                              <span className="block font-mono text-[12px] uppercase tracking-label-tight text-nd-text-display">
+                                {item.name}
+                              </span>
+                              <span className="mt-1 block text-xs leading-relaxed text-nd-text-disabled">
+                                {item.description}
+                              </span>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
           {navLinks.map((link) => {
             const sectionId = link.href.replace("#", "");
             return (
@@ -197,6 +344,29 @@ export function Header() {
           className="border-t border-nd-border bg-nd-black px-4 py-4 md:hidden"
         >
           <nav className="grid gap-1">
+            {productGroups.map((group) => {
+              const Icon = group.icon;
+              return (
+                <div key={group.label} className="border-b border-nd-border py-3">
+                  <div className="mb-2 flex items-center gap-2 font-mono text-[10px] uppercase tracking-label text-nd-text-disabled">
+                    <Icon className="h-3.5 w-3.5" />
+                    {group.label}
+                  </div>
+                  <div className="grid gap-1">
+                    {group.items.map((item) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="py-2 font-mono text-[12px] uppercase tracking-label text-nd-text-primary nd-focus"
+                      >
+                        {item.href}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
             {navLinks.map((link) => (
               <Link
                 key={link.name}
