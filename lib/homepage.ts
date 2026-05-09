@@ -37,6 +37,66 @@ export const workbenchItems = [
   { label: "Jump", value: "/linux /android /reverse /raycast" },
 ] as const;
 
+export type JourneyChapter = {
+  id: "home" | "builds" | "selected-builds" | "about" | "status" | "contact";
+  label: string;
+  mode: "thesis" | "friction" | "build" | "origin" | "now";
+  surface: string;
+  active: string;
+  signal: string;
+};
+
+export const journeyChapters: JourneyChapter[] = [
+  {
+    id: "home",
+    label: "Thesis",
+    mode: "thesis",
+    surface: "developer reflex",
+    active: "missing thing",
+    signal: "notice -> understand -> build",
+  },
+  {
+    id: "builds",
+    label: "Friction",
+    mode: "friction",
+    surface: "problems",
+    active: "problem index",
+    signal: "problem -> build -> outcome",
+  },
+  {
+    id: "selected-builds",
+    label: "Builds",
+    mode: "build",
+    surface: "shipped artifacts",
+    active: "selected builds",
+    signal: "range -> stack -> result",
+  },
+  {
+    id: "about",
+    label: "Origin",
+    mode: "origin",
+    surface: "systems curiosity",
+    active: "PS3 / modding roots",
+    signal: "take apart -> understand -> rebuild",
+  },
+  {
+    id: "status",
+    label: "Now",
+    mode: "now",
+    surface: "workbench",
+    active: "current status",
+    signal: "building -> shipping -> learning",
+  },
+  {
+    id: "contact",
+    label: "Contact",
+    mode: "now",
+    surface: "handoff",
+    active: "weird workflows",
+    signal: "send -> inspect -> build",
+  },
+];
+
 export const problemBuilds: ProblemBuild[] = [
   {
     id: "linux-sonar",

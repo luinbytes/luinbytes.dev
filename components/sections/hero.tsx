@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowDown, ArrowRight, Command } from "lucide-react";
 import { workbenchItems } from "@/lib/homepage";
+import { ScrollReveal } from "@/components/animations/scroll-reveal";
 
 export function Hero() {
   const openCommandMenu = () => {
@@ -12,13 +13,14 @@ export function Hero() {
   return (
     <section
       id="home"
+      data-journey-section="home"
       className="relative flex min-h-[calc(100svh-12rem)] items-center overflow-hidden border-b border-nd-border"
     >
       <div className="absolute inset-0 dot-grid-subtle opacity-30" />
       <div className="absolute inset-x-0 bottom-0 h-px bg-nd-border-visible" />
 
       <div className="container relative z-10 mx-auto grid max-w-7xl gap-12 px-4 py-16 md:py-20 lg:grid-cols-[1.08fr_0.92fr] lg:items-center">
-        <div>
+        <ScrollReveal>
           <h1 className="max-w-4xl font-body text-5xl font-bold leading-[0.95] tracking-normal text-nd-text-display md:text-6xl lg:text-7xl">
             I get annoyed,
             <br />
@@ -49,9 +51,12 @@ export function Hero() {
               Open Command Menu
             </button>
           </div>
-        </div>
+        </ScrollReveal>
 
-        <aside className="border border-nd-border-visible bg-nd-black/80 p-5 md:p-6">
+        <ScrollReveal
+          delay={0.08}
+          className="border border-nd-border-visible bg-nd-black/80 p-5 md:p-6"
+        >
           <div className="mb-6 flex items-center justify-between border-b border-nd-border pb-4 font-mono text-[10px] uppercase tracking-label text-nd-text-disabled">
             <span>Workbench</span>
             <span>May 2026</span>
@@ -71,7 +76,7 @@ export function Hero() {
               </div>
             ))}
           </dl>
-        </aside>
+        </ScrollReveal>
 
         <a
           href="#builds"
@@ -79,6 +84,13 @@ export function Hero() {
         >
           <span>{"// next"}</span>
           <ArrowDown className="h-4 w-4 text-nd-accent" />
+        </a>
+
+        <a
+          href="#builds"
+          className="absolute bottom-6 right-4 hidden font-mono text-[10px] uppercase tracking-label text-nd-text-disabled nd-transition hover:text-nd-text-primary lg:block"
+        >
+          scroll the build loop
         </a>
       </div>
     </section>

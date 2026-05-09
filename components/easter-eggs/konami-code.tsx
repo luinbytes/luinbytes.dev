@@ -47,9 +47,6 @@ export function KonamiCode() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDPadOpen, setIsDPadOpen] = useState(false);
   const [pressedButton, setPressedButton] = useState<string | null>(null);
-  const [isMobileDevice] = useState(() => isMobile());
-  const [reducedMotion] = useState(() => prefersReducedMotion());
-  const [showMobileButton] = useState(() => isMobile());
   const [keySequence, setKeySequence] = useState<string[]>([]);
 
   useEffect(() => {
@@ -155,7 +152,7 @@ export function KonamiCode() {
   useEffect(() => { window.addEventListener("keydown", handleKeyDown); return () => window.removeEventListener("keydown", handleKeyDown); }, [handleKeyDown]);
 
   useEffect(() => {
-    if (!isMobileDevice || reducedMotion || motionListenerAttachedRef.current) return;
+    if (!isMobile() || prefersReducedMotion() || motionListenerAttachedRef.current) return;
     shakeEnabledRef.current = true;
     const handleFirstTouch = async () => {
       const granted = await requestMotionPermission();
@@ -172,7 +169,7 @@ export function KonamiCode() {
       motionListenerAttachedRef.current = true;
     }
     return () => { window.removeEventListener("devicemotion", handleDeviceMotion); document.removeEventListener("touchstart", handleFirstTouch); motionListenerAttachedRef.current = false; if (dPadTimeoutRef.current) clearTimeout(dPadTimeoutRef.current); };
-  }, [isMobileDevice, reducedMotion, handleDeviceMotion, requestMotionPermission]);
+  }, [handleDeviceMotion, requestMotionPermission]);
 
   const closeModal = useCallback(() => setIsModalOpen(false), []);
   const closeDPad = useCallback(() => { setIsDPadOpen(false); keySequenceRef.current = []; setKeySequence([]); lastKeyTimeRef.current = 0; if (dPadTimeoutRef.current) clearTimeout(dPadTimeoutRef.current); }, []);
@@ -184,8 +181,8 @@ export function KonamiCode() {
 
   return (
     <>
-      {showMobileButton && !isDPadOpen && !isModalOpen && (
-        <button onClick={openDPad} className="fixed bottom-4 right-4 z-40 bg-nd-surface border border-nd-border-visible text-nd-text-secondary p-3 nd-transition active:bg-nd-surface-raised" aria-label="Open Konami Code D-PAD">
+      {!isDPadOpen && !isModalOpen && (
+        <button onClick={openDPad} className="fixed bottom-4 right-4 z-40 bg-nd-surface border border-nd-border-visible text-nd-text-secondary p-3 nd-transition active:bg-nd-surface-raised md:hidden" aria-label="Open Konami Code D-PAD">
           <Gamepad2 className="w-5 h-5" />
         </button>
       )}

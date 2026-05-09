@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, ExternalLink } from "lucide-react";
 import { problemBuilds } from "@/lib/homepage";
 import { cn } from "@/lib/utils";
+import { ScrollReveal } from "@/components/animations/scroll-reveal";
 
 export function ProblemIndex() {
   const [selectedId, setSelectedId] = useState(problemBuilds[0]?.id ?? "");
@@ -15,6 +16,16 @@ export function ProblemIndex() {
     [selectedId]
   );
   const selected = problemBuilds[selectedIndex] ?? problemBuilds[0];
+
+  useEffect(() => {
+    if (!selected) {
+      return;
+    }
+
+    window.dispatchEvent(
+      new CustomEvent("lu:journey-problem-change", { detail: selected.id })
+    );
+  }, [selected]);
 
   if (!selected) {
     return null;
@@ -30,9 +41,13 @@ export function ProblemIndex() {
   };
 
   return (
-    <section id="builds" className="border-b border-nd-border py-20 md:py-28">
+    <section
+      id="builds"
+      data-journey-section="builds"
+      className="border-b border-nd-border py-20 md:py-28"
+    >
       <div className="container mx-auto max-w-7xl px-4">
-        <div className="mb-8 flex items-end justify-between gap-6">
+        <ScrollReveal className="mb-8 flex items-end justify-between gap-6">
           <div>
             <span className="mb-4 block font-mono text-[11px] uppercase tracking-label text-nd-accent">
               01 / Problems I Refused To Accept
@@ -45,10 +60,10 @@ export function ProblemIndex() {
             Select a problem to see the build, stack, and outcome. The range is
             the point: different surfaces, same reflex.
           </p>
-        </div>
+        </ScrollReveal>
 
         <div className="grid gap-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(420px,1fr)]">
-          <div
+          <ScrollReveal
             role="tablist"
             aria-label="Problems I refused to accept"
             aria-orientation="vertical"
@@ -118,9 +133,12 @@ export function ProblemIndex() {
                 </button>
               );
             })}
-          </div>
+          </ScrollReveal>
 
-          <div className="min-h-[420px] border border-nd-border-visible bg-nd-surface">
+          <ScrollReveal
+            delay={0.08}
+            className="min-h-[420px] border border-nd-border-visible bg-nd-surface"
+          >
             {problemBuilds.map((item) => {
               const DetailIcon = item.icon;
               const isSelected = item.id === selected.id;
@@ -199,7 +217,7 @@ export function ProblemIndex() {
                 </article>
               );
             })}
-          </div>
+          </ScrollReveal>
         </div>
       </div>
     </section>

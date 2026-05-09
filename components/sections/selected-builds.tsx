@@ -1,15 +1,17 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { selectedBuilds } from "@/lib/homepage";
+import { ScrollReveal } from "@/components/animations/scroll-reveal";
 
 export function SelectedBuilds() {
   return (
     <section
       id="selected-builds"
+      data-journey-section="selected-builds"
       className="border-b border-nd-border py-20 md:py-28"
     >
       <div className="container mx-auto max-w-7xl px-4">
-        <div className="mb-8 flex items-end justify-between gap-6">
+        <ScrollReveal className="mb-8 flex items-end justify-between gap-6">
           <div>
             <span className="mb-4 block font-mono text-[11px] uppercase tracking-label text-nd-accent">
               02 / Selected Builds
@@ -26,7 +28,7 @@ export function SelectedBuilds() {
           >
             View all builds -&gt;
           </a>
-        </div>
+        </ScrollReveal>
 
         <div className="border border-nd-border-visible">
           {selectedBuilds.map((build) => {
@@ -63,26 +65,33 @@ export function SelectedBuilds() {
 
             if (isExternal) {
               return (
-                <a
+                <ScrollReveal
                   key={build.id}
-                  href={build.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={rowClassName}
+                  delay={Number(build.index) * 0.025}
+                  distance={12}
                 >
-                  {rowContent}
-                </a>
+                  <a
+                    href={build.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={rowClassName}
+                  >
+                    {rowContent}
+                  </a>
+                </ScrollReveal>
               );
             }
 
             return (
-              <Link
+              <ScrollReveal
                 key={build.id}
-                href={build.href}
-                className={rowClassName}
+                delay={Number(build.index) * 0.025}
+                distance={12}
               >
-                {rowContent}
-              </Link>
+                <Link href={build.href} className={rowClassName}>
+                  {rowContent}
+                </Link>
+              </ScrollReveal>
             );
           })}
         </div>
