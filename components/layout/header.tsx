@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CommandShortcut } from "@/components/os-shortcut";
 
 const navLinks = [
   { name: "Builds", href: "#builds" },
@@ -213,7 +214,7 @@ export function Header() {
       className={cn(
         "fixed left-0 right-0 top-0 z-50 border-b nd-transition",
         scrolled || mobileMenuOpen
-          ? "border-nd-border bg-nd-black/95"
+          ? "border-nd-border-visible bg-nd-surface/92 shadow-[0_10px_40px_rgba(20,16,10,0.08)] backdrop-blur"
           : "border-transparent bg-transparent"
       )}
     >
@@ -252,7 +253,7 @@ export function Header() {
             {productMenuOpen && (
               <div
                 id="products-menu"
-                className="absolute right-0 top-full mt-2 w-[360px] border border-nd-border-visible bg-nd-black p-3 shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
+                className="atlas-paper absolute right-0 top-full mt-2 w-[360px] border-2 border-nd-border-visible bg-nd-surface p-3 shadow-[12px_12px_0_rgba(20,16,10,0.12)]"
               >
                 <div className="grid gap-3">
                   {productGroups.map((group) => {
@@ -270,9 +271,9 @@ export function Header() {
                               href={item.href}
                               onClick={() => setProductMenuOpen(false)}
                               className={cn(
-                                "block border border-transparent px-3 py-2 nd-focus nd-transition hover:border-nd-border-visible hover:bg-nd-surface",
+                                "block border border-transparent px-3 py-2 nd-focus nd-transition hover:border-nd-border-visible hover:bg-nd-surface-raised",
                                 pathname === item.href &&
-                                  "border-nd-border-visible bg-nd-surface"
+                                  "border-nd-border-visible bg-nd-surface-raised"
                               )}
                             >
                               <span className="block font-mono text-[12px] uppercase tracking-label-tight text-nd-text-display">
@@ -313,10 +314,10 @@ export function Header() {
           <button
             type="button"
             onClick={openCommandMenu}
-            className="ml-3 inline-flex items-center gap-2 border border-nd-border-visible px-3 py-1.5 font-mono text-[11px] uppercase tracking-label-tight text-nd-text-secondary nd-focus nd-transition hover:border-nd-text-secondary hover:text-nd-text-display"
+            className="ml-3 inline-flex items-center gap-2 border border-nd-border-visible bg-nd-surface px-3 py-1.5 font-mono text-[11px] uppercase tracking-label-tight text-nd-text-secondary shadow-[4px_4px_0_rgba(20,16,10,0.08)] nd-focus nd-transition hover:-translate-y-0.5 hover:border-nd-text-display hover:text-nd-text-display"
           >
             <Command className="h-3.5 w-3.5" />
-            Cmd K
+            <CommandShortcut />
           </button>
         </nav>
 
@@ -341,7 +342,7 @@ export function Header() {
         <div
           id="mobile-menu"
           ref={mobileMenuRef}
-          className="border-t border-nd-border bg-nd-black px-4 py-4 md:hidden"
+          className="border-t-2 border-nd-border-visible bg-nd-surface px-4 py-4 md:hidden"
         >
           <nav className="grid gap-1">
             {productGroups.map((group) => {
@@ -380,9 +381,11 @@ export function Header() {
             <button
               type="button"
               onClick={openCommandMenu}
-              className="mt-3 inline-flex min-h-[44px] items-center justify-center gap-2 border border-nd-border-visible px-4 py-3 font-mono text-[12px] uppercase tracking-label text-nd-text-primary nd-focus"
+              className="mt-3 inline-flex min-h-[44px] items-center justify-center gap-2 border-2 border-nd-border-visible bg-nd-text-display px-4 py-3 font-mono text-[12px] uppercase tracking-label text-nd-black nd-focus"
             >
-              <Command className="h-4 w-4" />
+              <span className="font-mono text-[13px] leading-none">
+                <CommandShortcut />
+              </span>
               Open Command Menu
             </button>
           </nav>

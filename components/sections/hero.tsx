@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowDown, ArrowRight, Command } from "lucide-react";
+import { ArrowDown, ArrowRight } from "lucide-react";
 import { workbenchItems } from "@/lib/homepage";
 import { ScrollReveal } from "@/components/animations/scroll-reveal";
+import { AtlasField } from "@/components/animations/atlas-field";
+import { CommandShortcut } from "@/components/os-shortcut";
 
 export function Hero() {
   const openCommandMenu = () => {
@@ -14,21 +16,31 @@ export function Hero() {
     <section
       id="home"
       data-journey-section="home"
-      className="relative flex min-h-[calc(100svh-12rem)] items-center overflow-hidden border-b border-nd-border"
+      className="theme-hero-section relative flex min-h-[calc(100svh-5rem)] items-center overflow-hidden border-b border-nd-border"
     >
-      <div className="absolute inset-0 dot-grid-subtle opacity-30" />
+      <div className="theme-hero-grid absolute inset-0 dot-grid-subtle opacity-70" />
+      <div className="theme-atlas-accent-bar absolute left-0 top-0 h-full w-2 bg-nd-accent" />
       <div className="absolute inset-x-0 bottom-0 h-px bg-nd-border-visible" />
+      <AtlasField />
 
-      <div className="container relative z-10 mx-auto grid max-w-7xl gap-12 px-4 py-16 md:py-20 lg:grid-cols-[1.08fr_0.92fr] lg:items-center">
+      <div className="container relative z-10 mx-auto grid max-w-7xl gap-10 px-4 py-12 md:py-16 lg:grid-cols-[1.08fr_0.92fr] lg:items-center">
         <ScrollReveal>
-          <h1 className="max-w-4xl font-body text-5xl font-bold leading-[0.95] tracking-normal text-nd-text-display md:text-6xl lg:text-7xl">
+          <div className="theme-hero-note mb-7 inline-flex items-center gap-3 border border-nd-border-visible bg-nd-surface px-3 py-2 font-mono text-[10px] uppercase tracking-label-tight text-nd-text-secondary shadow-[6px_6px_0_rgba(20,16,10,0.12)]">
+            <span className="h-2 w-2 bg-nd-accent" />
+            <span className="theme-atlas-copy">Field note 00 / working reflex</span>
+            <span className="theme-nothing-copy">Nothing system / working reflex</span>
+          </div>
+          <h1 className="theme-hero-title max-w-5xl font-display text-5xl font-bold leading-[0.9] tracking-normal text-nd-text-display md:text-7xl lg:text-[5.9rem]">
             I get annoyed,
             <br />
             then I build the
             <br />
-            <span className="text-nd-accent">missing thing.</span>
+            <span className="relative inline-block text-nd-accent">
+              missing thing.
+              <span className="absolute -bottom-2 left-0 h-2 w-full bg-nd-interactive/25" />
+            </span>
           </h1>
-          <p className="mt-8 max-w-2xl text-base leading-relaxed text-nd-text-secondary md:text-lg">
+          <p className="mt-8 max-w-2xl text-lg leading-relaxed text-nd-text-secondary md:text-xl">
             Android apps, Linux systems, reverse-engineering tools, automation,
             and small utilities from the edge cases normal software leaves
             behind.
@@ -37,17 +49,19 @@ export function Hero() {
           <div className="mt-10 flex flex-col gap-3 sm:flex-row">
             <Link
               href="#builds"
-              className="inline-flex min-h-[44px] items-center justify-center gap-2 border border-nd-text-display bg-nd-text-display px-6 py-3 font-mono text-[12px] font-bold uppercase tracking-label-tight text-nd-black nd-transition hover:opacity-80"
+              className="atlas-scanline atlas-hover-lift inline-flex min-h-[48px] items-center justify-center gap-2 border-2 border-nd-text-display bg-nd-text-display px-6 py-3 font-mono text-[12px] font-bold uppercase tracking-label-tight text-nd-black shadow-[7px_7px_0_rgba(217,77,47,0.28)]"
             >
               Explore Problems
-              <ArrowRight className="h-4 w-4" />
+              <ArrowRight className="atlas-arrow h-4 w-4 nd-transition" />
             </Link>
             <button
               type="button"
               onClick={openCommandMenu}
-              className="inline-flex min-h-[44px] items-center justify-center gap-2 border border-nd-border-visible px-6 py-3 font-mono text-[12px] font-bold uppercase tracking-label-tight text-nd-text-primary nd-transition hover:border-nd-text-secondary"
+              className="atlas-hover-lift inline-flex min-h-[48px] items-center justify-center gap-2 border-2 border-nd-border-visible bg-nd-surface px-6 py-3 font-mono text-[12px] font-bold uppercase tracking-label-tight text-nd-text-primary shadow-[7px_7px_0_rgba(20,127,148,0.18)]"
             >
-              <Command className="h-4 w-4" />
+              <span className="font-mono text-[13px] leading-none">
+                <CommandShortcut />
+              </span>
               Open Command Menu
             </button>
           </div>
@@ -55,10 +69,11 @@ export function Hero() {
 
         <ScrollReveal
           delay={0.08}
-          className="border border-nd-border-visible bg-nd-black/80 p-5 md:p-6"
+          className="theme-workbench-card atlas-mark atlas-paper border-2 border-nd-border-visible bg-nd-surface p-5 shadow-[12px_12px_0_rgba(20,16,10,0.12)] md:p-6"
         >
-          <div className="mb-6 flex items-center justify-between border-b border-nd-border pb-4 font-mono text-[10px] uppercase tracking-label text-nd-text-disabled">
-            <span>Workbench</span>
+          <div className="theme-workbench-heading mb-6 flex items-center justify-between border-b-2 border-nd-border-visible pb-4 font-mono text-[10px] uppercase tracking-label text-nd-text-secondary">
+            <span className="theme-atlas-copy">Atlas Readout</span>
+            <span className="theme-nothing-copy">Workbench</span>
             <span>May 2026</span>
           </div>
           <dl className="space-y-0">
@@ -80,7 +95,7 @@ export function Hero() {
 
         <a
           href="#builds"
-          className="absolute bottom-6 left-4 hidden items-center gap-3 font-mono text-[11px] uppercase tracking-label text-nd-text-disabled nd-transition hover:text-nd-text-primary md:flex"
+          className="absolute bottom-6 left-4 hidden items-center gap-3 font-mono text-[11px] uppercase tracking-label text-nd-text-secondary nd-transition hover:text-nd-text-primary md:flex"
         >
           <span>{"// next"}</span>
           <ArrowDown className="h-4 w-4 text-nd-accent" />
@@ -88,7 +103,7 @@ export function Hero() {
 
         <a
           href="#builds"
-          className="absolute bottom-6 right-4 hidden font-mono text-[10px] uppercase tracking-label text-nd-text-disabled nd-transition hover:text-nd-text-primary lg:block"
+          className="absolute bottom-6 right-4 hidden border border-nd-border-visible bg-nd-surface px-3 py-2 font-mono text-[10px] uppercase tracking-label text-nd-text-secondary nd-transition hover:-translate-y-0.5 hover:text-nd-text-primary lg:block"
         >
           scroll the build loop
         </a>

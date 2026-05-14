@@ -24,10 +24,10 @@ export function ScrollReveal({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: distance }}
-      whileInView={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0, y: distance, scale: 0.992, filter: "blur(3px)" }}
+      whileInView={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
       viewport={{ once: true, margin: "-12% 0px -10% 0px" }}
-      transition={{ duration: 0.28, delay, ease: [0.25, 0.1, 0.25, 1] }}
+      transition={{ duration: 0.36, delay, ease: [0.16, 1, 0.3, 1] }}
       className={className}
       {...props}
     >

@@ -1,48 +1,44 @@
 @import "tailwindcss";
 
-/* ═══════════════════════════════════════════════════════
-   NOTHING DESIGN SYSTEM — CSS TOKENS
-   Monochromatic. Typographic. Industrial. OLED dark.
-   Brand accent: neon pink #ff9eb5 / #ff7da0
-   ═══════════════════════════════════════════════════════ */
+/* Field Atlas design system: warm editorial build journal. */
 
 @theme {
   /* — Surfaces — */
-  --color-nd-black: #000000;
-  --color-nd-surface: #111111;
-  --color-nd-surface-raised: #1A1A1A;
+  --color-nd-black: #f4efe2;
+  --color-nd-surface: #fffaf0;
+  --color-nd-surface-raised: #ebe0ca;
 
   /* — Borders — */
-  --color-nd-border: #222222;
-  --color-nd-border-visible: #333333;
+  --color-nd-border: #d8c9ad;
+  --color-nd-border-visible: #2a251e;
 
   /* — Text hierarchy (4 levels) — */
-  --color-nd-text-disabled: #666666;
-  --color-nd-text-secondary: #999999;
-  --color-nd-text-primary: #E8E8E8;
-  --color-nd-text-display: #FFFFFF;
+  --color-nd-text-disabled: #8c8069;
+  --color-nd-text-secondary: #605641;
+  --color-nd-text-primary: #272117;
+  --color-nd-text-display: #14100a;
 
   /* — Accent & Status — */
-  --color-nd-accent: #ff9eb5;
-  --color-nd-accent-subtle: rgba(255, 158, 181, 0.15);
-  --color-nd-success: #4A9E5C;
-  --color-nd-warning: #D4A843;
-  --color-nd-interactive: #5B9BF6;
+  --color-nd-accent: #d94d2f;
+  --color-nd-accent-subtle: rgba(217, 77, 47, 0.13);
+  --color-nd-success: #617645;
+  --color-nd-warning: #b8872b;
+  --color-nd-interactive: #147f94;
 
   /* — Legacy compat mapping — */
-  --color-background: #000000;
-  --color-foreground: #E8E8E8;
-  --color-foreground-muted: #999999;
-  --color-neon: #ff9eb5;
-  --color-neon-hover: #ff7da0;
-  --color-purple: #a855f7;
-  --color-surface: #111111;
-  --color-surface-highlight: #1A1A1A;
-  --color-border: #222222;
-  --color-charcoal: #111111;
+  --color-background: #f4efe2;
+  --color-foreground: #272117;
+  --color-foreground-muted: #605641;
+  --color-neon: #d94d2f;
+  --color-neon-hover: #b73922;
+  --color-purple: #147f94;
+  --color-surface: #fffaf0;
+  --color-surface-highlight: #ebe0ca;
+  --color-border: #d8c9ad;
+  --color-charcoal: #14100a;
 
   /* — Typography — */
-  --font-display: "Doto", "Space Mono", monospace;
+  --font-display: var(--font-display-theme), "Space Grotesk", "DM Sans", system-ui, sans-serif;
   --font-body: "Space Grotesk", "DM Sans", system-ui, sans-serif;
   --font-mono: "Space Mono", "JetBrains Mono", monospace;
 }
@@ -58,18 +54,65 @@
   --space-2xl: 48px;
   --space-3xl: 64px;
   --space-4xl: 96px;
+  --font-display-theme: var(--font-space-grotesk);
+}
+
+html[data-theme="nothing"] {
+  color-scheme: dark;
+
+  --color-nd-black: #000000;
+  --color-nd-surface: #111111;
+  --color-nd-surface-raised: #1a1a1a;
+
+  --color-nd-border: #222222;
+  --color-nd-border-visible: #333333;
+
+  --color-nd-text-disabled: #666666;
+  --color-nd-text-secondary: #999999;
+  --color-nd-text-primary: #e8e8e8;
+  --color-nd-text-display: #ffffff;
+
+  --color-nd-accent: #ff9eb5;
+  --color-nd-accent-subtle: rgba(255, 158, 181, 0.15);
+  --color-nd-success: #4a9e5c;
+  --color-nd-warning: #d4a843;
+  --color-nd-interactive: #5b9bf6;
+
+  --color-background: #000000;
+  --color-foreground: #e8e8e8;
+  --color-foreground-muted: #999999;
+  --color-neon: #ff9eb5;
+  --color-neon-hover: #ff7da0;
+  --color-purple: #a855f7;
+  --color-surface: #111111;
+  --color-surface-highlight: #1a1a1a;
+  --color-border: #222222;
+  --color-charcoal: #111111;
+
+  --font-display-theme: var(--font-doto);
 }
 
 html, body {
   overflow-x: hidden;
   width: 100%;
   max-width: 100vw;
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 body {
   color: var(--color-nd-text-primary);
   background: var(--color-nd-black);
+  background-image:
+    linear-gradient(rgba(20, 16, 10, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(20, 16, 10, 0.045) 1px, transparent 1px),
+    radial-gradient(circle at 16% 18%, rgba(20, 127, 148, 0.12), transparent 28rem),
+    radial-gradient(circle at 84% 12%, rgba(217, 77, 47, 0.11), transparent 26rem);
+  background-size: 44px 44px, 44px 44px, auto, auto;
+}
+
+html[data-theme="nothing"] body {
+  background: var(--color-nd-black);
+  background-image: none;
 }
 
 /* — Scrollbar: minimal, industrial — */
@@ -77,14 +120,14 @@ body {
   width: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--color-nd-black);
+  background: var(--color-nd-surface-raised);
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-nd-border-visible);
+  background: var(--color-nd-text-secondary);
   border-radius: 0;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-nd-text-secondary);
+  background: var(--color-nd-text-display);
 }
 
 /* — Selection — */
@@ -95,19 +138,91 @@ body {
 
 /* — Dot-matrix motif — */
 .dot-grid {
+  background-image: radial-gradient(circle, rgba(20, 16, 10, 0.22) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+.dot-grid-subtle {
+  background-image:
+    linear-gradient(rgba(20, 16, 10, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(20, 16, 10, 0.07) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+html[data-theme="nothing"] .dot-grid {
   background-image: radial-gradient(circle, var(--color-nd-border-visible) 1px, transparent 1px);
   background-size: 16px 16px;
 }
-.dot-grid-subtle {
+
+html[data-theme="nothing"] .dot-grid-subtle {
   background-image: radial-gradient(circle, var(--color-nd-border) 0.5px, transparent 0.5px);
   background-size: 12px 12px;
 }
 
-/* — Nothing-style transitions: percussive, not fluid — */
+.theme-nothing-copy {
+  display: none;
+}
+
+html[data-theme="nothing"] .theme-atlas-copy {
+  display: none;
+}
+
+html[data-theme="nothing"] .theme-nothing-copy {
+  display: inline;
+}
+
+html[data-theme="nothing"] .theme-hero-section {
+  min-height: calc(100svh - 12rem);
+}
+
+html[data-theme="nothing"] .theme-hero-grid {
+  opacity: 0.3;
+}
+
+html[data-theme="nothing"] .theme-atlas-accent-bar,
+html[data-theme="nothing"] .theme-atlas-field {
+  opacity: 0;
+  transform: translate3d(8rem, -50%, 0) scale(0.92);
+}
+
+html[data-theme="nothing"] .theme-hero-note {
+  box-shadow: none;
+}
+
+html[data-theme="nothing"] .theme-hero-title {
+  max-width: 56rem;
+  font-family: var(--font-body);
+  font-size: clamp(3rem, 6.8vw, 4.5rem);
+  line-height: 0.95;
+}
+
+html[data-theme="nothing"] .theme-workbench-card {
+  border-width: 1px;
+  background: rgba(17, 17, 17, 0.82);
+  box-shadow: none;
+}
+
+html[data-theme="nothing"] .theme-workbench-heading {
+  border-bottom-width: 1px;
+  color: var(--color-nd-text-disabled);
+}
+
+html[data-theme="nothing"] .atlas-mark::before,
+html[data-theme="nothing"] .atlas-mark::after {
+  opacity: 0.42;
+  border-width: 1px;
+}
+
+@media (max-width: 639px) {
+  .theme-workbench-card {
+    margin-top: 12rem;
+  }
+}
+
+/* — Field Atlas transitions: crisp, physical, and readable — */
 .nd-transition {
   transition-property: color, background-color, border-color, opacity, transform, box-shadow;
-  transition-duration: 200ms;
-  transition-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1);
+  transition-duration: 220ms;
+  transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .nd-focus {
@@ -117,6 +232,289 @@ body {
 
 .nd-focus:focus-visible {
   outline-color: var(--color-nd-accent);
+}
+
+.atlas-paper {
+  position: relative;
+  isolation: isolate;
+}
+
+.atlas-paper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background:
+    linear-gradient(115deg, rgba(255, 250, 240, 0.72), rgba(244, 239, 226, 0.18)),
+    repeating-linear-gradient(
+      0deg,
+      rgba(20, 16, 10, 0.025) 0,
+      rgba(20, 16, 10, 0.025) 1px,
+      transparent 1px,
+      transparent 5px
+    );
+}
+
+html[data-theme="nothing"] .atlas-paper::before {
+  background:
+    linear-gradient(115deg, rgba(17, 17, 17, 0.68), rgba(0, 0, 0, 0.08)),
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.025) 0,
+      rgba(255, 255, 255, 0.025) 1px,
+      transparent 1px,
+      transparent 5px
+    );
+}
+
+.atlas-mark {
+  position: relative;
+}
+
+.atlas-mark::before,
+.atlas-mark::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-color: var(--color-nd-accent);
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+.atlas-mark::before {
+  left: -1px;
+  top: -1px;
+  border-left: 2px solid;
+  border-top: 2px solid;
+}
+
+.atlas-mark::after {
+  right: -1px;
+  bottom: -1px;
+  border-right: 2px solid;
+  border-bottom: 2px solid;
+}
+
+.atlas-scanline {
+  position: relative;
+  overflow: hidden;
+}
+
+.atlas-scanline::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(20, 127, 148, 0.16),
+    transparent
+  );
+  transform: translateX(-120%);
+}
+
+.atlas-scanline:hover::after,
+.atlas-scanline:focus-visible::after {
+  animation: atlas-scan 720ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.atlas-hover-lift {
+  transform: translate3d(0, 0, 0);
+  transition:
+    transform 260ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 260ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    color 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.atlas-hover-lift:hover,
+.atlas-hover-lift:focus-visible {
+  transform: translate3d(-4px, -4px, 0);
+  box-shadow:
+    10px 10px 0 rgba(217, 77, 47, 0.2),
+    18px 18px 0 rgba(20, 127, 148, 0.12);
+}
+
+html[data-theme="nothing"] .atlas-hover-lift:hover,
+html[data-theme="nothing"] .atlas-hover-lift:focus-visible {
+  box-shadow:
+    10px 10px 0 rgba(255, 158, 181, 0.18),
+    18px 18px 0 rgba(91, 155, 246, 0.1);
+}
+
+.theme-switcher-button {
+  --theme-switcher-shadow: rgba(20, 16, 10, 0.18);
+  --theme-switcher-orbit: rgba(217, 77, 47, 0.32);
+  position: relative;
+  isolation: isolate;
+}
+
+html[data-theme="nothing"] .theme-switcher-button {
+  --theme-switcher-shadow: rgba(255, 158, 181, 0.18);
+  --theme-switcher-orbit: rgba(255, 158, 181, 0.36);
+}
+
+.theme-switcher-button::before,
+.theme-switcher-button::after {
+  content: "";
+  position: absolute;
+  inset: -7px;
+  z-index: -1;
+  border: 1px solid var(--theme-switcher-orbit);
+  border-radius: 999px;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.theme-switcher-button::before {
+  animation: theme-orbit 6s linear infinite;
+}
+
+.theme-switcher-button::after {
+  inset: -13px;
+  border-style: dashed;
+  opacity: 0.34;
+  animation: theme-orbit 12s linear infinite reverse;
+}
+
+.theme-switcher-button:hover,
+.theme-switcher-button:focus-visible {
+  box-shadow:
+    7px 7px 0 var(--theme-switcher-shadow),
+    0 0 42px var(--color-nd-accent-subtle);
+}
+
+.theme-morph-ripple {
+  position: fixed;
+  right: -14vmax;
+  bottom: -14vmax;
+  z-index: -1;
+  width: 32vmax;
+  height: 32vmax;
+  border-radius: 999px;
+  contain: layout paint style;
+  pointer-events: none;
+  transform: scale(0);
+  translate: 0 0;
+  transform-origin: 50% 50%;
+  will-change: opacity, transform;
+  animation: theme-ripple-bloom 560ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.theme-morph-ripple-atlas {
+  background: #f4efe2;
+  box-shadow:
+    0 0 72px rgba(217, 77, 47, 0.34),
+    0 0 0 18vmax rgba(255, 250, 240, 0.18);
+}
+
+.theme-morph-ripple-nothing {
+  background: #000000;
+  box-shadow:
+    0 0 72px rgba(255, 158, 181, 0.38),
+    0 0 0 18vmax rgba(255, 158, 181, 0.13);
+}
+
+html.theme-morphing .theme-atlas-field,
+html.theme-morphing .theme-hero-section,
+html.theme-morphing .theme-hero-grid,
+html.theme-morphing .theme-hero-title,
+html.theme-morphing .theme-workbench-card,
+html.theme-morphing .theme-workbench-heading {
+  transition-duration: 480ms;
+  transition-property: opacity, transform, background-color, border-color, color;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+
+html.theme-morphing::view-transition-group(root) {
+  animation-duration: 520ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html.theme-morphing::view-transition-old(root),
+html.theme-morphing::view-transition-new(root) {
+  animation-duration: 520ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  mix-blend-mode: normal;
+  will-change: opacity, transform;
+}
+
+html.theme-morphing::view-transition-old(root) {
+  animation-name: theme-old-soft-out;
+}
+
+html.theme-morphing::view-transition-new(root) {
+  animation-name: theme-new-soft-in;
+}
+
+@keyframes theme-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes theme-ripple-bloom {
+  0% {
+    opacity: 0.88;
+    transform: scale(0);
+  }
+  52% {
+    opacity: 0.68;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(5.8);
+  }
+}
+
+@keyframes theme-old-soft-out {
+  to {
+    opacity: 0.18;
+    transform: scale(0.985);
+  }
+}
+
+@keyframes theme-new-soft-in {
+  from {
+    opacity: 0.35;
+    transform: scale(1.012);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.atlas-hover-lift:hover .atlas-arrow,
+.atlas-hover-lift:focus-visible .atlas-arrow {
+  transform: translateX(6px);
+  color: var(--color-nd-accent);
+}
+
+.atlas-hover-lift:hover .atlas-icon,
+.atlas-hover-lift:focus-visible .atlas-icon {
+  transform: rotate(-4deg) scale(1.06);
+  border-color: var(--color-nd-accent);
+}
+
+@keyframes atlas-scan {
+  to {
+    transform: translateX(120%);
+  }
+}
+
+@keyframes atlas-drift {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(10px, -8px, 0) rotate(1deg);
+  }
 }
 
 /* — Segmented progress bar — */
@@ -141,5 +539,6 @@ body {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

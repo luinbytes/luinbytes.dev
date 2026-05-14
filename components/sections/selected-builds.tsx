@@ -8,40 +8,44 @@ export function SelectedBuilds() {
     <section
       id="selected-builds"
       data-journey-section="selected-builds"
-      className="border-b border-nd-border py-20 md:py-28"
+      className="relative overflow-hidden border-b border-nd-border bg-nd-surface/35 py-20 md:py-28"
     >
+      <div className="absolute right-8 top-10 hidden h-24 w-24 border border-dashed border-nd-interactive/35 opacity-70 [animation:atlas-drift_9s_ease-in-out_infinite] lg:block" />
       <div className="container mx-auto max-w-7xl px-4">
         <ScrollReveal className="mb-8 flex items-end justify-between gap-6">
           <div>
             <span className="mb-4 block font-mono text-[11px] uppercase tracking-label text-nd-accent">
               02 / Selected Builds
             </span>
-            <h2 className="font-body text-3xl font-bold tracking-normal text-nd-text-display md:text-5xl">
-              Fewer entries, stronger signal.
+            <h2 className="font-display text-4xl font-bold leading-[0.95] tracking-normal text-nd-text-display md:text-6xl">
+              Shipped artifacts, pinned like field samples.
             </h2>
           </div>
           <a
             href="https://github.com/luinbytes"
             target="_blank"
             rel="noopener noreferrer"
-            className="hidden font-mono text-[11px] uppercase tracking-label text-nd-accent nd-transition hover:text-nd-text-display md:inline-flex"
+            className="hidden border border-nd-border-visible bg-nd-surface px-3 py-2 font-mono text-[11px] uppercase tracking-label text-nd-accent shadow-[4px_4px_0_rgba(20,16,10,0.1)] nd-transition hover:-translate-y-0.5 hover:text-nd-text-display md:inline-flex"
           >
             View all builds -&gt;
           </a>
         </ScrollReveal>
 
-        <div className="border border-nd-border-visible">
+        <div className="grid gap-4">
           {selectedBuilds.map((build) => {
             const Icon = build.icon;
             const isExternal = build.href.startsWith("http");
             const rowClassName =
-              "group grid gap-4 border-b border-nd-border p-5 nd-focus nd-transition last:border-b-0 hover:bg-nd-surface md:grid-cols-[72px_1fr_auto_32px] md:items-center md:p-6";
+              "atlas-scanline atlas-hover-lift group grid gap-4 border-2 border-nd-border-visible bg-nd-surface p-5 shadow-[8px_8px_0_rgba(20,16,10,0.08)] nd-focus md:grid-cols-[72px_1fr_auto_32px] md:items-center md:p-6";
             const rowContent = (
               <>
-                <span className="flex h-12 w-12 items-center justify-center border border-nd-border-visible text-nd-text-primary group-hover:border-nd-accent group-hover:text-nd-accent">
+                <span className="atlas-icon flex h-12 w-12 items-center justify-center border-2 border-nd-border-visible bg-nd-black text-nd-text-primary nd-transition group-hover:bg-nd-accent group-hover:text-nd-surface">
                   <Icon className="h-5 w-5" strokeWidth={1.5} />
                 </span>
                 <span>
+                  <span className="mb-1 block font-mono text-[10px] uppercase tracking-label-tight text-nd-accent">
+                    Artifact {build.index} / {build.shortName}
+                  </span>
                   <span className="block font-body text-xl font-bold text-nd-text-display">
                     {build.buildName}
                   </span>
@@ -53,13 +57,13 @@ export function SelectedBuilds() {
                   {build.tech.slice(0, 4).map((tech) => (
                     <span
                       key={tech}
-                      className="border border-nd-border-visible px-2 py-1 font-mono text-[10px] uppercase tracking-label-tight text-nd-text-disabled"
+                      className="border border-nd-border bg-nd-black/50 px-2 py-1 font-mono text-[10px] uppercase tracking-label-tight text-nd-text-secondary"
                     >
                       {tech}
                     </span>
                   ))}
                 </span>
-                <ArrowRight className="h-4 w-4 text-nd-accent nd-transition group-hover:translate-x-1" />
+                <ArrowRight className="atlas-arrow h-4 w-4 text-nd-accent nd-transition" />
               </>
             );
 

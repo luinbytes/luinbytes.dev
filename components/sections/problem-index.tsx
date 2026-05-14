@@ -44,15 +44,16 @@ export function ProblemIndex() {
     <section
       id="builds"
       data-journey-section="builds"
-      className="border-b border-nd-border py-20 md:py-28"
+      className="relative border-b border-nd-border py-20 md:py-28"
     >
+      <div className="absolute inset-y-10 left-1/2 hidden w-px bg-nd-border md:block" />
       <div className="container mx-auto max-w-7xl px-4">
         <ScrollReveal className="mb-8 flex items-end justify-between gap-6">
           <div>
             <span className="mb-4 block font-mono text-[11px] uppercase tracking-label text-nd-accent">
               01 / Problems I Refused To Accept
             </span>
-            <h2 className="max-w-2xl font-body text-3xl font-bold leading-tight tracking-normal text-nd-text-display md:text-5xl">
+            <h2 className="max-w-3xl font-display text-4xl font-bold leading-[0.95] tracking-normal text-nd-text-display md:text-6xl">
               The annoying parts became the roadmap.
             </h2>
           </div>
@@ -67,7 +68,7 @@ export function ProblemIndex() {
             role="tablist"
             aria-label="Problems I refused to accept"
             aria-orientation="vertical"
-            className="border border-nd-border-visible"
+            className="atlas-paper border-2 border-nd-border-visible bg-nd-surface shadow-[10px_10px_0_rgba(20,16,10,0.08)]"
           >
             {problemBuilds.map((item, index) => {
               const Icon = item.icon;
@@ -98,17 +99,17 @@ export function ProblemIndex() {
                     }
                   }}
                   className={cn(
-                    "group grid w-full grid-cols-[52px_1fr_28px] items-center gap-4 border-b border-nd-border p-4 text-left nd-transition last:border-b-0 md:grid-cols-[72px_1fr_40px] md:p-5",
+                    "atlas-scanline group grid w-full grid-cols-[52px_1fr_28px] items-center gap-4 border-b border-nd-border p-4 text-left nd-transition last:border-b-0 hover:pl-6 md:grid-cols-[72px_1fr_40px] md:p-5 md:hover:pl-7",
                     isSelected
-                      ? "bg-nd-surface text-nd-text-display"
-                      : "bg-nd-black text-nd-text-secondary hover:bg-nd-surface/60 hover:text-nd-text-primary"
+                      ? "bg-nd-text-display text-nd-black"
+                      : "bg-transparent text-nd-text-secondary hover:bg-nd-surface-raised hover:text-nd-text-primary"
                   )}
                 >
                   <span
                     className={cn(
-                      "flex aspect-square items-center justify-center border nd-transition",
+                      "atlas-icon flex aspect-square items-center justify-center border nd-transition",
                       isSelected
-                        ? "border-nd-accent text-nd-accent"
+                        ? "border-nd-accent bg-nd-accent text-nd-surface"
                         : "border-nd-border-visible text-nd-text-disabled group-hover:text-nd-text-primary"
                     )}
                   >
@@ -124,7 +125,7 @@ export function ProblemIndex() {
                   </span>
                   <ArrowRight
                     className={cn(
-                      "h-4 w-4 nd-transition",
+                      "atlas-arrow h-4 w-4 nd-transition",
                       isSelected
                         ? "translate-x-0 text-nd-accent"
                         : "text-nd-text-disabled group-hover:translate-x-1 group-hover:text-nd-text-primary"
@@ -137,7 +138,7 @@ export function ProblemIndex() {
 
           <ScrollReveal
             delay={0.08}
-            className="min-h-[420px] border border-nd-border-visible bg-nd-surface"
+            className="atlas-mark atlas-paper min-h-[420px] border-2 border-nd-border-visible bg-nd-surface shadow-[14px_14px_0_rgba(20,127,148,0.12)]"
           >
             {problemBuilds.map((item) => {
               const DetailIcon = item.icon;
@@ -162,7 +163,7 @@ export function ProblemIndex() {
                         {item.buildName}
                       </h3>
                     </div>
-                    <span className="flex h-14 w-14 shrink-0 items-center justify-center border border-nd-accent text-nd-accent">
+                    <span className="flex h-14 w-14 shrink-0 items-center justify-center border-2 border-nd-accent bg-nd-accent text-nd-surface shadow-[5px_5px_0_rgba(20,16,10,0.13)]">
                       <DetailIcon className="h-6 w-6" strokeWidth={1.5} />
                     </span>
                   </div>
@@ -185,7 +186,7 @@ export function ProblemIndex() {
                         {item.tech.map((tech) => (
                           <span
                             key={tech}
-                            className="border border-nd-border-visible px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-label-tight text-nd-text-secondary"
+                            className="border border-nd-border-visible bg-nd-black/60 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-label-tight text-nd-text-secondary"
                           >
                             {tech}
                           </span>
@@ -197,7 +198,7 @@ export function ProblemIndex() {
                   <div className="mt-10 flex flex-col gap-3 border-t border-nd-border pt-6 sm:flex-row">
                     <Link
                       href={item.href}
-                      className="inline-flex min-h-[44px] items-center justify-center gap-2 border border-nd-text-display bg-nd-text-display px-5 py-3 font-mono text-[12px] font-bold uppercase tracking-label-tight text-nd-black nd-transition hover:opacity-80"
+                      className="atlas-scanline inline-flex min-h-[44px] items-center justify-center gap-2 border-2 border-nd-text-display bg-nd-text-display px-5 py-3 font-mono text-[12px] font-bold uppercase tracking-label-tight text-nd-black shadow-[6px_6px_0_rgba(217,77,47,0.24)] nd-transition hover:-translate-y-0.5"
                     >
                       View build
                       <ArrowRight className="h-4 w-4" />
@@ -207,7 +208,7 @@ export function ProblemIndex() {
                         href={item.sourceHref}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex min-h-[44px] items-center justify-center gap-2 border border-nd-border-visible px-5 py-3 font-mono text-[12px] font-bold uppercase tracking-label-tight text-nd-text-primary nd-transition hover:border-nd-text-secondary"
+                        className="inline-flex min-h-[44px] items-center justify-center gap-2 border-2 border-nd-border-visible bg-nd-surface px-5 py-3 font-mono text-[12px] font-bold uppercase tracking-label-tight text-nd-text-primary nd-transition hover:-translate-y-0.5 hover:bg-nd-surface-raised"
                       >
                         Source
                         <ExternalLink className="h-4 w-4" />

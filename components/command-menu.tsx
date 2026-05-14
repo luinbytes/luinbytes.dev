@@ -23,13 +23,20 @@ export function CommandMenu() {
 
   React.useEffect(() => {
     const down = (e: KeyboardEvent) => {
-      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+      const isCommandK =
+        (e.key.toLowerCase() === "k" || e.code === "KeyK") &&
+        (e.metaKey || e.ctrlKey) &&
+        !e.altKey;
+
+      if (isCommandK) {
         e.preventDefault();
+        e.stopPropagation();
         setOpen((open) => !open);
       }
     };
-    document.addEventListener("keydown", down);
-    return () => document.removeEventListener("keydown", down);
+
+    window.addEventListener("keydown", down, { capture: true });
+    return () => window.removeEventListener("keydown", down, { capture: true });
   }, []);
 
   React.useEffect(() => {
@@ -97,7 +104,7 @@ export function CommandMenu() {
       role="dialog"
       aria-modal="true"
       aria-label="Command menu"
-      className="fixed inset-0 z-[99] flex items-start justify-center bg-nd-black/75 px-4 pt-[14vh] backdrop-blur-sm"
+      className="fixed inset-0 z-[99] flex items-start justify-center bg-nd-text-display/35 px-4 pt-[14vh] backdrop-blur-sm"
       onClick={() => setOpen(false)}
       onKeyDown={handleDialogKeyDown}
     >
@@ -106,15 +113,15 @@ export function CommandMenu() {
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-xl"
       >
-        <Command className="overflow-hidden border border-nd-border-visible bg-nd-surface text-nd-text-primary shadow-[0_24px_80px_rgba(0,0,0,0.55)]">
-          <div className="flex items-center gap-3 border-b border-nd-border px-4 py-3 focus-within:border-nd-accent">
+        <Command className="atlas-paper overflow-hidden border-2 border-nd-border-visible bg-nd-surface text-nd-text-primary shadow-[14px_14px_0_rgba(20,16,10,0.16)]">
+          <div className="flex items-center gap-3 border-b-2 border-nd-border-visible px-4 py-3 focus-within:border-nd-accent">
             <Command.Input
               aria-label="Type a command or search"
               autoFocus
               placeholder="Type a command or search…"
               className="min-h-[40px] w-full bg-transparent font-mono text-[13px] text-nd-text-display outline-none placeholder:text-nd-text-disabled"
             />
-            <kbd className="hidden h-6 shrink-0 select-none items-center border border-nd-border bg-nd-black px-2 font-mono text-[10px] text-nd-text-disabled sm:inline-flex">
+            <kbd className="hidden h-6 shrink-0 select-none items-center border border-nd-border-visible bg-nd-black px-2 font-mono text-[10px] text-nd-text-disabled sm:inline-flex">
               ESC
             </kbd>
           </div>
@@ -201,7 +208,7 @@ function Item({
     <Command.Item
       keywords={keywords}
       onSelect={onSelect}
-      className="group mt-1 flex min-h-[42px] cursor-pointer items-center gap-3 border border-transparent px-3 py-2 font-mono text-[13px] text-nd-text-secondary outline-none nd-transition aria-selected:border-nd-border-visible aria-selected:bg-nd-black aria-selected:text-nd-text-display"
+      className="group mt-1 flex min-h-[42px] cursor-pointer items-center gap-3 border border-transparent px-3 py-2 font-mono text-[13px] text-nd-text-secondary outline-none nd-transition aria-selected:border-nd-border-visible aria-selected:bg-nd-text-display aria-selected:text-nd-black"
     >
       <Icon className="h-4 w-4 text-nd-text-disabled nd-transition group-aria-selected:text-nd-accent" strokeWidth={1.5} />
       {children}

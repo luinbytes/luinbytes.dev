@@ -130,14 +130,14 @@ export function ScrollJourney({ children }: ScrollJourneyProps) {
       {children}
       <aside
         aria-label="Homepage journey"
-        className="fixed right-4 top-1/2 z-40 hidden w-[210px] -translate-y-1/2 border border-nd-border-visible bg-nd-black/90 p-3 backdrop-blur 2xl:block"
+        className="atlas-paper !fixed left-4 top-24 z-40 hidden w-[218px] border-2 border-nd-border-visible bg-nd-surface/92 p-3 shadow-[10px_10px_0_rgba(20,16,10,0.12)] backdrop-blur nd-transition min-[1536px]:block 2xl:left-8"
       >
-        <div className="mb-3 flex items-center justify-between border-b border-nd-border pb-3 font-mono text-[10px] uppercase tracking-label text-nd-text-disabled">
-          <span>Journey</span>
+        <div className="mb-3 flex items-center justify-between border-b-2 border-nd-border-visible pb-3 font-mono text-[10px] uppercase tracking-label text-nd-text-secondary">
+          <span>Field Route</span>
           <span>{Math.round(scrollProgress * 100).toString().padStart(2, "0")}%</span>
         </div>
 
-        <div className="mb-4 h-1 border border-nd-border">
+        <div className="mb-4 h-2 border border-nd-border-visible bg-nd-black">
           <div
             className="h-full bg-nd-accent nd-transition"
             style={{ width: `${scrollProgress * 100}%` }}
@@ -156,8 +156,8 @@ export function ScrollJourney({ children }: ScrollJourneyProps) {
                 className={cn(
                   "grid w-full grid-cols-[18px_1fr] items-center gap-2 border border-transparent px-2 py-2 text-left font-mono text-[10px] uppercase tracking-label-tight nd-focus nd-transition",
                   isActive
-                    ? "border-nd-border-visible bg-nd-surface text-nd-text-display"
-                    : "text-nd-text-disabled hover:border-nd-border hover:text-nd-text-primary"
+                    ? "border-nd-border-visible bg-nd-text-display text-nd-black shadow-[4px_4px_0_rgba(217,77,47,0.22)]"
+                    : "text-nd-text-secondary hover:border-nd-border-visible hover:bg-nd-surface-raised hover:text-nd-text-primary"
                 )}
                 aria-current={isActive ? "location" : undefined}
               >
@@ -173,7 +173,7 @@ export function ScrollJourney({ children }: ScrollJourneyProps) {
           })}
         </nav>
 
-        <dl className="mt-4 border-t border-nd-border pt-3 font-mono text-[10px] uppercase tracking-label-tight">
+        <dl className="mt-4 border-t-2 border-nd-border-visible pt-3 font-mono text-[10px] uppercase tracking-label-tight">
           {[
             ["mode", readout.mode],
             ["surface", readout.surface],

@@ -1,15 +1,22 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, Space_Mono, Doto } from "next/font/google";
+import { Doto, Space_Grotesk, Space_Mono } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { CommandMenu } from "@/components/command-menu";
-import { KonamiCode } from "@/components/easter-eggs/konami-code";
+import { ThemeSwitcher } from "@/components/theme-switcher";
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
   weight: ["300", "400", "500", "700"],
-  variable: "--font-body",
+  variable: "--font-space-grotesk",
+  display: "swap",
+});
+
+const doto = Doto({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  variable: "--font-doto",
   display: "swap",
 });
 
@@ -17,13 +24,6 @@ const spaceMono = Space_Mono({
   subsets: ["latin"],
   weight: ["400", "700"],
   variable: "--font-mono",
-  display: "swap",
-});
-
-const doto = Doto({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-display",
   display: "swap",
 });
 
@@ -82,7 +82,6 @@ export const metadata: Metadata = {
 };
 
 import { ConsoleEgg } from "@/components/easter-eggs/console-egg";
-import { CursorTrail } from "@/components/easter-eggs/cursor-trail";
 
 export default function RootLayout({
   children,
@@ -93,7 +92,6 @@ export default function RootLayout({
     <html
       lang="en"
       className="scroll-smooth"
-      style={{ colorScheme: "dark" }}
       data-lumi="was-here ✨"
       suppressHydrationWarning
     >
@@ -105,17 +103,32 @@ export default function RootLayout({
         ║   b) Lu debugging something I broke (sorry)               ║
         ║   c) A recruiter snooping for code quality (it's good!)   ║
         ║                                                           ║
-        ║   Nothing Design System. Monochromatic. Typographic.      ║
-        ║   Industrial warmth. OLED dark mode.                      ║
+        ║   Field Atlas System. Warm paper. Ink. Motion.            ║
+        ║   Build journal energy with sharp product craft.          ║
         ║                                                           ║
         ║   Built with help from Lumi, Lu's AI assistant.          ║
         ║   https://hermes.al                                        ║
         ║                                                           ║
         ╚═══════════════════════════════════════════════════════════╝
       */}
-      <head></head>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(() => {
+  try {
+    const theme = localStorage.getItem("lu-theme") === "nothing" ? "nothing" : "atlas";
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme === "nothing" ? "dark" : "light";
+  } catch {
+    document.documentElement.dataset.theme = "atlas";
+    document.documentElement.style.colorScheme = "light";
+  }
+})();`,
+          }}
+        />
+      </head>
       <body
-        className={`${spaceGrotesk.variable} ${spaceMono.variable} ${doto.variable} font-body bg-nd-black text-nd-text-primary antialiased`}
+        className={`${spaceGrotesk.variable} ${doto.variable} ${spaceMono.variable} font-body bg-nd-black text-nd-text-primary antialiased`}
         suppressHydrationWarning
       >
         {/* Accessibility easter egg - screen readers only */}
@@ -124,10 +137,9 @@ export default function RootLayout({
           accessibility tools.
         </span>
 
-        <CursorTrail />
         <ConsoleEgg />
-        <KonamiCode />
         <CommandMenu />
+        <ThemeSwitcher />
         <a
           href="#main"
           className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[200] focus:bg-nd-text-display focus:px-4 focus:py-3 focus:font-mono focus:text-[12px] focus:font-bold focus:uppercase focus:tracking-[0.08em] focus:text-nd-black"
