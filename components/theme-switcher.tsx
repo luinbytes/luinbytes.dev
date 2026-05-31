@@ -1,10 +1,10 @@
 "use client";
 
 import { useRef, useState, useSyncExternalStore } from "react";
-import { Moon, Palette, Sun } from "lucide-react";
+import { Aperture, Palette, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type Theme = "atlas" | "nothing";
+type Theme = "anomaly" | "void";
 type MorphTheme = Theme | null;
 
 const themes: Record<
@@ -12,33 +12,33 @@ const themes: Record<
   {
     label: string;
     next: string;
-    Icon: typeof Sun;
+    Icon: typeof Sparkles;
   }
 > = {
-  atlas: {
-    label: "Field Atlas",
-    next: "OLED Nothing",
-    Icon: Sun,
+  anomaly: {
+    label: "Precision",
+    next: "Void",
+    Icon: Sparkles,
   },
-  nothing: {
-    label: "OLED Nothing",
-    next: "Field Atlas",
-    Icon: Moon,
+  void: {
+    label: "Void",
+    next: "Precision",
+    Icon: Aperture,
   },
 };
 
 function applyTheme(theme: Theme) {
   document.documentElement.dataset.theme = theme;
-  document.documentElement.style.colorScheme = theme === "nothing" ? "dark" : "light";
+  document.documentElement.style.colorScheme = "dark";
 }
 
 function getStoredTheme(): Theme {
-  if (typeof window === "undefined") return "atlas";
-  return window.localStorage.getItem("lu-theme") === "nothing" ? "nothing" : "atlas";
+  if (typeof window === "undefined") return "anomaly";
+  return window.localStorage.getItem("lu-theme") === "void" ? "void" : "anomaly";
 }
 
 function getServerTheme(): Theme {
-  return "atlas";
+  return "anomaly";
 }
 
 function subscribeToThemeChanges(onStoreChange: () => void) {
@@ -68,8 +68,8 @@ export function ThemeSwitcher() {
     themeSwapTimeoutRef.current = null;
     document.documentElement.classList.remove(
       "theme-morphing",
-      "theme-morph-to-atlas",
-      "theme-morph-to-nothing"
+      "theme-morph-to-anomaly",
+      "theme-morph-to-void"
     );
     setMorphTheme(null);
   };
@@ -77,7 +77,7 @@ export function ThemeSwitcher() {
   const toggleTheme = () => {
     if (morphTheme) return;
 
-    const nextTheme = theme === "atlas" ? "nothing" : "atlas";
+    const nextTheme = theme === "anomaly" ? "void" : "anomaly";
     const prefersReducedMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)"
     ).matches;
@@ -121,9 +121,9 @@ export function ThemeSwitcher() {
           aria-hidden="true"
           className={cn(
             "theme-morph-ripple",
-            morphTheme === "nothing"
-              ? "theme-morph-ripple-nothing"
-              : "theme-morph-ripple-atlas"
+            morphTheme === "void"
+              ? "theme-morph-ripple-void"
+              : "theme-morph-ripple-anomaly"
           )}
         />
       )}
@@ -135,8 +135,8 @@ export function ThemeSwitcher() {
         title={`Switch to ${activeTheme.next}`}
         className={cn(
           "theme-switcher-button group flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border-2 border-nd-border-visible bg-nd-surface/92 text-nd-text-display shadow-[5px_5px_0_rgba(20,16,10,0.14)] backdrop-blur nd-focus nd-transition",
-          "hover:w-[13.5rem] hover:-translate-y-1 hover:border-nd-accent hover:bg-nd-text-display hover:text-nd-black",
-          "focus-visible:w-[13.5rem] focus-visible:-translate-y-1 focus-visible:border-nd-accent focus-visible:bg-nd-text-display focus-visible:text-nd-black"
+          "hover:w-[12rem] hover:-translate-y-1 hover:border-nd-accent hover:bg-nd-text-display hover:text-nd-black",
+          "focus-visible:w-[12rem] focus-visible:-translate-y-1 focus-visible:border-nd-accent focus-visible:bg-nd-text-display focus-visible:text-nd-black"
         )}
       >
         <span className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,var(--color-nd-accent-subtle),transparent_58%)] opacity-90" />

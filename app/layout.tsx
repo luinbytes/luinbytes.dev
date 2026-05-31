@@ -5,6 +5,7 @@ import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { CommandMenu } from "@/components/command-menu";
 import { ThemeSwitcher } from "@/components/theme-switcher";
+import { CaseInterfaceOverlay } from "@/components/case-interface-overlay";
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -103,8 +104,8 @@ export default function RootLayout({
         ║   b) Lu debugging something I broke (sorry)               ║
         ║   c) A recruiter snooping for code quality (it's good!)   ║
         ║                                                           ║
-        ║   Field Atlas System. Warm paper. Ink. Motion.            ║
-        ║   Build journal energy with sharp product craft.          ║
+        ║   Precision Anomaly System. Reactive case interface.       ║
+        ║   Sharp surfaces, strange controls, preserved details.     ║
         ║                                                           ║
         ║   Built with help from Lumi, Lu's AI assistant.          ║
         ║   https://hermes.al                                        ║
@@ -116,12 +117,13 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `(() => {
   try {
-    const theme = localStorage.getItem("lu-theme") === "nothing" ? "nothing" : "atlas";
+    const stored = localStorage.getItem("lu-theme");
+    const theme = stored === "void" ? "void" : "anomaly";
     document.documentElement.dataset.theme = theme;
-    document.documentElement.style.colorScheme = theme === "nothing" ? "dark" : "light";
+    document.documentElement.style.colorScheme = "dark";
   } catch {
-    document.documentElement.dataset.theme = "atlas";
-    document.documentElement.style.colorScheme = "light";
+    document.documentElement.dataset.theme = "anomaly";
+    document.documentElement.style.colorScheme = "dark";
   }
 })();`,
           }}
@@ -139,6 +141,7 @@ export default function RootLayout({
 
         <ConsoleEgg />
         <CommandMenu />
+        <CaseInterfaceOverlay />
         <ThemeSwitcher />
         <a
           href="#main"
