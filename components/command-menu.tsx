@@ -14,6 +14,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { commandFilters, problemBuilds } from "@/lib/homepage";
+import { caseStudies } from "@/lib/case-studies";
 
 export function CommandMenu() {
   const [open, setOpen] = React.useState(false);
@@ -168,6 +169,19 @@ export function CommandMenu() {
                   onSelect={() => runCommand(() => openHref(build.href))}
                 >
                   {build.buildName}
+                </Item>
+              ))}
+            </Command.Group>
+
+            <Command.Group heading="Case pages" className="mb-2 px-1 pt-4 font-mono text-[10px] uppercase tracking-label text-nd-text-disabled">
+              {caseStudies.map((study) => (
+                <Item
+                  key={study.route}
+                  icon={Folder}
+                  keywords={[study.category, study.signal, ...study.tags]}
+                  onSelect={() => runCommand(() => openHref(study.route))}
+                >
+                  {study.title}
                 </Item>
               ))}
             </Command.Group>
