@@ -52,7 +52,7 @@ const getBackoffDelay = (attempt: number): number => {
 /**
  * Get cached data from localStorage
  */
-export const getCache = <T>(key: string): T | null => {
+const getCache = <T>(key: string): T | null => {
     if (typeof window === 'undefined') return null;
 
     try {
@@ -78,7 +78,7 @@ export const getCache = <T>(key: string): T | null => {
 /**
  * Set cached data in localStorage
  */
-export const setCache = <T>(key: string, data: T, ttl: number = DEFAULT_CACHE_TTL): void => {
+const setCache = <T>(key: string, data: T, ttl: number = DEFAULT_CACHE_TTL): void => {
     if (typeof window === 'undefined') return;
 
     try {
@@ -100,20 +100,6 @@ export const setCache = <T>(key: string, data: T, ttl: number = DEFAULT_CACHE_TT
 export const clearCache = (key: string): void => {
     if (typeof window === 'undefined') return;
     localStorage.removeItem(CACHE_PREFIX + key);
-};
-
-/**
- * Clear all API cache entries
- */
-export const clearAllCache = (): void => {
-    if (typeof window === 'undefined') return;
-
-    const keys = Object.keys(localStorage);
-    keys.forEach(key => {
-        if (key.startsWith(CACHE_PREFIX)) {
-            localStorage.removeItem(key);
-        }
-    });
 };
 
 /**
@@ -344,21 +330,4 @@ export const fetchGitHub = async <T>(
         ...options,
         cacheTTL: options.cacheTTL || 10 * 60 * 1000, // 10 minutes for GitHub data
     });
-};
-
-/**
- * Batch fetch multiple endpoints with Promise.allSettled
- * Returns results with success/failure status
- */
-export const batchFetch = async <T>(
-    urls: string[],
-    options: FetchWithRetryOptions = {}
-): Promise<Array<{ status: 'fulfilled' | 'rejected'; value?: T; reason?: ApiError }>> => {
-    const promises = urls.map(url =>
-        fetchWithRetry<T>(url, options)
-            .then(value => ({ status: 'fulfilled' as const, value }))
-            .catch(reason => ({ status: 'rejected' as const, reason: reason as ApiError }))
-    );
-
-    return Promise.all(promises);
 };

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { SectionRail, SegmentedStats, useActiveSection } from "@/components/case-page-parts";
 import {
   Github,
   Download,
@@ -158,83 +158,11 @@ const techStack = [
 ];
 
 export function PerkaholicPage() {
-  const [activeSection, setActiveSection] = useState<string>("overview");
-
-  useEffect(() => {
-    const sectionIds = SECTION_NAV.map((s) => s.id);
-    const elements = sectionIds
-      .map((id) => document.getElementById(id))
-      .filter((el): el is HTMLElement => el !== null);
-
-    if (elements.length === 0) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort(
-            (a, b) => a.boundingClientRect.top - b.boundingClientRect.top,
-          );
-        if (visible.length > 0) {
-          setActiveSection(visible[0].target.id);
-        }
-      },
-      {
-        rootMargin: "-30% 0px -60% 0px",
-        threshold: 0,
-      },
-    );
-
-    elements.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
-
-  const handleNavClick = (
-    e: React.MouseEvent<HTMLAnchorElement>,
-    id: string,
-  ) => {
-    e.preventDefault();
-    const el = document.getElementById(id);
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  };
+  const activeSection = useActiveSection(SECTION_NAV);
 
   return (
     <div className="min-h-screen bg-nd-black scroll-smooth">
-      {/* Sticky side-rail nav (desktop only) */}
-      <nav
-        aria-label="Page sections"
-        className="hidden lg:flex fixed left-6 top-1/2 -translate-y-1/2 z-40 flex-col gap-5"
-      >
-        {SECTION_NAV.map((item) => {
-          const isActive = activeSection === item.id;
-          return (
-            <a
-              key={item.id}
-              href={`#${item.id}`}
-              onClick={(e) => handleNavClick(e, item.id)}
-              className="group flex items-center gap-3 nd-transition"
-              aria-current={isActive ? "true" : undefined}
-            >
-              <span
-                className={`w-1.5 h-1.5 rounded-full nd-transition ${
-                  isActive ? "bg-nd-accent" : "bg-nd-border-visible"
-                }`}
-              />
-              <span
-                className={`font-mono text-[10px] tracking-[0.08em] uppercase nd-transition ${
-                  isActive
-                    ? "text-nd-text-display opacity-100"
-                    : "text-nd-text-disabled opacity-0 group-hover:opacity-100"
-                }`}
-              >
-                {item.label}
-              </span>
-            </a>
-          );
-        })}
-      </nav>
+      <SectionRail sections={SECTION_NAV} activeSection={activeSection} />
 
       {/* Hero */}
       <section id="overview" className="relative border-b border-nd-border">
@@ -377,33 +305,13 @@ export function PerkaholicPage() {
 
           {/* Stats row */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-16 pt-10 border-t border-nd-border">
-            {(
-              [
+            <SegmentedStats stats={[
                 { label: "Source langs", value: "3", total: 3, filled: 3, accentFrom: -1 },
                 { label: "Internal LOC", value: "~4.3k", total: 20, filled: 9, accentFrom: -1 },
                 { label: "Overlay LOC", value: "~18k", total: 20, filled: 20, accentFrom: 17 },
                 { label: "Crates", value: "5", total: 5, filled: 5, accentFrom: -1 },
               ] as const
-            ).map((stat) => (
-              <div key={stat.label}>
-                <span className="font-mono text-[10px] tracking-[0.08em] uppercase text-nd-text-disabled block mb-2">
-                  {stat.label}
-                </span>
-                <span className="font-display text-3xl md:text-4xl font-bold text-nd-text-display block mb-3">
-                  {stat.value}
-                </span>
-                <div className="nd-segmented-bar h-1.5 w-full">
-                  {Array.from({ length: stat.total }).map((_, i) => {
-                    const isFilled = i < stat.filled;
-                    const isAccent = stat.accentFrom >= 0 && i >= stat.accentFrom;
-                    const classes = ["segment", "flex-1"];
-                    if (isFilled && !isAccent) classes.push("filled");
-                    if (isAccent) classes.push("accent");
-                    return <span key={i} className={classes.join(" ")} style={{ height: "100%" }} />;
-                  })}
-                </div>
-              </div>
-            ))}
+            } />
           </div>
         </div>
       </section>

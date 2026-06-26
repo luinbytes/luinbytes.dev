@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { SectionRail, SegmentedStats, useActiveSection } from "@/components/case-page-parts";
 import {
   AlarmClock,
   Bell,
@@ -99,80 +99,11 @@ const techStack = [
 ];
 
 export default function SleeprPage() {
-  const [activeSection, setActiveSection] = useState<string>("overview");
-
-  useEffect(() => {
-    const sectionIds = SECTION_NAV.map((s) => s.id);
-    const elements = sectionIds
-      .map((id) => document.getElementById(id))
-      .filter((el): el is HTMLElement => el !== null);
-
-    if (elements.length === 0) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-        if (visible.length > 0) {
-          setActiveSection(visible[0].target.id);
-        }
-      },
-      {
-        rootMargin: "-30% 0px -60% 0px",
-        threshold: 0,
-      },
-    );
-
-    elements.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
-
-  const handleNavClick = (
-    e: React.MouseEvent<HTMLAnchorElement>,
-    id: string,
-  ) => {
-    e.preventDefault();
-    document.getElementById(id)?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
-  };
+  const activeSection = useActiveSection(SECTION_NAV);
 
   return (
     <div className="min-h-screen bg-nd-black scroll-smooth">
-      <nav
-        aria-label="Page sections"
-        className="hidden lg:flex fixed left-6 top-1/2 -translate-y-1/2 z-40 flex-col gap-5"
-      >
-        {SECTION_NAV.map((item) => {
-          const isActive = activeSection === item.id;
-          return (
-            <a
-              key={item.id}
-              href={`#${item.id}`}
-              onClick={(e) => handleNavClick(e, item.id)}
-              className="group flex items-center gap-3 nd-transition"
-              aria-current={isActive ? "true" : undefined}
-            >
-              <span
-                className={`w-1.5 h-1.5 rounded-full nd-transition ${
-                  isActive ? "bg-nd-accent" : "bg-nd-border-visible"
-                }`}
-              />
-              <span
-                className={`font-mono text-[10px] tracking-[0.08em] uppercase nd-transition ${
-                  isActive
-                    ? "text-nd-text-display opacity-100"
-                    : "text-nd-text-disabled opacity-0 group-hover:opacity-100"
-                }`}
-              >
-                {item.label}
-              </span>
-            </a>
-          );
-        })}
-      </nav>
+      <SectionRail sections={SECTION_NAV} activeSection={activeSection} />
 
       <section id="overview" className="relative border-b border-nd-border">
         <div className="absolute inset-0 dot-grid-subtle opacity-30 pointer-events-none" />
@@ -208,7 +139,6 @@ export default function SleeprPage() {
               <div className="flex flex-col sm:flex-row gap-3">
                 <a
                   href="#get-the-app"
-                  onClick={(e) => handleNavClick(e, "get-the-app")}
                   className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-nd-text-display text-nd-black font-mono text-[13px] font-bold tracking-[0.06em] uppercase rounded-full nd-transition hover:opacity-80 min-h-[44px]"
                 >
                   <Download className="w-4 h-4" />
@@ -216,7 +146,6 @@ export default function SleeprPage() {
                 </a>
                 <a
                   href="#privacy"
-                  onClick={(e) => handleNavClick(e, "privacy")}
                   className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-transparent border border-nd-border-visible text-nd-text-primary font-mono text-[13px] font-bold tracking-[0.06em] uppercase rounded-full nd-transition hover:border-nd-text-secondary min-h-[44px]"
                 >
                   <Shield className="w-4 h-4" />
@@ -260,32 +189,13 @@ export default function SleeprPage() {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-16 pt-10 border-t border-nd-border">
-            {(
-              [
+            <SegmentedStats stats={[
                 { label: "Platform", value: "Android", total: 1, filled: 1 },
                 { label: "Cycle base", value: "90m", total: 6, filled: 6 },
                 { label: "Cloud need", value: "0", total: 5, filled: 0 },
                 { label: "Mode", value: "Quiet", total: 4, filled: 4 },
               ] as const
-            ).map((stat) => (
-              <div key={stat.label}>
-                <span className="font-mono text-[10px] tracking-[0.08em] uppercase text-nd-text-disabled block mb-2">
-                  {stat.label}
-                </span>
-                <span className="font-display text-3xl md:text-4xl font-bold text-nd-text-display block mb-3">
-                  {stat.value}
-                </span>
-                <div className="nd-segmented-bar h-1.5 w-full">
-                  {Array.from({ length: stat.total }).map((_, i) => (
-                    <span
-                      key={i}
-                      className={`segment flex-1 ${i < stat.filled ? "filled" : ""}`}
-                      style={{ height: "100%" }}
-                    />
-                  ))}
-                </div>
-              </div>
-            ))}
+            } />
           </div>
         </div>
       </section>
