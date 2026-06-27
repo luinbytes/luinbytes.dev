@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Command, Crosshair, Focus, Gauge, Layers3, MousePointer2 } from "lucide-react";
+import { Command, Crosshair, Focus, Layers3, MousePointer2 } from "lucide-react";
 import { getCaseStudy } from "@/lib/case-studies";
 import { cn } from "@/lib/utils";
 
@@ -26,13 +26,12 @@ export function CaseInterfaceOverlay() {
   const [activeId, setActiveId] = useState("");
   const [progress, setProgress] = useState(0);
   const [panelOpen, setPanelOpen] = useState(false);
-  const [scanMode, setScanMode] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
 
   useEffect(() => {
-    document.documentElement.toggleAttribute("data-scan-mode", scanMode);
+    document.documentElement.setAttribute("data-scan-mode", "");
     return () => document.documentElement.removeAttribute("data-scan-mode");
-  }, [scanMode]);
+  }, []);
 
   useEffect(() => {
     document.documentElement.toggleAttribute("data-focus-mode", focusMode);
@@ -197,21 +196,7 @@ export function CaseInterfaceOverlay() {
           ))}
         </nav>
 
-        <div className="mt-3 grid grid-cols-3 gap-2">
-          <button
-            type="button"
-            onClick={() => setScanMode((value) => !value)}
-            aria-pressed={scanMode}
-            className={cn(
-              "grid min-h-[48px] place-items-center rounded-2xl border nd-focus nd-transition",
-              scanMode
-                ? "border-nd-accent bg-nd-accent text-nd-black"
-                : "border-nd-border bg-nd-black/35 text-nd-text-secondary hover:text-nd-text-display"
-            )}
-            title="Toggle scan overlays"
-          >
-            <Gauge className="h-4 w-4" />
-          </button>
+        <div className="mt-3 grid grid-cols-2 gap-2">
           <button
             type="button"
             onClick={() => setFocusMode((value) => !value)}
