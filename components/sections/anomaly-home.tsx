@@ -11,7 +11,6 @@ import {
   Filter,
   Mail,
   Shuffle,
-  Sparkles,
 } from "lucide-react";
 import {
   commandFilters,
@@ -476,14 +475,6 @@ export function AnomalyHome() {
           </div>
         </section>
       </main>
-
-      <div
-        aria-hidden="true"
-        className="pointer-events-none fixed bottom-5 right-5 z-30 hidden rounded-full border border-nd-border bg-nd-surface/70 px-3 py-2 font-mono text-[10px] uppercase tracking-label text-nd-text-disabled backdrop-blur md:block"
-      >
-        <Sparkles className="mr-2 inline h-3.5 w-3.5 text-nd-accent" />
-        reactive surface
-      </div>
     </div>
   );
 }
