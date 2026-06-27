@@ -6,6 +6,8 @@ import {
   CheckSquare,
   Files,
   Gamepad2,
+  MousePointerBan,
+  Smartphone,
   type LucideIcon,
 } from "lucide-react";
 
@@ -32,7 +34,7 @@ export type ProblemBuild = {
 
 export const workbenchItems = [
   { label: "Focus", value: "Building & shipping" },
-  { label: "Currently", value: "Meteor, linux-sonar, Raycast extensions" },
+  { label: "Currently", value: "Poke Android, Minecrooft, Cursor Barrier" },
   { label: "Always", value: "Learning, breaking, rebuilding" },
   { label: "Jump", value: "/linux /android /reverse /raycast" },
 ] as const;
@@ -130,8 +132,39 @@ export const problemBuilds: ProblemBuild[] = [
     icon: CheckSquare,
   },
   {
-    id: "file-deduplicator",
+    id: "poke-android-client",
     index: "03",
+    problem: "Android RCS makes Poke feel slower than it should.",
+    buildName: "Poke Android",
+    shortName: "Poke client",
+    summary:
+      "Native Android client plus companion backend for faster Poke messaging, rich actions, notifications, and webhook-backed context.",
+    outcome:
+      "A dedicated Android lane for Poke: Compose app, Node backend, SQLite event store, SSE sessions, and Samsung-tested debug flows.",
+    tech: ["Kotlin", "Compose", "Node", "SQLite"],
+    href: "https://github.com/luinbytes/poke-android-client",
+    sourceHref: "https://github.com/luinbytes/poke-android-client",
+    filters: ["android", "kotlin", "node", "ai"],
+    icon: Smartphone,
+  },
+  {
+    id: "sleepr",
+    index: "04",
+    problem: "Sleep apps turn bedtime into another dashboard.",
+    buildName: "Sleepr",
+    shortName: "Sleep guidance",
+    summary:
+      "A quiet Android sleep companion for cycle-aware wake windows, optional live notifications, and private on-device rhythm learning.",
+    outcome:
+      "Keeps bedtime planning local and practical: no account, opt-in notification ticker, and morning feedback that tunes the model.",
+    tech: ["Kotlin", "Compose", "Room", "WorkManager"],
+    href: "/sleepr",
+    filters: ["android", "kotlin", "sleep", "local-first"],
+    icon: Smartphone,
+  },
+  {
+    id: "file-deduplicator",
+    index: "05",
     problem: "Duplicate files waste space and clutter everything.",
     buildName: "file-deduplicator",
     shortName: "Duplicate cleanup",
@@ -147,7 +180,7 @@ export const problemBuilds: ProblemBuild[] = [
   },
   {
     id: "reverse-engineering",
-    index: "04",
+    index: "06",
     problem: "Game systems are opaque black boxes.",
     buildName: "game systems / reverse engineering",
     shortName: "Systems craft",
@@ -162,7 +195,7 @@ export const problemBuilds: ProblemBuild[] = [
   },
   {
     id: "perkaholic",
-    index: "05",
+    index: "07",
     problem: "Wayland and Wine do not share a windowing path.",
     buildName: "perkaholic",
     shortName: "BO3 hybrid trainer",
@@ -177,8 +210,40 @@ export const problemBuilds: ProblemBuild[] = [
     icon: Gamepad2,
   },
   {
+    id: "minecrooft",
+    index: "08",
+    problem: "Voxel engines are best understood by building one.",
+    buildName: "Minecrooft",
+    shortName: "Voxel engine",
+    summary:
+      "Minecraft-style engine built from scratch in Rust with wgpu rendering, procedural biomes, survival/creative modes, and chunk save/load.",
+    outcome:
+      "A deterministic voxel sandbox with culled chunk meshing, generated textures, inventory, HUD, physics, and multithreaded world loading.",
+    tech: ["Rust", "wgpu", "winit", "egui"],
+    href: "https://github.com/luinbytes/minecrooft",
+    sourceHref: "https://github.com/luinbytes/minecrooft",
+    filters: ["rust", "game", "systems", "engine"],
+    icon: Boxes,
+  },
+  {
+    id: "cursor-barrier",
+    index: "09",
+    problem: "Pointer boundaries should follow the way the desktop is actually used.",
+    buildName: "Cursor Barrier",
+    shortName: "Pointer control",
+    summary:
+      "Linux cursor utility for controlling pointer movement at workspace and monitor edges without reaching for a heavier desktop tool.",
+    outcome:
+      "Small systems utility shaped around a single desktop annoyance: predictable cursor behavior with minimal moving parts.",
+    tech: ["C", "Linux", "Desktop"],
+    href: "https://github.com/luinbytes/cursor-barrier",
+    sourceHref: "https://github.com/luinbytes/cursor-barrier",
+    filters: ["linux", "desktop", "systems", "utility"],
+    icon: MousePointerBan,
+  },
+  {
     id: "raycast-automation",
-    index: "06",
+    index: "10",
     problem: "Automation is more work than doing the thing.",
     buildName: "Raycast automation",
     shortName: "Small workflow tools",
