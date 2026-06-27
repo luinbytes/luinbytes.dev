@@ -710,6 +710,10 @@ html.theme-morphing::view-transition-new(root) {
   animation: anomaly-pulse 900ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.anomaly-lens-attention {
+  animation: anomaly-attention 1200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 .anomaly-orbit {
   position: relative;
   min-height: 15rem;
@@ -902,6 +906,24 @@ html[data-focus-mode] header:focus-within {
   }
   45% {
     filter: saturate(1.45) brightness(1.12);
+  }
+}
+
+@keyframes anomaly-attention {
+  0%,
+  100% {
+    box-shadow:
+      0 28px 90px rgba(0, 0, 0, 0.34),
+      inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    filter: saturate(1);
+  }
+  35% {
+    box-shadow:
+      0 0 0 2px rgba(255, 79, 109, 0.82),
+      0 0 0 14px rgba(255, 79, 109, 0.13),
+      0 32px 105px rgba(255, 79, 109, 0.26),
+      inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    filter: saturate(1.45) brightness(1.1);
   }
 }
 

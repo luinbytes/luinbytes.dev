@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
@@ -33,6 +33,9 @@ export function AnomalyHome() {
   const [query, setQuery] = useState("");
   const [intensity, setIntensity] = useState(62);
   const [surprise, setSurprise] = useState(false);
+  const [attention, setAttention] = useState(false);
+  const attentionTimeoutRef = useRef<number | null>(null);
+  const attentionResetRef = useRef<number | null>(null);
 
   const visibleBuilds = useMemo(() => {
     const search = query.trim().toLowerCase();
@@ -69,11 +72,30 @@ export function AnomalyHome() {
     window.dispatchEvent(new CustomEvent("lu:open-command-menu"));
   };
 
+  const cueActiveCase = (delay = 0) => {
+    if (attentionTimeoutRef.current) {
+      window.clearTimeout(attentionTimeoutRef.current);
+    }
+    if (attentionResetRef.current) {
+      window.clearTimeout(attentionResetRef.current);
+    }
+
+    attentionTimeoutRef.current = window.setTimeout(() => {
+      setAttention(true);
+      attentionResetRef.current = window.setTimeout(() => {
+        setAttention(false);
+        attentionResetRef.current = null;
+      }, 1200);
+    }, delay);
+  };
+
   const selectRandom = () => {
     const pool = visibleBuilds.length > 0 ? visibleBuilds : problemBuilds;
-    const next = pool[Math.floor(Math.random() * pool.length)];
+    const currentIndex = pool.findIndex((build) => build.id === selected.id);
+    const next = pool[(currentIndex + 1) % pool.length];
     setSelectedId(next.id);
     setSurprise(true);
+    cueActiveCase(120);
     window.setTimeout(() => setSurprise(false), 900);
   };
 
@@ -83,7 +105,19 @@ export function AnomalyHome() {
       behavior: prefersReducedMotion ? "auto" : "smooth",
       block: "center",
     });
+    cueActiveCase(prefersReducedMotion ? 0 : 520);
   };
+
+  useEffect(() => {
+    return () => {
+      if (attentionTimeoutRef.current) {
+        window.clearTimeout(attentionTimeoutRef.current);
+      }
+      if (attentionResetRef.current) {
+        window.clearTimeout(attentionResetRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="relative isolate min-h-screen overflow-hidden bg-nd-black text-nd-text-primary">
@@ -145,7 +179,8 @@ export function AnomalyHome() {
               id="active-case"
               className={cn(
                 "anomaly-lens min-h-[390px] p-4 sm:p-5",
-                surprise && "anomaly-lens-pulse"
+                surprise && "anomaly-lens-pulse",
+                attention && "anomaly-lens-attention"
               )}
               style={{ "--anomaly-intensity": `${intensity}%` } as CSSProperties}
               animate={
