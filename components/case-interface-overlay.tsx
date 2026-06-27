@@ -131,7 +131,7 @@ export function CaseInterfaceOverlay() {
 
       <aside
         aria-label={`${study.title} case interface`}
-        className="case-hud fixed right-4 top-24 z-40 hidden w-[270px] rounded-[28px] border border-nd-border-visible/55 bg-nd-surface/72 p-3 text-nd-text-primary shadow-[0_24px_70px_rgba(0,0,0,0.28)] backdrop-blur-2xl xl:block"
+        className="case-hud fixed right-4 top-32 z-40 hidden w-[270px] rounded-[28px] border border-nd-border-visible/55 bg-nd-surface/72 p-3 text-nd-text-primary shadow-[0_24px_70px_rgba(0,0,0,0.28)] backdrop-blur-2xl xl:block"
       >
         <div className="rounded-[22px] border border-nd-border/70 bg-nd-black/46 p-4">
           <div className="mb-4 flex items-start justify-between gap-3">

@@ -253,7 +253,7 @@ export function Header() {
             {productMenuOpen && (
               <div
                 id="products-menu"
-                className="atlas-paper absolute right-0 top-full mt-2 w-[360px] border-2 border-nd-border-visible bg-nd-surface p-3 shadow-[12px_12px_0_rgba(20,16,10,0.12)]"
+                className="atlas-paper fixed right-4 top-20 max-h-[calc(100vh-6rem)] w-[360px] overflow-y-auto border-2 border-nd-border-visible bg-nd-surface p-3 shadow-[12px_12px_0_rgba(20,16,10,0.12)]"
               >
                 <div className="grid gap-3">
                   {productGroups.map((group) => {

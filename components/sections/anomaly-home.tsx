@@ -77,6 +77,14 @@ export function AnomalyHome() {
     window.setTimeout(() => setSurprise(false), 900);
   };
 
+  const selectBuild = (id: string) => {
+    setSelectedId(id);
+    document.getElementById("active-case")?.scrollIntoView({
+      behavior: prefersReducedMotion ? "auto" : "smooth",
+      block: "center",
+    });
+  };
+
   return (
     <div className="relative isolate min-h-screen overflow-hidden bg-nd-black text-nd-text-primary">
       <div className="anomaly-backdrop" aria-hidden="true" />
@@ -134,6 +142,7 @@ export function AnomalyHome() {
             </div>
 
             <motion.div
+              id="active-case"
               className={cn(
                 "anomaly-lens min-h-[390px] p-4 sm:p-5",
                 surprise && "anomaly-lens-pulse"
@@ -169,7 +178,7 @@ export function AnomalyHome() {
                     <button
                       key={build.id}
                       type="button"
-                      onClick={() => setSelectedId(build.id)}
+                      onClick={() => selectBuild(build.id)}
                       className={cn(
                         "anomaly-node nd-focus",
                         selected.id === build.id && "is-active"
@@ -231,7 +240,7 @@ export function AnomalyHome() {
           </div>
           <a
             href="#builds"
-            className="absolute bottom-3 left-1/2 hidden -translate-x-1/2 rounded-full border border-nd-border bg-nd-surface/64 px-3 py-2 font-mono text-[10px] uppercase tracking-label text-nd-text-disabled backdrop-blur nd-focus nd-transition hover:border-nd-accent hover:text-nd-text-display md:inline-flex"
+            className="mx-auto mt-8 hidden w-max rounded-full border border-nd-border bg-nd-surface/64 px-3 py-2 font-mono text-[10px] uppercase tracking-label text-nd-text-disabled backdrop-blur nd-focus nd-transition hover:border-nd-accent hover:text-nd-text-display md:flex"
           >
             next: problem selector
           </a>
@@ -298,7 +307,7 @@ export function AnomalyHome() {
                       type="button"
                       role="option"
                       aria-selected={active}
-                      onClick={() => setSelectedId(build.id)}
+                      onClick={() => selectBuild(build.id)}
                       className={cn(
                         "anomaly-row group grid gap-4 rounded-[28px] border p-4 text-left nd-focus md:grid-cols-[4.8rem_1fr_auto] md:items-center md:p-5",
                         active
