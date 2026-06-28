@@ -29,7 +29,7 @@ const themes: Record<
 
 function applyTheme(theme: Theme) {
   document.documentElement.dataset.theme = theme;
-  document.documentElement.style.colorScheme = "dark";
+  document.documentElement.style.colorScheme = theme === "void" ? "dark" : "light";
 }
 
 function getStoredTheme(): Theme {
