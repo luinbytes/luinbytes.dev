@@ -141,7 +141,7 @@ export function AnomalyHome() {
           <div className="mx-auto grid max-w-[92rem] gap-8 lg:grid-cols-[minmax(0,1.04fr)_minmax(390px,0.96fr)] lg:items-center">
             <div className="pt-6 md:pt-8">
               <div className="mb-6 flex flex-wrap items-center gap-3">
-                <span className="anomaly-chip">Workbench portfolio</span>
+                <span className="anomaly-chip">Verified shipped work</span>
                 <button
                   type="button"
                   onClick={openCommandMenu}
@@ -159,9 +159,9 @@ export function AnomalyHome() {
               </h1>
 
               <p className="mt-6 max-w-2xl text-base leading-relaxed text-nd-text-secondary md:text-lg">
-                Android apps, Linux systems, reverse-engineering tools,
-                automation, and small utilities from the edge cases normal
-                software leaves behind.
+                AI-assisted execution across Android apps, Linux systems,
+                reverse-engineering tools, automation, and utilities, turning
+                messy technical work into verified shipped outcomes.
               </p>
 
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">

@@ -120,10 +120,10 @@ export default function RootLayout({
     const stored = localStorage.getItem("lu-theme");
     const theme = stored === "void" ? "void" : "anomaly";
     document.documentElement.dataset.theme = theme;
-    document.documentElement.style.colorScheme = "dark";
+    document.documentElement.style.colorScheme = theme === "void" ? "dark" : "light";
   } catch {
     document.documentElement.dataset.theme = "anomaly";
-    document.documentElement.style.colorScheme = "dark";
+    document.documentElement.style.colorScheme = "light";
   }
 })();`,
           }}
