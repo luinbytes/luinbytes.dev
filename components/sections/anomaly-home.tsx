@@ -30,7 +30,7 @@ export function AnomalyHome() {
   const [activeFilter, setActiveFilter] = useState("all");
   const [selectedId, setSelectedId] = useState(problemBuilds[0].id);
   const [query, setQuery] = useState("");
-  const [intensity, setIntensity] = useState(62);
+  const [intensity] = useState(62);
   const [surprise, setSurprise] = useState(false);
   const [attention, setAttention] = useState(false);
   const attentionTimeoutRef = useRef<number | null>(null);
@@ -107,6 +107,17 @@ export function AnomalyHome() {
     cueActiveCase(prefersReducedMotion ? 0 : 520);
   };
 
+  const moveSelection = (direction: 1 | -1) => {
+    const pool = visibleBuilds.length > 0 ? visibleBuilds : problemBuilds;
+    const currentIndex = Math.max(
+      0,
+      pool.findIndex((build) => build.id === selected.id)
+    );
+    const next = pool[(currentIndex + direction + pool.length) % pool.length];
+    setSelectedId(next.id);
+    cueActiveCase(0);
+  };
+
   useEffect(() => {
     return () => {
       if (attentionTimeoutRef.current) {
@@ -130,9 +141,7 @@ export function AnomalyHome() {
           <div className="mx-auto grid max-w-[92rem] gap-8 lg:grid-cols-[minmax(0,1.04fr)_minmax(390px,0.96fr)] lg:items-center">
             <div className="pt-6 md:pt-8">
               <div className="mb-6 flex flex-wrap items-center gap-3">
-                <span className="anomaly-chip">
-                  Precision Anomaly
-                </span>
+                <span className="anomaly-chip">Workbench portfolio</span>
                 <button
                   type="button"
                   onClick={openCommandMenu}
@@ -150,9 +159,9 @@ export function AnomalyHome() {
               </h1>
 
               <p className="mt-6 max-w-2xl text-base leading-relaxed text-nd-text-secondary md:text-lg">
-                Android apps, Linux audio systems, reverse-engineering and game
-                tooling, automation, CLI utilities, and tiny tools that stay out
-                of the way.
+                Android apps, Linux systems, reverse-engineering tools,
+                automation, and small utilities from the edge cases normal
+                software leaves behind.
               </p>
 
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">
@@ -259,17 +268,21 @@ export function AnomalyHome() {
                 </div>
               </div>
 
-              <label className="mt-5 block font-mono text-[10px] uppercase tracking-label text-nd-text-disabled">
-                Interface intensity
-                <input
-                  value={intensity}
-                  min={20}
-                  max={100}
-                  type="range"
-                  onChange={(event) => setIntensity(Number(event.target.value))}
-                  className="mt-3 w-full accent-[var(--color-nd-accent)]"
-                />
-              </label>
+              <div className="mt-5 grid gap-0 border-t border-nd-border pt-2">
+                {workbenchItems.map((item) => (
+                  <div
+                    key={item.label}
+                    className="grid grid-cols-[6rem_1fr] gap-3 border-b border-nd-border/70 py-3 last:border-b-0"
+                  >
+                    <span className="font-mono text-[10px] uppercase tracking-label text-nd-accent">
+                      {item.label}
+                    </span>
+                    <span className="text-sm leading-relaxed text-nd-text-primary">
+                      {item.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </motion.div>
           </div>
           <a
@@ -331,7 +344,21 @@ export function AnomalyHome() {
                 </div>
               </div>
 
-              <div className="grid gap-3" role="listbox" aria-label="Build cases">
+              <div
+                className="grid gap-3"
+                role="listbox"
+                aria-label="Build cases"
+                onKeyDown={(event) => {
+                  if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+                    event.preventDefault();
+                    moveSelection(1);
+                  }
+                  if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
+                    event.preventDefault();
+                    moveSelection(-1);
+                  }
+                }}
+              >
                 {visibleBuilds.map((build, index) => {
                   const Icon = build.icon;
                   const active = build.id === selected.id;
