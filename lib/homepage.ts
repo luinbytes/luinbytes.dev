@@ -34,7 +34,7 @@ export type ProblemBuild = {
 
 export const workbenchItems = [
   { label: "Focus", value: "Building & shipping" },
-  { label: "Currently", value: "Poke Android, Minecrooft, Cursor Barrier" },
+  { label: "Currently", value: "Meteor, linux-sonar, Raycast extensions" },
   { label: "Always", value: "Learning, breaking, rebuilding" },
   { label: "Jump", value: "/linux /android /reverse /raycast" },
 ] as const;
