@@ -19,7 +19,7 @@ export function Hero() {
       className="theme-hero-section relative flex min-h-[calc(100svh-5rem)] items-center overflow-hidden border-b border-nd-border"
     >
       <div className="theme-hero-grid absolute inset-0 dot-grid-subtle opacity-70" />
-      <div className="theme-atlas-accent-bar absolute left-0 top-0 h-full w-2 bg-nd-accent" />
+      <div className="theme-accent-bar absolute left-0 top-0 h-full w-2 bg-nd-accent" />
       <div className="absolute inset-x-0 bottom-0 h-px bg-nd-border-visible" />
       <AtlasField />
 
@@ -27,8 +27,7 @@ export function Hero() {
         <ScrollReveal>
           <div className="theme-hero-note mb-7 inline-flex items-center gap-3 border border-nd-border-visible bg-nd-surface px-3 py-2 font-mono text-[10px] uppercase tracking-label-tight text-nd-text-secondary shadow-[6px_6px_0_rgba(20,16,10,0.12)]">
             <span className="h-2 w-2 bg-nd-accent" />
-            <span className="theme-atlas-copy">Field note 00 / working reflex</span>
-            <span className="theme-nothing-copy">Nothing system / working reflex</span>
+            <span>Field note 00 / working reflex</span>
           </div>
           <h1 className="theme-hero-title max-w-5xl font-display text-5xl font-bold leading-[0.9] tracking-normal text-nd-text-display md:text-7xl lg:text-[5.9rem]">
             I get annoyed,
@@ -72,8 +71,7 @@ export function Hero() {
           className="theme-workbench-card atlas-mark atlas-paper border-2 border-nd-border-visible bg-nd-surface p-5 shadow-[12px_12px_0_rgba(20,16,10,0.12)] md:p-6"
         >
           <div className="theme-workbench-heading mb-6 flex items-center justify-between border-b-2 border-nd-border-visible pb-4 font-mono text-[10px] uppercase tracking-label text-nd-text-secondary">
-            <span className="theme-atlas-copy">Atlas Readout</span>
-            <span className="theme-nothing-copy">Workbench</span>
+            <span>Readout</span>
             <span>May 2026</span>
           </div>
           <dl className="space-y-0">
