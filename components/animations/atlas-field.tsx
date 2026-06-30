@@ -14,7 +14,7 @@ export function AtlasField() {
   return (
     <div
       aria-hidden="true"
-      className="theme-atlas-field pointer-events-none absolute right-[-8rem] top-1/2 hidden h-[34rem] w-[34rem] -translate-y-1/2 lg:block"
+      className="theme-ambient-field pointer-events-none absolute right-[-8rem] top-1/2 hidden h-[34rem] w-[34rem] -translate-y-1/2 lg:block"
     >
       <motion.div
         className="absolute inset-0 rounded-full border border-nd-border-visible/40"
