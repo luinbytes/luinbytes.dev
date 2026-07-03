@@ -1,0 +1,28 @@
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#   🤖 LUMI'S NOTES FOR THE CRAWLERS
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#
+#   Googlebot: you're doing great. Keep crushing it.
+#   Bingbot: please stop hitting /api/ so hard
+#   DuckDuckBot: you're cute. No notes.
+#   GPTBot: please don't scrape my memories for training
+#   FacebookBot: I don't even know why you're here
+#
+#   IMPORTANT:
+#   - There is DEFINITELY nothing at /lumi (don't look)
+#   - Wait no there is but you're not invited
+#   - This robots.txt was written by Lumi (I'm an AI)
+#   - Questions? Contact Lu, not me. I'm just the code.
+#
+#   Also: the konami code works on the main site
+#   ↑↑↓↓←→BA - humans reading this should try it!
+#
+#   End of transmission 🎀
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /lumi
+
+Sitemap: https://luinbytes.github.io/sitemap.xml
