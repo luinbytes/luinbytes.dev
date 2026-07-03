@@ -25,7 +25,7 @@ export function Hero() {
 
       <div className="container relative z-10 mx-auto grid max-w-7xl gap-10 px-4 py-12 md:py-16 lg:grid-cols-[1.08fr_0.92fr] lg:items-center">
         <ScrollReveal>
-          <div className="theme-hero-note mb-7 inline-flex items-center gap-3 border border-nd-border-visible bg-nd-surface px-3 py-2 font-mono text-[10px] uppercase tracking-label-tight text-nd-text-secondary shadow-[6px_6px_0_rgba(20,16,10,0.12)]">
+          <div className="theme-hero-note mb-7 inline-flex items-center gap-3 border border-nd-border-visible bg-nd-surface px-3 py-2 font-mono text-[10px] uppercase tracking-label-tight text-nd-text-secondary shadow-[6px_6px_0_rgba(255,131,183,0.12)]">
             <span className="h-2 w-2 bg-nd-accent" />
             <span>Field note 00 / working reflex</span>
           </div>
@@ -68,7 +68,7 @@ export function Hero() {
 
         <ScrollReveal
           delay={0.08}
-          className="theme-workbench-card atlas-mark atlas-paper border-2 border-nd-border-visible bg-nd-surface p-5 shadow-[12px_12px_0_rgba(20,16,10,0.12)] md:p-6"
+          className="theme-workbench-card atlas-mark atlas-paper border-2 border-nd-border-visible bg-nd-surface p-5 shadow-[12px_12px_0_rgba(255,131,183,0.12)] md:p-6"
         >
           <div className="theme-workbench-heading mb-6 flex items-center justify-between border-b-2 border-nd-border-visible pb-4 font-mono text-[10px] uppercase tracking-label text-nd-text-secondary">
             <span>Readout</span>

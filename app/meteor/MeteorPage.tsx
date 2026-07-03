@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { SectionRail, SegmentedStats, useActiveSection } from "@/components/case-page-parts";
+import { CaseProofLoop, SectionRail, SegmentedStats, useActiveSection } from "@/components/case-page-parts";
 import {
   Download,
   Shield,
@@ -322,6 +322,15 @@ export function MeteorPage() {
           </div>
         </div>
       </section>
+
+      <CaseProofLoop
+        steps={[
+          { label: "Problem", value: "Tasks and habits split the daily view." },
+          { label: "Build", value: "One Android surface for tasks, habits, widgets, and reminders." },
+          { label: "Verify", value: "Room, WorkManager, and privacy sections document the local path." },
+          { label: "Ship", value: "Play Store app with no account requirement." },
+        ]}
+      />
 
       {/* Habits */}
       <section id="habits" className="py-24 md:py-32 border-b border-nd-border">

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { SectionRail, SegmentedStats, useActiveSection } from "@/components/case-page-parts";
+import { CaseProofLoop, SectionRail, SegmentedStats, useActiveSection } from "@/components/case-page-parts";
 import {
   Github,
   Download,
@@ -315,6 +315,15 @@ export function PerkaholicPage() {
           </div>
         </div>
       </section>
+
+      <CaseProofLoop
+        steps={[
+          { label: "Problem", value: "Wine/Proton trainers split engine state from native UI." },
+          { label: "Build", value: "XInput proxy DLL, Wayland overlay, and binary IPC." },
+          { label: "Verify", value: "Public source shows the DLL, overlay, and bridge." },
+          { label: "Ship", value: "Hybrid BO3 trainer with release builds." },
+        ]}
+      />
 
       {/* Features */}
       <section id="features" className="py-24 md:py-32 border-b border-nd-border">

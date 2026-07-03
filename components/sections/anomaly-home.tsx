@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties } from "react";
 import Link from "next/link";
-import { motion, useReducedMotion } from "framer-motion";
+import { useReducedMotion } from "framer-motion";
 import {
   ArrowRight,
   Command,
@@ -17,10 +16,12 @@ import {
   contactLinks,
   originLines,
   problemBuilds,
+  proofLoopSteps,
   workbenchItems,
 } from "@/lib/homepage";
 import { cn } from "@/lib/utils";
 import { CommandShortcut } from "@/components/os-shortcut";
+import { HomeCommandChoreography } from "@/components/animations/home-command-choreography";
 
 const allFilter = { label: "All", value: "all", icon: Filter };
 const filters = [allFilter, ...commandFilters];
@@ -30,7 +31,7 @@ export function AnomalyHome() {
   const [activeFilter, setActiveFilter] = useState("all");
   const [selectedId, setSelectedId] = useState(problemBuilds[0].id);
   const [query, setQuery] = useState("");
-  const [intensity] = useState(62);
+  const [activeProofStep, setActiveProofStep] = useState(0);
   const [surprise, setSurprise] = useState(false);
   const [attention, setAttention] = useState(false);
   const attentionTimeoutRef = useRef<number | null>(null);
@@ -66,6 +67,12 @@ export function AnomalyHome() {
     visibleBuilds[0] ??
     problemBuilds[0];
   const SelectedIcon = selected.icon;
+  const selectedProofLoop = [
+    { ...proofLoopSteps[0], value: selected.problem },
+    { ...proofLoopSteps[1], value: selected.shortName },
+    { ...proofLoopSteps[2], value: selected.sourceHref ? "Source linked" : "Case documented" },
+    { ...proofLoopSteps[3], value: "Open case" },
+  ];
 
   const openCommandMenu = () => {
     window.dispatchEvent(new CustomEvent("lu:open-command-menu"));
@@ -100,6 +107,7 @@ export function AnomalyHome() {
 
   const selectBuild = (id: string) => {
     setSelectedId(id);
+    setActiveProofStep(0);
     document.getElementById("active-case")?.scrollIntoView({
       behavior: prefersReducedMotion ? "auto" : "smooth",
       block: "center",
@@ -131,6 +139,7 @@ export function AnomalyHome() {
 
   return (
     <div className="relative isolate min-h-screen overflow-hidden bg-nd-black text-nd-text-primary">
+      <HomeCommandChoreography />
       <div className="anomaly-backdrop" aria-hidden="true" />
       <main className="relative z-10">
         <section
@@ -140,7 +149,7 @@ export function AnomalyHome() {
         >
           <div className="mx-auto grid max-w-[92rem] gap-8 lg:grid-cols-[minmax(0,1.04fr)_minmax(390px,0.96fr)] lg:items-center">
             <div className="pt-6 md:pt-8">
-              <div className="mb-6 flex flex-wrap items-center gap-3">
+              <div className="mb-6 flex flex-wrap items-center gap-3" data-command-intro>
                 <span className="anomaly-chip">Verified shipped work</span>
                 <button
                   type="button"
@@ -152,19 +161,101 @@ export function AnomalyHome() {
                 </button>
               </div>
 
-              <h1 className="max-w-5xl text-balance font-display text-[clamp(2.85rem,6.55vw,6.6rem)] font-black leading-[0.84] tracking-normal text-nd-text-display">
+              <h1
+                className="max-w-5xl text-balance font-display text-[clamp(2.85rem,6.55vw,6.6rem)] font-black leading-[0.84] tracking-normal text-nd-text-display"
+                data-command-intro
+              >
                 I get annoyed,
                 <span className="block text-nd-accent">then I build</span>
                 the missing thing.
               </h1>
 
-              <p className="mt-6 max-w-2xl text-base leading-relaxed text-nd-text-secondary md:text-lg">
+              <p
+                className="mt-6 max-w-2xl text-base leading-relaxed text-nd-text-secondary md:text-lg"
+                data-command-intro
+              >
                 AI-assisted execution across Android apps, Linux systems,
                 reverse-engineering tools, automation, and utilities, turning
                 messy technical work into verified shipped outcomes.
               </p>
 
-              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+              <div
+                className="mt-7 rounded-[30px] border border-nd-border-visible/45 bg-nd-surface/72 p-3 shadow-[0_24px_70px_rgba(0,0,0,0.28)] backdrop-blur-2xl"
+                data-primary-surface
+              >
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <label className="sr-only" htmlFor="hero-command-search">
+                    Search shipped work
+                  </label>
+                  <input
+                    id="hero-command-search"
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="Search proof loop, stack, annoyance..."
+                    className="min-h-[48px] flex-1 rounded-full border border-nd-border bg-nd-black/52 px-5 font-mono text-sm text-nd-text-display outline-none placeholder:text-nd-text-disabled focus:border-nd-accent"
+                  />
+                  <button
+                    type="button"
+                    onClick={openCommandMenu}
+                    className="anomaly-button anomaly-button-secondary min-h-[48px] shrink-0"
+                  >
+                    Command
+                    <Command className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <div className="mt-3 grid gap-2">
+                  {(visibleBuilds.length > 0 ? visibleBuilds : problemBuilds)
+                    .slice(0, 3)
+                    .map((build, index) => {
+                      const active = build.id === selected.id;
+                      return (
+                        <button
+                          key={build.id}
+                          type="button"
+                          onClick={() => selectBuild(build.id)}
+                          className={cn(
+                            "grid min-h-[54px] grid-cols-[2rem_1fr_auto] items-center gap-3 rounded-2xl border px-3 text-left nd-focus nd-transition",
+                            active
+                              ? "border-nd-accent/70 bg-nd-accent-subtle text-nd-text-display"
+                              : "border-nd-border bg-nd-black/32 text-nd-text-secondary hover:border-nd-border-visible hover:text-nd-text-display"
+                          )}
+                        >
+                          <span className="font-mono text-[10px] text-nd-text-disabled">
+                            {String(index + 1).padStart(2, "0")}
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block truncate text-sm font-bold">
+                              {build.buildName}
+                            </span>
+                            <span className="mt-1 block truncate font-mono text-[10px] uppercase tracking-label-tight text-nd-accent">
+                              {build.shortName}
+                            </span>
+                          </span>
+                          <ArrowRight className="h-4 w-4 text-nd-accent" />
+                        </button>
+                      );
+                    })}
+                </div>
+
+                <div className="mt-3 grid gap-2 sm:grid-cols-4">
+                  {proofLoopSteps.map((step, index) => (
+                    <div
+                      key={step.label}
+                      className="rounded-2xl border border-nd-border bg-nd-black/36 p-3"
+                    >
+                      <p className="font-mono text-[10px] uppercase tracking-label-tight text-nd-accent">
+                        {String(index + 1).padStart(2, "0")} {step.label}
+                      </p>
+                      <p className="mt-2 text-xs leading-snug text-nd-text-secondary">
+                        {step.value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row" data-command-intro>
                 <Link
                   href="#builds"
                   className="anomaly-button anomaly-button-primary"
@@ -183,39 +274,34 @@ export function AnomalyHome() {
               </div>
             </div>
 
-            <motion.div
+            <div
               id="active-case"
+              data-active-case
               className={cn(
                 "anomaly-lens min-h-[390px] p-4 sm:p-5",
                 surprise && "anomaly-lens-pulse",
                 attention && "anomaly-lens-attention"
               )}
-              style={{ "--anomaly-intensity": `${intensity}%` } as CSSProperties}
-              animate={
-                prefersReducedMotion
-                  ? undefined
-                  : { y: [0, -8, 0], rotate: [0, 0.35, 0] }
-              }
-              transition={
-                prefersReducedMotion
-                  ? undefined
-                  : { duration: 7, repeat: Infinity, ease: "easeInOut" }
-              }
             >
-              <div className="mb-4 flex items-start justify-between gap-4">
+              <div className="mb-4 flex items-start justify-between gap-4 border-b border-nd-border pb-4">
                 <div>
                   <p className="font-mono text-[10px] uppercase tracking-label text-nd-accent">
-                    Active Case
+                    Active Case / Proof Loop
                   </p>
                   <h2 className="mt-2 text-3xl font-bold leading-none text-nd-text-display sm:text-4xl">
                     {selected.buildName}
                   </h2>
+                  <p className="mt-2 max-w-xl font-mono text-[10px] uppercase tracking-label-tight text-nd-text-secondary">
+                    {selected.shortName} / {selected.tech.slice(0, 3).join(" / ")}
+                  </p>
                 </div>
-                <SelectedIcon className="h-8 w-8 text-nd-accent" strokeWidth={1.5} />
+                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-nd-border-visible/70 bg-nd-accent text-nd-black shadow-[0_18px_45px_rgba(255,131,183,0.24)]">
+                  <SelectedIcon className="h-5 w-5" strokeWidth={1.8} />
+                </span>
               </div>
 
-              <div className="anomaly-orbit" aria-hidden="true">
-                {problemBuilds.slice(0, 6).map((build, index) => {
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-6" aria-label="Case switchboard">
+                {problemBuilds.slice(0, 6).map((build) => {
                   const Icon = build.icon;
                   return (
                     <button
@@ -223,67 +309,112 @@ export function AnomalyHome() {
                       type="button"
                       onClick={() => selectBuild(build.id)}
                       className={cn(
-                        "anomaly-node nd-focus",
-                        selected.id === build.id && "is-active"
+                        "grid min-h-[66px] place-items-center gap-1 rounded-2xl border px-2 font-mono text-[9px] uppercase tracking-label-tight nd-focus nd-transition",
+                        selected.id === build.id
+                          ? "border-nd-accent bg-nd-accent text-nd-black"
+                          : "border-nd-border bg-nd-black/38 text-nd-text-secondary hover:border-nd-border-visible hover:text-nd-text-display"
                       )}
-                      style={{ "--node-index": index } as CSSProperties}
                       aria-label={`Inspect ${build.buildName}`}
                     >
-                      <Icon className="h-4 w-4" strokeWidth={1.5} />
+                      <Icon className="h-4 w-4" strokeWidth={1.6} />
+                      <span className="max-w-full truncate">{build.index}</span>
                     </button>
                   );
                 })}
               </div>
 
-              <div className="mt-8 grid gap-4 rounded-[28px] border border-nd-border bg-nd-black/45 p-4 backdrop-blur">
-                <p className="text-lg leading-relaxed text-nd-text-primary">
-                  {selected.summary}
-                </p>
-                <p className="text-sm leading-relaxed text-nd-text-secondary">
-                  {selected.outcome}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {selected.tech.map((tech) => (
-                    <span key={tech} className="anomaly-tag">
-                      {tech}
-                    </span>
-                  ))}
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Link href={selected.href} className="anomaly-button anomaly-button-primary">
-                    Open case
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                  {selected.sourceHref && (
-                    <a
-                      href={selected.sourceHref}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="anomaly-button anomaly-button-secondary"
-                    >
-                      Source
-                      <ExternalLink className="h-4 w-4" />
-                    </a>
-                  )}
+              <div className="mt-4 grid gap-4 rounded-[28px] border border-nd-border bg-nd-black/58 p-4 backdrop-blur">
+                <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-start">
+                  <div>
+                    <p className="font-mono text-[10px] uppercase tracking-label-tight text-nd-accent">
+                      Selected artifact
+                    </p>
+                    <p className="mt-2 text-xl font-bold leading-tight text-nd-text-display">
+                      {selected.shortName}
+                    </p>
+                    <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-nd-text-secondary">
+                      {selected.problem}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2 lg:max-w-[13rem] lg:justify-end">
+                    {selected.tech.map((tech) => (
+                      <span key={tech} className="anomaly-tag">
+                        {tech}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              <div className="mt-5 grid gap-0 border-t border-nd-border pt-2">
-                {workbenchItems.map((item) => (
+              <div className="mt-4 hidden grid-cols-2 gap-2 md:grid">
+                {selectedProofLoop.map((step, index) => (
                   <div
-                    key={item.label}
-                    className="grid grid-cols-[6rem_1fr] gap-3 border-b border-nd-border/70 py-3 last:border-b-0"
+                    key={step.label}
+                    data-proof-signal
+                    className="min-h-[86px] rounded-3xl border border-nd-border bg-nd-black/36 p-4"
                   >
-                    <span className="font-mono text-[10px] uppercase tracking-label text-nd-accent">
-                      {item.label}
-                    </span>
-                    <span className="text-sm leading-relaxed text-nd-text-primary">
-                      {item.value}
-                    </span>
+                    <p className="font-mono text-[10px] uppercase tracking-label-tight text-nd-accent">
+                      {String(index + 1).padStart(2, "0")} {step.label}
+                    </p>
+                    <p className="mt-3 text-sm font-bold leading-tight text-nd-text-display">
+                      {step.value}
+                    </p>
                   </div>
                 ))}
               </div>
-            </motion.div>
+
+              <div className="mt-4 md:hidden">
+                <div
+                  className="grid grid-cols-4 gap-1 rounded-full border border-nd-border bg-nd-black/36 p-1"
+                  role="tablist"
+                  aria-label={`${selected.buildName} proof loop`}
+                >
+                  {selectedProofLoop.map((step, index) => (
+                    <button
+                      key={step.label}
+                      type="button"
+                      role="tab"
+                      aria-selected={activeProofStep === index}
+                      onClick={() => setActiveProofStep(index)}
+                      className={cn(
+                        "min-h-[36px] rounded-full px-2 font-mono text-[9px] uppercase tracking-label-tight nd-focus nd-transition",
+                        activeProofStep === index
+                          ? "bg-nd-accent text-nd-black"
+                          : "text-nd-text-secondary hover:text-nd-text-display"
+                      )}
+                    >
+                      {step.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-3 rounded-3xl border border-nd-border bg-nd-black/42 p-4">
+                  <p className="font-mono text-[10px] uppercase tracking-label-tight text-nd-accent">
+                    {selectedProofLoop[activeProofStep].label}
+                  </p>
+                  <p className="mt-3 text-sm font-bold leading-tight text-nd-text-display">
+                    {selectedProofLoop[activeProofStep].value}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <Link href={selected.href} className="anomaly-button anomaly-button-primary">
+                  Open case
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                {selected.sourceHref && (
+                  <a
+                    href={selected.sourceHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="anomaly-button anomaly-button-secondary"
+                  >
+                    Source
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                )}
+              </div>
+            </div>
           </div>
           <a
             href="#builds"
@@ -296,6 +427,7 @@ export function AnomalyHome() {
         <section
           id="builds"
           data-journey-section="builds"
+          data-command-section
           className="border-b border-nd-border px-4 py-16 md:py-24"
         >
           <div className="mx-auto max-w-[92rem]">
@@ -407,6 +539,7 @@ export function AnomalyHome() {
         <section
           id="about"
           data-journey-section="about"
+          data-command-section
           className="border-b border-nd-border px-4 py-16 md:py-24"
         >
           <div className="mx-auto grid max-w-[92rem] gap-8 lg:grid-cols-[0.9fr_1.1fr]">
@@ -439,6 +572,7 @@ export function AnomalyHome() {
         <section
           id="status"
           data-journey-section="status"
+          data-command-section
           className="border-b border-nd-border px-4 py-16 md:py-24"
         >
           <div className="mx-auto max-w-[92rem]">
@@ -463,6 +597,7 @@ export function AnomalyHome() {
         <section
           id="contact"
           data-journey-section="contact"
+          data-command-section
           className="px-4 py-16 md:py-24"
         >
           <div className="mx-auto grid max-w-[92rem] gap-8 rounded-[36px] border border-nd-border-visible/45 bg-nd-surface/68 p-6 backdrop-blur-2xl md:p-10 lg:grid-cols-[1fr_auto] lg:items-end">

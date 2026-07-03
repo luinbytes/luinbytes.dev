@@ -114,7 +114,7 @@ export function CommandMenu() {
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-xl"
       >
-        <Command className="atlas-paper overflow-hidden border-2 border-nd-border-visible bg-nd-surface text-nd-text-primary shadow-[14px_14px_0_rgba(20,16,10,0.16)]">
+        <Command className="atlas-paper overflow-hidden border-2 border-nd-border-visible bg-nd-surface text-nd-text-primary shadow-[14px_14px_0_rgba(255,131,183,0.12),0_28px_80px_rgba(0,0,0,0.38)]">
           <div className="flex items-center gap-3 border-b-2 border-nd-border-visible px-4 py-3 focus-within:border-nd-accent">
             <Command.Input
               aria-label="Type a command or search"

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { SectionRail, SegmentedStats, useActiveSection } from "@/components/case-page-parts";
+import { CaseProofLoop, SectionRail, SegmentedStats, useActiveSection } from "@/components/case-page-parts";
 import {
   Github,
   Download,
@@ -301,6 +301,15 @@ export function RiskOfAnticheatPage() {
           </div>
         </div>
       </section>
+
+      <CaseProofLoop
+        steps={[
+          { label: "Problem", value: "Risk of Rain 2 mod feedback is hard to inspect mid-run." },
+          { label: "Build", value: "Overlay, hooks, config, and packaged release flow." },
+          { label: "Verify", value: "GitHub releases and source expose the mod path." },
+          { label: "Ship", value: "Open-source singleplayer/co-op tool." },
+        ]}
+      />
 
       {/* Features */}
       <section id="features" className="py-24 md:py-32 border-b border-nd-border">

@@ -130,7 +130,7 @@ export function ScrollJourney({ children }: ScrollJourneyProps) {
       {children}
       <aside
         aria-label="Homepage journey"
-        className="atlas-paper !fixed left-4 top-24 z-40 hidden w-[218px] border-2 border-nd-border-visible bg-nd-surface/92 p-3 shadow-[10px_10px_0_rgba(20,16,10,0.12)] backdrop-blur nd-transition min-[1536px]:block 2xl:left-8"
+        className="atlas-paper !fixed left-4 top-24 z-40 hidden w-[218px] border-2 border-nd-border-visible bg-nd-surface/92 p-3 shadow-[10px_10px_0_rgba(255,131,183,0.12)] backdrop-blur nd-transition min-[1536px]:block 2xl:left-8"
       >
         <div className="mb-3 flex items-center justify-between border-b-2 border-nd-border-visible pb-3 font-mono text-[10px] uppercase tracking-label text-nd-text-secondary">
           <span>Field Route</span>

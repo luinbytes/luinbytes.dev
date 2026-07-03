@@ -16,20 +16,20 @@ const themes: Record<
   }
 > = {
   anomaly: {
-    label: "Precision",
+    label: "Obsidian",
     next: "Void",
     Icon: Sparkles,
   },
   void: {
     label: "Void",
-    next: "Precision",
+    next: "Obsidian",
     Icon: Aperture,
   },
 };
 
 function applyTheme(theme: Theme) {
   document.documentElement.dataset.theme = theme;
-  document.documentElement.style.colorScheme = theme === "void" ? "dark" : "light";
+  document.documentElement.style.colorScheme = "dark";
 }
 
 function getStoredTheme(): Theme {
@@ -134,7 +134,7 @@ export function ThemeSwitcher() {
         aria-label={`Switch to ${activeTheme.next} theme`}
         title={`Switch to ${activeTheme.next}`}
         className={cn(
-          "theme-switcher-button group flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border-2 border-nd-border-visible bg-nd-surface/92 text-nd-text-display shadow-[5px_5px_0_rgba(20,16,10,0.14)] backdrop-blur nd-focus nd-transition",
+          "theme-switcher-button group flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border-2 border-nd-border-visible bg-nd-surface/92 text-nd-text-display shadow-[5px_5px_0_rgba(255,131,183,0.12),0_18px_54px_rgba(0,0,0,0.34)] backdrop-blur nd-focus nd-transition",
           "hover:w-[12rem] hover:-translate-y-1 hover:border-nd-accent hover:bg-nd-text-display hover:text-nd-black",
           "focus-visible:w-[12rem] focus-visible:-translate-y-1 focus-visible:border-nd-accent focus-visible:bg-nd-text-display focus-visible:text-nd-black"
         )}

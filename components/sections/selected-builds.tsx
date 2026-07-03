@@ -25,7 +25,7 @@ export function SelectedBuilds() {
             href="https://github.com/luinbytes"
             target="_blank"
             rel="noopener noreferrer"
-            className="hidden border border-nd-border-visible bg-nd-surface px-3 py-2 font-mono text-[11px] uppercase tracking-label text-nd-accent shadow-[4px_4px_0_rgba(20,16,10,0.1)] nd-transition hover:-translate-y-0.5 hover:text-nd-text-display md:inline-flex"
+            className="hidden border border-nd-border-visible bg-nd-surface px-3 py-2 font-mono text-[11px] uppercase tracking-label text-nd-accent shadow-[4px_4px_0_rgba(255,131,183,0.1)] nd-transition hover:-translate-y-0.5 hover:text-nd-text-display md:inline-flex"
           >
             View all builds -&gt;
           </a>
@@ -36,7 +36,7 @@ export function SelectedBuilds() {
             const Icon = build.icon;
             const isExternal = build.href.startsWith("http");
             const rowClassName =
-              "atlas-scanline atlas-hover-lift group grid gap-4 border-2 border-nd-border-visible bg-nd-surface p-5 shadow-[8px_8px_0_rgba(20,16,10,0.08)] nd-focus md:grid-cols-[72px_1fr_auto_32px] md:items-center md:p-6";
+              "atlas-scanline atlas-hover-lift group grid gap-4 border-2 border-nd-border-visible bg-nd-surface p-5 shadow-[8px_8px_0_rgba(255,131,183,0.1)] nd-focus md:grid-cols-[72px_1fr_auto_32px] md:items-center md:p-6";
             const rowContent = (
               <>
                 <span className="atlas-icon flex h-12 w-12 items-center justify-center border-2 border-nd-border-visible bg-nd-black text-nd-text-primary nd-transition group-hover:bg-nd-accent group-hover:text-nd-surface">

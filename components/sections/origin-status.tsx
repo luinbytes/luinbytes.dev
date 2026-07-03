@@ -19,7 +19,7 @@ export function OriginStatus() {
               Started on a PS3. Stayed for the systems.
             </h2>
           </ScrollReveal>
-          <div className="atlas-paper space-y-5 border-l-4 border-nd-accent bg-nd-surface/70 p-6 shadow-[10px_10px_0_rgba(20,16,10,0.08)]">
+          <div className="atlas-paper space-y-5 border-l-4 border-nd-accent bg-nd-surface/70 p-6 shadow-[10px_10px_0_rgba(255,131,183,0.1)]">
             {originLines.map((line, index) => (
               <ScrollReveal key={line} delay={index * 0.05} distance={12}>
                 <p className="text-lg leading-relaxed text-nd-text-secondary md:text-xl">

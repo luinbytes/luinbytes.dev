@@ -214,7 +214,7 @@ export function Header() {
       className={cn(
         "fixed left-0 right-0 top-0 z-50 border-b nd-transition",
         scrolled || mobileMenuOpen
-          ? "border-nd-border-visible bg-nd-surface/92 shadow-[0_10px_40px_rgba(20,16,10,0.08)] backdrop-blur"
+          ? "border-nd-border-visible bg-nd-surface/92 shadow-[0_18px_54px_rgba(0,0,0,0.34)] backdrop-blur"
           : "border-transparent bg-transparent"
       )}
     >
@@ -253,7 +253,7 @@ export function Header() {
             {productMenuOpen && (
               <div
                 id="products-menu"
-                className="atlas-paper fixed right-4 top-20 max-h-[calc(100vh-6rem)] w-[360px] overflow-y-auto border-2 border-nd-border-visible bg-nd-surface p-3 shadow-[12px_12px_0_rgba(20,16,10,0.12)]"
+                className="atlas-paper fixed right-4 top-20 max-h-[calc(100vh-6rem)] w-[360px] overflow-y-auto border-2 border-nd-border-visible bg-nd-surface p-3 shadow-[14px_14px_0_rgba(255,131,183,0.12),0_28px_80px_rgba(0,0,0,0.34)]"
               >
                 <div className="grid gap-3">
                   {productGroups.map((group) => {
@@ -314,7 +314,7 @@ export function Header() {
           <button
             type="button"
             onClick={openCommandMenu}
-            className="ml-3 inline-flex items-center gap-2 border border-nd-border-visible bg-nd-surface px-3 py-1.5 font-mono text-[11px] uppercase tracking-label-tight text-nd-text-secondary shadow-[4px_4px_0_rgba(20,16,10,0.08)] nd-focus nd-transition hover:-translate-y-0.5 hover:border-nd-text-display hover:text-nd-text-display"
+            className="ml-3 inline-flex items-center gap-2 border border-nd-border-visible bg-nd-surface px-3 py-1.5 font-mono text-[11px] uppercase tracking-label-tight text-nd-text-secondary shadow-[4px_4px_0_rgba(255,131,183,0.1)] nd-focus nd-transition hover:-translate-y-0.5 hover:border-nd-text-display hover:text-nd-text-display"
           >
             <Command className="h-3.5 w-3.5" />
             <CommandShortcut />

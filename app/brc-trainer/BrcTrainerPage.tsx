@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { SectionRail, SegmentedStats, useActiveSection } from "@/components/case-page-parts";
+import { CaseProofLoop, SectionRail, SegmentedStats, useActiveSection } from "@/components/case-page-parts";
 import {
   Github,
   Download,
@@ -284,6 +284,15 @@ export function BrcTrainerPage() {
           </div>
         </div>
       </section>
+
+      <CaseProofLoop
+        steps={[
+          { label: "Problem", value: "Trainer UI needs fast in-game control." },
+          { label: "Build", value: "Harmony hooks and a five-tab overlay." },
+          { label: "Verify", value: "Case sections list hook targets and feature paths." },
+          { label: "Ship", value: "BepInEx mod with focused controls." },
+        ]}
+      />
 
       {/* Features */}
       <section id="features" className="py-24 md:py-32 border-b border-nd-border">

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { SectionRail, SegmentedStats, useActiveSection } from "@/components/case-page-parts";
+import { CaseProofLoop, SectionRail, SegmentedStats, useActiveSection } from "@/components/case-page-parts";
 import {
   Github,
   Download,
@@ -302,6 +302,15 @@ export function SuperHackerGolfPage() {
           </div>
         </div>
       </section>
+
+      <CaseProofLoop
+        steps={[
+          { label: "Problem", value: "Golf With Your Friends mods need precise runtime feedback." },
+          { label: "Build", value: "Trainer controls with hooks, overlays, and repeatable toggles." },
+          { label: "Verify", value: "Case sections expose feature groups and source-backed behavior." },
+          { label: "Ship", value: "Playable tooling with a dedicated case route." },
+        ]}
+      />
 
       {/* Features */}
       <section id="features" className="py-24 md:py-32 border-b border-nd-border">

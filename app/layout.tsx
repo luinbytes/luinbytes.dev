@@ -93,7 +93,6 @@ export default function RootLayout({
     <html
       lang="en"
       className="scroll-smooth"
-      data-lumi="was-here ✨"
       suppressHydrationWarning
     >
       {/*
@@ -104,11 +103,8 @@ export default function RootLayout({
         ║   b) Lu debugging something I broke (sorry)               ║
         ║   c) A recruiter snooping for code quality (it's good!)   ║
         ║                                                           ║
-        ║   Precision Anomaly System. Reactive case interface.       ║
+        ║   Command Deck System. Proof loop interface.               ║
         ║   Sharp surfaces, strange controls, preserved details.     ║
-        ║                                                           ║
-        ║   Built with help from Lumi, Lu's AI assistant.          ║
-        ║   https://hermes.al                                        ║
         ║                                                           ║
         ╚═══════════════════════════════════════════════════════════╝
       */}
@@ -120,10 +116,10 @@ export default function RootLayout({
     const stored = localStorage.getItem("lu-theme");
     const theme = stored === "void" ? "void" : "anomaly";
     document.documentElement.dataset.theme = theme;
-    document.documentElement.style.colorScheme = theme === "void" ? "dark" : "light";
+    document.documentElement.style.colorScheme = "dark";
   } catch {
     document.documentElement.dataset.theme = "anomaly";
-    document.documentElement.style.colorScheme = "light";
+    document.documentElement.style.colorScheme = "dark";
   }
 })();`,
           }}
@@ -133,12 +129,6 @@ export default function RootLayout({
         className={`${spaceGrotesk.variable} ${doto.variable} ${spaceMono.variable} font-body bg-nd-black text-nd-text-primary antialiased`}
         suppressHydrationWarning
       >
-        {/* Accessibility easter egg - screen readers only */}
-        <span className="sr-only" aria-hidden="false">
-          Psst... Lumi the AI assistant says hi! You&apos;re awesome for using
-          accessibility tools.
-        </span>
-
         <ConsoleEgg />
         <CommandMenu />
         <CaseInterfaceOverlay />

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { SectionRail, SegmentedStats, useActiveSection } from "@/components/case-page-parts";
+import { CaseProofLoop, SectionRail, SegmentedStats, useActiveSection } from "@/components/case-page-parts";
 import {
   AlarmClock,
   Bell,
@@ -199,6 +199,15 @@ export default function SleeprPage() {
           </div>
         </div>
       </section>
+
+      <CaseProofLoop
+        steps={[
+          { label: "Problem", value: "Sleep apps turn bedtime into another dashboard." },
+          { label: "Build", value: "Cycle windows, local history, widgets, and morning feedback." },
+          { label: "Verify", value: "Room, WorkManager, and on-device model sections cover the flow." },
+          { label: "Ship", value: "Private Android sleep companion." },
+        ]}
+      />
 
       <section
         id="wake-windows"

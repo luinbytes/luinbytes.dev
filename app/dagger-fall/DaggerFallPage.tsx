@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { SectionRail, SegmentedStats, useActiveSection } from "@/components/case-page-parts";
+import { CaseProofLoop, SectionRail, SegmentedStats, useActiveSection } from "@/components/case-page-parts";
 import {
   Github,
   Download,
@@ -268,6 +268,15 @@ export function DaggerFallPage() {
           </div>
         </div>
       </section>
+
+      <CaseProofLoop
+        steps={[
+          { label: "Problem", value: "Classic game tooling needs readable runtime controls." },
+          { label: "Build", value: "Trainer surface with focused game-state actions." },
+          { label: "Verify", value: "Case sections document hooks, controls, and shipped behavior." },
+          { label: "Ship", value: "Usable mod page with source path." },
+        ]}
+      />
 
       {/* Features */}
       <section id="features" className="py-24 md:py-32 border-b border-nd-border">

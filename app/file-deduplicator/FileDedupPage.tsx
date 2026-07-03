@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { SectionRail, SegmentedStats, useActiveSection } from "@/components/case-page-parts";
+import { CaseProofLoop, SectionRail, SegmentedStats, useActiveSection } from "@/components/case-page-parts";
 import {
   Github,
   ShoppingCart,
@@ -284,6 +284,15 @@ export function FileDedupPage() {
           </div>
         </div>
       </section>
+
+      <CaseProofLoop
+        steps={[
+          { label: "Problem", value: "Duplicate files hide beyond byte-exact matches." },
+          { label: "Build", value: "Exact hashes plus perceptual image matching." },
+          { label: "Verify", value: "Dry-run, move-before-delete, and source-visible hashing paths." },
+          { label: "Ship", value: "Go CLI for safe cleanup runs." },
+        ]}
+      />
 
       {/* Why */}
       <section id="why" className="py-24 md:py-32 border-b border-nd-border">

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { SectionRail, SegmentedStats, useActiveSection } from "@/components/case-page-parts";
+import { CaseProofLoop, SectionRail, SegmentedStats, useActiveSection } from "@/components/case-page-parts";
 import {
   Github,
   Sliders,
@@ -323,6 +323,15 @@ export function LinuxSonarPage() {
           </div>
         </div>
       </section>
+
+      <CaseProofLoop
+        steps={[
+          { label: "Problem", value: "SteelSeries Sonar does not exist on Linux." },
+          { label: "Build", value: "PipeWire routing, ChatMix, GTK4 controls, and a mic chain." },
+          { label: "Verify", value: "Public source shows daemon, GUI, and PipeWire paths." },
+          { label: "Ship", value: "Open-source Linux audio control surface." },
+        ]}
+      />
 
       {/* Channels */}
       <section

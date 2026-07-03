@@ -25,6 +25,7 @@ export type ProblemBuild = {
   shortName: string;
   summary: string;
   outcome: string;
+  proof: string;
   tech: string[];
   href: string;
   sourceHref?: string;
@@ -37,6 +38,25 @@ export const workbenchItems = [
   { label: "Currently", value: "Meteor, linux-sonar, Raycast extensions" },
   { label: "Always", value: "Learning, breaking, rebuilding" },
   { label: "Jump", value: "/linux /android /reverse /raycast" },
+] as const;
+
+export const proofLoopSteps = [
+  {
+    label: "Problem",
+    value: "Name the annoying gap.",
+  },
+  {
+    label: "Build",
+    value: "Shape the missing tool.",
+  },
+  {
+    label: "Verify",
+    value: "Test it against real use.",
+  },
+  {
+    label: "Ship",
+    value: "Leave a usable artifact.",
+  },
 ] as const;
 
 export type JourneyChapter = {
@@ -110,6 +130,7 @@ export const problemBuilds: ProblemBuild[] = [
       "SteelSeries Sonar for Linux: per-app PipeWire routing, ChatMix, mic effects, and hardware-aware controls.",
     outcome:
       "Turns headset routing and mic processing into a native Linux workflow instead of a Windows-only compromise.",
+    proof: "Public source repo with PipeWire, WirePlumber, and GTK4 implementation paths.",
     tech: ["Python", "PipeWire", "WirePlumber", "GTK4"],
     href: "/linux-sonar",
     sourceHref: "https://github.com/luinbytes/linux-sonar",
@@ -126,6 +147,7 @@ export const problemBuilds: ProblemBuild[] = [
       "An offline-first Android app that keeps tasks, habits, streaks, reminders, and widgets in one daily surface.",
     outcome:
       "One calm local-first place for the daily loop: no account, no cloud, no productivity theater.",
+    proof: "Case route documents the local-first Android stack, widgets, reminders, and Room persistence.",
     tech: ["Kotlin", "Compose", "Room", "Android"],
     href: "/meteor",
     filters: ["android", "kotlin", "habits", "tasks"],
@@ -141,6 +163,7 @@ export const problemBuilds: ProblemBuild[] = [
       "Native Android client plus companion backend for faster Poke messaging, rich actions, notifications, and webhook-backed context.",
     outcome:
       "A dedicated Android lane for Poke: Compose app, Node backend, SQLite event store, SSE sessions, and Samsung-tested debug flows.",
+    proof: "Public Android client repo with Compose UI plus backend-backed event/session architecture.",
     tech: ["Kotlin", "Compose", "Node", "SQLite"],
     href: "https://github.com/luinbytes/poke-android-client",
     sourceHref: "https://github.com/luinbytes/poke-android-client",
@@ -157,6 +180,7 @@ export const problemBuilds: ProblemBuild[] = [
       "A quiet Android sleep companion for cycle-aware wake windows, optional live notifications, and private on-device rhythm learning.",
     outcome:
       "Keeps bedtime planning local and practical: no account, opt-in notification ticker, and morning feedback that tunes the model.",
+    proof: "Case route covers the Room, WorkManager, widgets, and on-device rhythm model.",
     tech: ["Kotlin", "Compose", "Room", "WorkManager"],
     href: "/sleepr",
     filters: ["android", "kotlin", "sleep", "local-first"],
@@ -172,6 +196,7 @@ export const problemBuilds: ProblemBuild[] = [
       "A fast CLI that finds exact duplicates and visually similar images with perceptual hashing.",
     outcome:
       "Safe dry-runs, move-before-delete flows, and real cleanup for messy photo/file libraries.",
+    proof: "Public Go source repo exposes exact-hash and perceptual-hash cleanup flows.",
     tech: ["Go", "CLI", "pHash", "SHA256"],
     href: "/file-deduplicator",
     sourceHref: "https://github.com/luinbytes/file-deduplicator",
@@ -188,6 +213,7 @@ export const problemBuilds: ProblemBuild[] = [
       "Tools to inspect, understand, and work with game internals: overlays, hooks, trainers, and runtime instrumentation.",
     outcome:
       "A practical path from unknown runtime behavior to usable tooling and clear feedback loops.",
+    proof: "Case route anchors the reverse-engineering work in shipped overlays, hooks, and runtime tooling.",
     tech: ["C#", "C", "HarmonyX", "BepInEx"],
     href: "/risk-of-anticheat",
     filters: ["reverse", "systems", "game", "modding"],
@@ -203,6 +229,7 @@ export const problemBuilds: ProblemBuild[] = [
       "Hybrid BO3 Zombies trainer under Wine/Proton: XInput proxy DLL owns internal hooks, a native Wayland overlay owns drawing, binary IPC bridges both.",
     outcome:
       "Two independent processes that tolerate each other's absence — DLL-only, overlay-only, or both, without crashing either side.",
+    proof: "Public source repo shows the native overlay, proxy DLL, and IPC bridge split.",
     tech: ["C", "Rust", "MinGW", "wgpu", "wlr-layer-shell"],
     href: "/perkaholic",
     sourceHref: "https://github.com/luinbytes/perkaholic",
@@ -219,6 +246,7 @@ export const problemBuilds: ProblemBuild[] = [
       "Minecraft-style engine built from scratch in Rust with wgpu rendering, procedural biomes, survival/creative modes, and chunk save/load.",
     outcome:
       "A deterministic voxel sandbox with culled chunk meshing, generated textures, inventory, HUD, physics, and multithreaded world loading.",
+    proof: "Public Rust source repo contains the wgpu renderer, world generation, and chunk systems.",
     tech: ["Rust", "wgpu", "winit", "egui"],
     href: "https://github.com/luinbytes/minecrooft",
     sourceHref: "https://github.com/luinbytes/minecrooft",
@@ -235,6 +263,7 @@ export const problemBuilds: ProblemBuild[] = [
       "Linux cursor utility for controlling pointer movement at workspace and monitor edges without reaching for a heavier desktop tool.",
     outcome:
       "Small systems utility shaped around a single desktop annoyance: predictable cursor behavior with minimal moving parts.",
+    proof: "Public C source repo for the Linux pointer-boundary utility.",
     tech: ["C", "Linux", "Desktop"],
     href: "https://github.com/luinbytes/cursor-barrier",
     sourceHref: "https://github.com/luinbytes/cursor-barrier",
@@ -251,6 +280,7 @@ export const problemBuilds: ProblemBuild[] = [
       "Raycast extensions and utilities that remove friction from lookups, window switching, smart-home control, and repeated tasks.",
     outcome:
       "Small tools with big leverage: fast to summon, easy to trust, and designed for muscle memory.",
+    proof: "Public extensions repo collects the TypeScript/Raycast workflow tools.",
     tech: ["TypeScript", "Raycast API", "Node"],
     href: "https://github.com/luinbytes/extensions",
     sourceHref: "https://github.com/luinbytes/extensions",
