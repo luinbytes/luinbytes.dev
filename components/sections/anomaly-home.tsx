@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useReducedMotion } from "framer-motion";
+import { motion, useAnimationControls, useReducedMotion } from "framer-motion";
 import {
   ArrowRight,
   Command,
@@ -22,12 +22,14 @@ import {
 import { cn } from "@/lib/utils";
 import { CommandShortcut } from "@/components/os-shortcut";
 import { HomeCommandChoreography } from "@/components/animations/home-command-choreography";
+import { caseContentTransition } from "@/components/animations/motion";
 
 const allFilter = { label: "All", value: "all", icon: Filter };
 const filters = [allFilter, ...commandFilters];
 
 export function AnomalyHome() {
   const prefersReducedMotion = useReducedMotion();
+  const caseContentControls = useAnimationControls();
   const [activeFilter, setActiveFilter] = useState("all");
   const [selectedId, setSelectedId] = useState(problemBuilds[0].id);
   const [query, setQuery] = useState("");
@@ -105,14 +107,29 @@ export function AnomalyHome() {
     window.setTimeout(() => setSurprise(false), 900);
   };
 
-  const selectBuild = (id: string) => {
+  const selectBuild = (id: string, source: "pointer" | "keyboard" = "keyboard") => {
     setSelectedId(id);
     setActiveProofStep(0);
-    document.getElementById("active-case")?.scrollIntoView({
-      behavior: prefersReducedMotion ? "auto" : "smooth",
-      block: "center",
-    });
-    cueActiveCase(prefersReducedMotion ? 0 : 520);
+
+    if (source === "pointer") {
+      if (prefersReducedMotion) {
+        caseContentControls.set({ opacity: 1, transform: "translateY(0px)" });
+      } else {
+        void caseContentControls.start({
+          opacity: [0.92, 1],
+          transform: ["translateY(4px)", "translateY(0px)"],
+          transition: caseContentTransition,
+        });
+      }
+      document.getElementById("active-case")?.scrollIntoView({
+        behavior: prefersReducedMotion ? "auto" : "smooth",
+        block: "center",
+      });
+      cueActiveCase(prefersReducedMotion ? 0 : 520);
+      return;
+    }
+
+    caseContentControls.set({ opacity: 1, transform: "translateY(0px)" });
   };
 
   const moveSelection = (direction: 1 | -1) => {
@@ -122,8 +139,7 @@ export function AnomalyHome() {
       pool.findIndex((build) => build.id === selected.id)
     );
     const next = pool[(currentIndex + direction + pool.length) % pool.length];
-    setSelectedId(next.id);
-    cueActiveCase(0);
+    selectBuild(next.id);
   };
 
   useEffect(() => {
@@ -213,7 +229,9 @@ export function AnomalyHome() {
                         <button
                           key={build.id}
                           type="button"
-                          onClick={() => selectBuild(build.id)}
+                          onClick={(event) =>
+                            selectBuild(build.id, event.detail === 0 ? "keyboard" : "pointer")
+                          }
                           className={cn(
                             "grid min-h-[54px] grid-cols-[2rem_1fr_auto] items-center gap-3 rounded-2xl border px-3 text-left nd-focus nd-transition",
                             active
@@ -283,7 +301,11 @@ export function AnomalyHome() {
                 attention && "anomaly-lens-attention"
               )}
             >
-              <div className="mb-4 flex items-start justify-between gap-4 border-b border-nd-border pb-4">
+              <motion.div
+                initial={false}
+                animate={caseContentControls}
+                className="mb-4 flex items-start justify-between gap-4 border-b border-nd-border pb-4"
+              >
                 <div>
                   <p className="font-mono text-[10px] uppercase tracking-label text-nd-accent">
                     Active Case / Proof Loop
@@ -298,7 +320,7 @@ export function AnomalyHome() {
                 <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-nd-border-visible/70 bg-nd-accent text-nd-black shadow-[0_18px_45px_rgba(255,131,183,0.24)]">
                   <SelectedIcon className="h-5 w-5" strokeWidth={1.8} />
                 </span>
-              </div>
+              </motion.div>
 
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-6" aria-label="Case switchboard">
                 {problemBuilds.slice(0, 6).map((build) => {
@@ -307,7 +329,9 @@ export function AnomalyHome() {
                     <button
                       key={build.id}
                       type="button"
-                      onClick={() => selectBuild(build.id)}
+                      onClick={(event) =>
+                        selectBuild(build.id, event.detail === 0 ? "keyboard" : "pointer")
+                      }
                       className={cn(
                         "grid min-h-[66px] place-items-center gap-1 rounded-2xl border px-2 font-mono text-[9px] uppercase tracking-label-tight nd-focus nd-transition",
                         selected.id === build.id
@@ -323,7 +347,11 @@ export function AnomalyHome() {
                 })}
               </div>
 
-              <div className="mt-4 grid gap-4 rounded-[28px] border border-nd-border bg-nd-black/58 p-4 backdrop-blur">
+              <motion.div
+                initial={false}
+                animate={caseContentControls}
+              >
+                <div className="mt-4 grid gap-4 rounded-[28px] border border-nd-border bg-nd-black/58 p-4 backdrop-blur">
                 <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-start">
                   <div>
                     <p className="font-mono text-[10px] uppercase tracking-label-tight text-nd-accent">
@@ -414,6 +442,7 @@ export function AnomalyHome() {
                   </a>
                 )}
               </div>
+              </motion.div>
             </div>
           </div>
           <a
@@ -500,7 +529,9 @@ export function AnomalyHome() {
                       type="button"
                       role="option"
                       aria-selected={active}
-                      onClick={() => selectBuild(build.id)}
+                      onClick={(event) =>
+                        selectBuild(build.id, event.detail === 0 ? "keyboard" : "pointer")
+                      }
                       className={cn(
                         "anomaly-row group grid gap-4 rounded-[28px] border p-4 text-left nd-focus md:grid-cols-[4.8rem_1fr_auto] md:items-center md:p-5",
                         active

@@ -55,6 +55,15 @@
   --space-3xl: 64px;
   --space-4xl: 96px;
   --font-display-theme: var(--font-space-grotesk);
+
+  /* — Motion —
+   * Canonical source for CSS and Framer Motion tokens. Keep the matching
+   * second-based mirror in components/animations/motion.ts in sync. */
+  --motion-duration-quick: 160ms;
+  --motion-duration-standard: 220ms;
+  --motion-duration-enter: 360ms;
+  --motion-ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --motion-ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 html[data-theme="anomaly"] {
@@ -193,8 +202,8 @@ html[data-theme="void"] body {
 /* — Field Atlas transitions: crisp, physical, and readable — */
 .nd-transition {
   transition-property: color, background-color, border-color, opacity, transform, box-shadow;
-  transition-duration: 220ms;
-  transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition-duration: var(--motion-duration-standard);
+  transition-timing-function: var(--motion-ease-standard);
 }
 
 .nd-focus {
@@ -361,7 +370,7 @@ html.theme-morphing .theme-workbench-card,
 html.theme-morphing .theme-workbench-heading {
   transition-duration: 480ms;
   transition-property: opacity, transform, background-color, border-color, color;
-  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  transition-timing-function: var(--motion-ease-emphasized);
   will-change: opacity, transform;
 }
 
