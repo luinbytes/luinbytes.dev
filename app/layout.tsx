@@ -4,7 +4,6 @@ import "./globals.css";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { CommandMenu } from "@/components/command-menu";
-import { ThemeSwitcher } from "@/components/theme-switcher";
 import { CaseInterfaceOverlay } from "@/components/case-interface-overlay";
 
 const spaceGrotesk = Space_Grotesk({
@@ -113,14 +112,10 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `(() => {
   try {
-    const stored = localStorage.getItem("lu-theme");
-    const theme = stored === "void" ? "void" : "anomaly";
-    document.documentElement.dataset.theme = theme;
-    document.documentElement.style.colorScheme = "dark";
-  } catch {
-    document.documentElement.dataset.theme = "anomaly";
-    document.documentElement.style.colorScheme = "dark";
-  }
+    localStorage.removeItem("lu-theme");
+  } catch {}
+  document.documentElement.dataset.theme = "anomaly";
+  document.documentElement.style.colorScheme = "dark";
 })();`,
           }}
         />
@@ -132,7 +127,6 @@ export default function RootLayout({
         <ConsoleEgg />
         <CommandMenu />
         <CaseInterfaceOverlay />
-        <ThemeSwitcher />
         <a
           href="#main"
           className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[200] focus:bg-nd-text-display focus:px-4 focus:py-3 focus:font-mono focus:text-[12px] focus:font-bold focus:uppercase focus:tracking-[0.08em] focus:text-nd-black"

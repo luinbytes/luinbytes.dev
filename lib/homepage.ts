@@ -4,7 +4,6 @@ import {
   Bot,
   Boxes,
   CheckSquare,
-  Files,
   Gamepad2,
   MousePointerBan,
   Smartphone,
@@ -187,23 +186,6 @@ export const problemBuilds: ProblemBuild[] = [
     icon: Smartphone,
   },
   {
-    id: "file-deduplicator",
-    index: "05",
-    problem: "Duplicate files waste space and clutter everything.",
-    buildName: "file-deduplicator",
-    shortName: "Duplicate cleanup",
-    summary:
-      "A fast CLI that finds exact duplicates and visually similar images with perceptual hashing.",
-    outcome:
-      "Safe dry-runs, move-before-delete flows, and real cleanup for messy photo/file libraries.",
-    proof: "Public Go source repo exposes exact-hash and perceptual-hash cleanup flows.",
-    tech: ["Go", "CLI", "pHash", "SHA256"],
-    href: "/file-deduplicator",
-    sourceHref: "https://github.com/luinbytes/file-deduplicator",
-    filters: ["cli", "go", "files", "images"],
-    icon: Files,
-  },
-  {
     id: "reverse-engineering",
     index: "06",
     problem: "Game systems are opaque black boxes.",
@@ -217,23 +199,6 @@ export const problemBuilds: ProblemBuild[] = [
     tech: ["C#", "C", "HarmonyX", "BepInEx"],
     href: "/risk-of-anticheat",
     filters: ["reverse", "systems", "game", "modding"],
-    icon: Gamepad2,
-  },
-  {
-    id: "perkaholic",
-    index: "07",
-    problem: "Wayland and Wine do not share a windowing path.",
-    buildName: "perkaholic",
-    shortName: "BO3 hybrid trainer",
-    summary:
-      "Hybrid BO3 Zombies trainer under Wine/Proton: XInput proxy DLL owns internal hooks, a native Wayland overlay owns drawing, binary IPC bridges both.",
-    outcome:
-      "Two independent processes that tolerate each other's absence — DLL-only, overlay-only, or both, without crashing either side.",
-    proof: "Public source repo shows the native overlay, proxy DLL, and IPC bridge split.",
-    tech: ["C", "Rust", "MinGW", "wgpu", "wlr-layer-shell"],
-    href: "/perkaholic",
-    sourceHref: "https://github.com/luinbytes/perkaholic",
-    filters: ["reverse", "systems", "game", "modding", "linux", "wayland"],
     icon: Gamepad2,
   },
   {
