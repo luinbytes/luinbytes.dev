@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CaseProofLoop, SectionRail, SegmentedStats, useActiveSection } from "@/components/case-page-parts";
+import { CasePageShell, CaseProofLoop, SectionRail, SegmentedStats, useActiveSection } from "@/components/case-page-parts";
 import {
   Github,
   Download,
@@ -130,7 +130,7 @@ export function BrcTrainerPage() {
   const activeSection = useActiveSection(SECTION_NAV);
 
   return (
-    <div className="min-h-screen bg-nd-black scroll-smooth">
+    <CasePageShell variant="brc">
       <SectionRail sections={SECTION_NAV} activeSection={activeSection} />
 
       {/* Hero */}
@@ -645,7 +645,7 @@ export function BrcTrainerPage() {
           </div>
         </div>
       </section>
-    </div>
+    </CasePageShell>
   );
 }
 

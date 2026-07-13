@@ -244,7 +244,10 @@ export function CaseInterfaceOverlay() {
       </button>
 
       {panelOpen && (
-        <div className="registration-plate print-dither print-shadow-md fixed inset-x-3 bottom-20 z-[80] border-2 border-paper bg-dark-brown p-4 xl:hidden">
+        <div
+          data-mobile-case-nav
+          className="registration-plate print-dither print-shadow-md fixed inset-x-3 bottom-20 z-[80] border-2 border-paper bg-dark-brown p-4 xl:hidden"
+        >
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <p className="font-mono text-[10px] uppercase tracking-label text-nd-accent">

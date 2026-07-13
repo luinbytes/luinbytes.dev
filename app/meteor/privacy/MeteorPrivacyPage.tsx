@@ -1,6 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import {
+  CasePageShell,
+  SectionRail,
+  useActiveSection,
+} from "@/components/case-page-parts";
 
 type Section = {
   id: string;
@@ -136,9 +141,17 @@ const SECTIONS: Section[] = [
   },
 ];
 
+const SECTION_NAV = SECTIONS.map(({ id, title }) => ({
+  id,
+  label: title.replaceAll("_", " ").replace("// ", ""),
+}));
+
 export function MeteorPrivacyPage() {
+  const activeSection = useActiveSection(SECTION_NAV);
+
   return (
-    <div className="bg-nd-black text-nd-text-primary">
+    <CasePageShell variant="privacy">
+      <SectionRail sections={SECTION_NAV} activeSection={activeSection} />
       <article className="mx-auto w-full max-w-[680px] px-6 py-20 sm:py-28">
         <Link
           href="/meteor"
@@ -168,7 +181,7 @@ export function MeteorPrivacyPage() {
         </section>
 
         {SECTIONS.map((section) => (
-          <section key={section.id} className="mt-14">
+          <section key={section.id} id={section.id} className="mt-14 scroll-mt-24">
             <hr className="mb-12 border-t border-nd-border" />
             <h2 className="font-mono text-sm uppercase tracking-[0.2em] text-nd-accent">
               {section.title}
@@ -183,6 +196,6 @@ export function MeteorPrivacyPage() {
           luinbytes / meteor / privacy
         </footer>
       </article>
-    </div>
+    </CasePageShell>
   );
 }

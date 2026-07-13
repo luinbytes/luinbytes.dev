@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CaseProofLoop, SectionRail, SegmentedStats, useActiveSection } from "@/components/case-page-parts";
+import { CasePageShell, CaseProofLoop, SectionRail, SegmentedStats, useActiveSection } from "@/components/case-page-parts";
 import {
   Download,
   Shield,
@@ -196,7 +196,7 @@ export function MeteorPage() {
   const activeSection = useActiveSection(SECTION_NAV);
 
   return (
-    <div className="min-h-screen bg-nd-black scroll-smooth">
+    <CasePageShell variant="meteor">
       <SectionRail sections={SECTION_NAV} activeSection={activeSection} />
 
       {/* Hero */}
@@ -571,7 +571,7 @@ export function MeteorPage() {
           </div>
         </div>
       </section>
-    </div>
+    </CasePageShell>
   );
 }
 

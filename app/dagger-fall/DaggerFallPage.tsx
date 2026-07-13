@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CaseProofLoop, SectionRail, SegmentedStats, useActiveSection } from "@/components/case-page-parts";
+import { CasePageShell, CaseProofLoop, SectionRail, SegmentedStats, useActiveSection } from "@/components/case-page-parts";
 import {
   Github,
   Download,
@@ -115,7 +115,7 @@ export function DaggerFallPage() {
   const activeSection = useActiveSection(SECTION_NAV);
 
   return (
-    <div className="min-h-screen bg-nd-black scroll-smooth">
+    <CasePageShell variant="dagger">
       <SectionRail sections={SECTION_NAV} activeSection={activeSection} />
 
       {/* Hero */}
@@ -630,7 +630,7 @@ export function DaggerFallPage() {
           </div>
         </div>
       </section>
-    </div>
+    </CasePageShell>
   );
 }
 
