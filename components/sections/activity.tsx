@@ -62,17 +62,17 @@ export function Activity() {
 
   const languageColors = useMemo<Record<string, string>>(
     () => ({
-      TypeScript: "#E8E8E8",
-      JavaScript: "#999999",
-      Python: "#666666",
-      Rust: "#FFFFFF",
-      "C#": "#999999",
-      Java: "#999999",
-      Go: "#E8E8E8",
-      Ruby: "#999999",
-      PHP: "#666666",
-      CSS: "#999999",
-      HTML: "#E8E8E8",
+      TypeScript: "var(--color-paper)",
+      JavaScript: "var(--color-mustard)",
+      Python: "var(--color-nd-text-secondary)",
+      Rust: "var(--color-nd-text-display)",
+      "C#": "var(--color-mustard)",
+      Java: "var(--color-nd-text-secondary)",
+      Go: "var(--color-paper)",
+      Ruby: "var(--color-mustard)",
+      PHP: "var(--color-nd-text-disabled)",
+      CSS: "var(--color-nd-text-secondary)",
+      HTML: "var(--color-paper)",
     }),
     []
   );
@@ -93,7 +93,7 @@ export function Activity() {
         .map(([lang, count]) => ({
           name: lang,
           percentage: Math.round((count / total) * 100),
-          color: languageColors[lang] || "#666666",
+          color: languageColors[lang] || "var(--color-nd-text-disabled)",
         }))
         .sort((a, b) => b.percentage - a.percentage)
         .slice(0, 5);
@@ -283,10 +283,22 @@ export function Activity() {
     fetchRepos();
   }, [calculateLanguages, calculateStreak]);
 
-  // Nothing-style monochrome contribution theme
+  // Canonical ink-and-paper contribution theme.
   const monoTheme = {
-    light: ["#F5F5F5", "#D0D0D0", "#A0A0A0", "#606060", "#1A1A1A"],
-    dark: ["#111111", "#333333", "#666666", "#999999", "#FFFFFF"],
+    light: [
+      "var(--color-paper)",
+      "var(--color-nd-text-secondary)",
+      "var(--color-mustard)",
+      "var(--color-nd-surface-raised)",
+      "var(--color-ink)",
+    ],
+    dark: [
+      "var(--color-dark-brown)",
+      "var(--color-nd-surface)",
+      "var(--color-mustard)",
+      "var(--color-nd-text-secondary)",
+      "var(--color-paper)",
+    ],
   };
 
   return (

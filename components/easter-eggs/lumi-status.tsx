@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
 
 interface LumiStatusProps {
   className?: string;
@@ -95,13 +94,6 @@ export function LumiStatus({ className }: LumiStatusProps) {
               <span className="font-mono text-[10px] tracking-[0.08em] uppercase text-nd-text-disabled block mb-1">Currently</span>
               <p className="text-xs text-nd-text-secondary font-body leading-relaxed">{statusInfo.activity}</p>
             </div>
-            <Link
-              href="/lumi"
-              className="font-mono text-[11px] tracking-[0.06em] uppercase text-nd-interactive nd-transition block"
-              onClick={() => setIsOpen(false)}
-            >
-              Visit Lumi&apos;s Page →
-            </Link>
           </div>
         </div>
       )}

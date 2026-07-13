@@ -52,7 +52,7 @@ export function Contact() {
                     href={link.href}
                     target={link.external ? "_blank" : undefined}
                     rel={link.external ? "noopener noreferrer" : undefined}
-                    className="atlas-scanline atlas-hover-lift group inline-flex min-h-[52px] w-full items-center justify-between gap-4 border-2 border-nd-border-visible bg-nd-surface px-5 py-3 font-mono text-[12px] font-bold uppercase tracking-label-tight text-nd-text-primary shadow-[6px_6px_0_rgba(255,131,183,0.1)] nd-focus"
+                    className="atlas-scanline atlas-hover-lift print-shadow-sm group inline-flex min-h-[52px] w-full items-center justify-between gap-4 border-2 border-nd-border-visible bg-nd-surface px-5 py-3 font-mono text-[12px] font-bold uppercase tracking-label-tight text-nd-text-primary nd-focus"
                   >
                     <span className="inline-flex items-center gap-3">
                       <Icon className="h-4 w-4" strokeWidth={1.5} />

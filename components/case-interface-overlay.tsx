@@ -131,9 +131,9 @@ export function CaseInterfaceOverlay() {
 
       <aside
         aria-label={`${study.title} case interface`}
-        className="case-hud fixed right-4 top-32 z-40 hidden w-[270px] rounded-[28px] border border-nd-border-visible/55 bg-nd-surface/72 p-3 text-nd-text-primary shadow-[0_24px_70px_rgba(0,0,0,0.28)] backdrop-blur-2xl xl:block"
+        className="registration-plate print-dither print-shadow-md case-hud fixed right-4 top-32 z-40 hidden w-[270px] border-2 border-paper bg-dark-brown p-3 text-nd-text-primary xl:block"
       >
-        <div className="rounded-[22px] border border-nd-border/70 bg-nd-black/46 p-4">
+        <div className="border border-nd-border/70 bg-nd-black/46 p-4">
           <div className="mb-4 flex items-start justify-between gap-3">
             <div>
               <p className="font-mono text-[10px] uppercase tracking-label text-nd-accent">
@@ -143,7 +143,7 @@ export function CaseInterfaceOverlay() {
                 {study.title}
               </h2>
             </div>
-            <span className="grid h-9 w-9 place-items-center rounded-full border border-nd-accent/60 bg-nd-accent/12 text-nd-accent">
+            <span className="grid h-9 w-9 place-items-center border border-nd-accent/60 bg-nd-accent/12 text-nd-accent">
               <Crosshair className="h-4 w-4" />
             </span>
           </div>
@@ -152,9 +152,9 @@ export function CaseInterfaceOverlay() {
             {study.summary}
           </p>
 
-          <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-nd-border/70">
+          <div className="mt-4 h-1.5 overflow-hidden bg-nd-border/70">
             <div
-              className="h-full rounded-full bg-nd-accent"
+              className="h-full bg-nd-accent"
               style={{ width: `${progress * 100}%` }}
             />
           </div>
@@ -184,7 +184,7 @@ export function CaseInterfaceOverlay() {
               type="button"
               onClick={() => jumpTo(section.id)}
               className={cn(
-                "group grid min-h-[42px] grid-cols-[2rem_1fr] items-center rounded-2xl border px-2 text-left font-mono text-[10px] uppercase tracking-label-tight nd-focus nd-transition",
+                "group grid min-h-[42px] grid-cols-[2rem_1fr] items-center border px-2 text-left font-mono text-[10px] uppercase tracking-label-tight nd-focus nd-transition",
                 activeId === section.id
                   ? "border-nd-accent/60 bg-nd-accent/13 text-nd-text-display"
                   : "border-transparent text-nd-text-secondary hover:border-nd-border hover:bg-nd-surface-raised/70 hover:text-nd-text-primary"
@@ -202,7 +202,7 @@ export function CaseInterfaceOverlay() {
             onClick={() => setFocusMode((value) => !value)}
             aria-pressed={focusMode}
             className={cn(
-              "grid min-h-[48px] place-items-center rounded-2xl border nd-focus nd-transition",
+              "grid min-h-[48px] place-items-center border nd-focus nd-transition",
               focusMode
                 ? "border-nd-interactive bg-nd-interactive text-nd-black"
                 : "border-nd-border bg-nd-black/35 text-nd-text-secondary hover:text-nd-text-display"
@@ -214,7 +214,7 @@ export function CaseInterfaceOverlay() {
           <button
             type="button"
             onClick={openCommandMenu}
-            className="grid min-h-[48px] place-items-center rounded-2xl border border-nd-border bg-nd-black/35 text-nd-text-secondary nd-focus nd-transition hover:text-nd-text-display"
+            className="grid min-h-[48px] place-items-center border border-nd-border bg-nd-black/35 text-nd-text-secondary nd-focus nd-transition hover:text-nd-text-display"
             title="Open command menu"
           >
             <Command className="h-4 w-4" />
@@ -225,7 +225,7 @@ export function CaseInterfaceOverlay() {
           {tags.map((tag) => (
             <span
               key={tag}
-              className="rounded-full border border-nd-border bg-nd-black/35 px-2 py-1 font-mono text-[9px] uppercase tracking-label-tight text-nd-text-disabled"
+              className="border border-nd-border bg-nd-black/35 px-2 py-1 font-mono text-[9px] uppercase tracking-label-tight text-nd-text-disabled"
             >
               {tag}
             </span>
@@ -237,14 +237,17 @@ export function CaseInterfaceOverlay() {
         type="button"
         onClick={() => setPanelOpen((open) => !open)}
         aria-expanded={panelOpen}
-        className="fixed bottom-4 left-4 z-[80] inline-flex min-h-[48px] items-center gap-2 rounded-full border border-nd-border-visible/60 bg-nd-surface/88 px-4 font-mono text-[11px] uppercase tracking-label text-nd-text-display shadow-[0_18px_45px_rgba(0,0,0,0.25)] backdrop-blur-xl nd-focus xl:hidden"
+        className="print-shadow-strong fixed bottom-4 left-4 z-[80] inline-flex min-h-[48px] items-center gap-2 border-2 border-paper bg-dark-brown px-4 font-mono text-[11px] uppercase tracking-label text-nd-text-display nd-focus xl:hidden"
       >
         <MousePointer2 className="h-4 w-4 text-nd-accent" />
         Inspect
       </button>
 
       {panelOpen && (
-        <div className="fixed inset-x-3 bottom-20 z-[80] rounded-[28px] border border-nd-border-visible/60 bg-nd-surface/94 p-4 shadow-[0_24px_70px_rgba(0,0,0,0.32)] backdrop-blur-2xl xl:hidden">
+        <div
+          data-mobile-case-nav
+          className="registration-plate print-dither print-shadow-md fixed inset-x-3 bottom-20 z-[80] border-2 border-paper bg-dark-brown p-4 xl:hidden"
+        >
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <p className="font-mono text-[10px] uppercase tracking-label text-nd-accent">
@@ -261,7 +264,7 @@ export function CaseInterfaceOverlay() {
                 type="button"
                 onClick={() => jumpTo(section.id)}
                 className={cn(
-                  "rounded-2xl border px-3 py-3 text-left font-mono text-[11px] uppercase tracking-label-tight nd-focus",
+                  "border px-3 py-3 text-left font-mono text-[11px] uppercase tracking-label-tight nd-focus",
                   activeId === section.id
                     ? "border-nd-accent bg-nd-accent/13 text-nd-text-display"
                     : "border-nd-border text-nd-text-secondary"

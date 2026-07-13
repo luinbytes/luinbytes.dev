@@ -63,10 +63,13 @@ export function CursorTrail() {
       });
 
       if (ctx && canvas) {
+        const inkPaperColor = getComputedStyle(document.documentElement)
+          .getPropertyValue("--color-paper")
+          .trim();
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         for (const p of particlesRef.current) {
           ctx.globalAlpha = Math.max(0, p.opacity);
-          ctx.fillStyle = "#FFFFFF";
+          ctx.fillStyle = inkPaperColor;
           ctx.beginPath();
           ctx.arc(p.x, p.y, Math.max(0.5, p.size / 2), 0, Math.PI * 2);
           ctx.fill();

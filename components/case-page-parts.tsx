@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import styles from "./case-page.module.css";
 
 type SectionItem = {
   id: string;
@@ -19,6 +20,30 @@ export type CaseProofLoopStep = {
   label: "Problem" | "Build" | "Verify" | "Ship";
   value: string;
 };
+
+export type CasePageVariant =
+  | "meteor"
+  | "sleepr"
+  | "linux"
+  | "risk"
+  | "brc"
+  | "dagger"
+  | "golf"
+  | "privacy";
+
+export function CasePageShell({
+  children,
+  variant,
+}: {
+  children: React.ReactNode;
+  variant: CasePageVariant;
+}) {
+  return (
+    <div className={styles.casePage} data-case-variant={variant}>
+      {children}
+    </div>
+  );
+}
 
 export function useActiveSection(sections: readonly SectionItem[]) {
   const [activeSection, setActiveSection] = useState(sections[0]?.id ?? "");
@@ -70,7 +95,7 @@ export function SectionRail({
             aria-current={isActive ? "true" : undefined}
           >
             <span
-              className={`w-1.5 h-1.5 rounded-full nd-transition ${
+              className={`h-2 w-2 border border-dark-brown nd-transition ${
                 isActive ? "bg-nd-accent" : "bg-nd-border-visible"
               }`}
             />
@@ -126,14 +151,20 @@ export function CaseProofLoop({
   steps: readonly CaseProofLoopStep[];
 }) {
   return (
-    <section className="border-b border-nd-border px-4 pb-28 pt-12 md:py-12">
+    <section
+      className="border-b border-nd-border px-4 pb-28 pt-12 md:py-12"
+      aria-labelledby="case-proof-title"
+    >
       <div className="mx-auto max-w-5xl xl:ml-28 xl:mr-[22rem] xl:max-w-[52rem]">
         <div className="mb-5 flex items-end justify-between gap-4">
           <div>
             <p className="font-mono text-[11px] uppercase tracking-label text-nd-accent">
               Case proof
             </p>
-            <h2 className="mt-2 text-2xl font-bold leading-tight text-nd-text-display md:text-3xl">
+            <h2
+              id="case-proof-title"
+              className="mt-2 font-display text-2xl font-bold leading-tight text-nd-text-display md:text-3xl"
+            >
               {title}
             </h2>
           </div>
@@ -143,7 +174,7 @@ export function CaseProofLoop({
           {steps.map((step, index) => (
             <article
               key={step.label}
-              className="rounded-[24px] border border-nd-border bg-nd-surface/72 p-4"
+              className="border border-nd-border bg-nd-surface/72 p-4"
             >
               <p className="font-mono text-[10px] uppercase tracking-label-tight text-nd-accent">
                 {String(index + 1).padStart(2, "0")} {step.label}

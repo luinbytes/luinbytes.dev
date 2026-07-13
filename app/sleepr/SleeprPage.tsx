@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CaseProofLoop, SectionRail, SegmentedStats, useActiveSection } from "@/components/case-page-parts";
+import { CasePageShell, CaseProofLoop, SectionRail, SegmentedStats, useActiveSection } from "@/components/case-page-parts";
 import {
   AlarmClock,
   Bell,
@@ -102,7 +102,7 @@ export default function SleeprPage() {
   const activeSection = useActiveSection(SECTION_NAV);
 
   return (
-    <div className="min-h-screen bg-nd-black scroll-smooth">
+    <CasePageShell variant="sleepr">
       <SectionRail sections={SECTION_NAV} activeSection={activeSection} />
 
       <section id="overview" className="relative border-b border-nd-border">
@@ -434,6 +434,6 @@ export default function SleeprPage() {
           </div>
         </div>
       </section>
-    </div>
+    </CasePageShell>
   );
 }

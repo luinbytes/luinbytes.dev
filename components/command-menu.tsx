@@ -19,8 +19,26 @@ import { caseStudies } from "@/lib/case-studies";
 export function CommandMenu() {
   const [open, setOpen] = React.useState(false);
   const menuRef = React.useRef<HTMLDivElement>(null);
+  const openerRef = React.useRef<HTMLElement | null>(null);
   const pathname = usePathname();
   const router = useRouter();
+
+  const openMenu = React.useCallback(() => {
+    openerRef.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    setOpen(true);
+  }, []);
+
+  const closeMenu = React.useCallback(() => {
+    const opener = openerRef.current;
+    openerRef.current = null;
+    setOpen(false);
+    window.requestAnimationFrame(() => {
+      if (opener?.isConnected) opener.focus();
+    });
+  }, []);
 
   React.useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -32,24 +50,27 @@ export function CommandMenu() {
       if (isCommandK) {
         e.preventDefault();
         e.stopPropagation();
-        setOpen((open) => !open);
+        if (open) {
+          closeMenu();
+        } else {
+          openMenu();
+        }
       }
     };
 
     window.addEventListener("keydown", down, { capture: true });
     return () => window.removeEventListener("keydown", down, { capture: true });
-  }, []);
+  }, [closeMenu, open, openMenu]);
 
   React.useEffect(() => {
-    const openMenu = () => setOpen(true);
     window.addEventListener("lu:open-command-menu", openMenu);
     return () => window.removeEventListener("lu:open-command-menu", openMenu);
-  }, []);
+  }, [openMenu]);
 
   const runCommand = React.useCallback((command: () => void) => {
-    setOpen(false);
+    closeMenu();
     command();
-  }, []);
+  }, [closeMenu]);
 
   const scrollToSection = React.useCallback(
     (id: string) => {
@@ -74,7 +95,7 @@ export function CommandMenu() {
   const handleDialogKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Escape") {
       e.preventDefault();
-      setOpen(false);
+      closeMenu();
       return;
     }
 
@@ -105,8 +126,8 @@ export function CommandMenu() {
       role="dialog"
       aria-modal="true"
       aria-label="Command menu"
-      className="fixed inset-0 z-[99] flex items-start justify-center bg-nd-text-display/35 px-4 pt-[14vh] backdrop-blur-sm"
-      onClick={() => setOpen(false)}
+      className="fixed inset-0 z-[99] flex items-start justify-center bg-dark-brown/80 px-4 pt-[14vh]"
+      onClick={closeMenu}
       onKeyDown={handleDialogKeyDown}
     >
       <div
@@ -114,7 +135,7 @@ export function CommandMenu() {
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-xl"
       >
-        <Command className="atlas-paper overflow-hidden border-2 border-nd-border-visible bg-nd-surface text-nd-text-primary shadow-[14px_14px_0_rgba(255,131,183,0.12),0_28px_80px_rgba(0,0,0,0.38)]">
+        <Command className="registration-plate print-dither print-shadow-lg overflow-hidden border-2 border-paper bg-dark-brown text-nd-text-primary">
           <div className="flex items-center gap-3 border-b-2 border-nd-border-visible px-4 py-3 focus-within:border-nd-accent">
             <Command.Input
               aria-label="Type a command or search"

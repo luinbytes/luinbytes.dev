@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -70,15 +70,57 @@ export function Header() {
   const [activeSection, setActiveSection] = useState("home");
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [productMenuOpen, setProductMenuOpen] = useState(false);
+  const [productMenuPhase, setProductMenuPhase] = useState<
+    "closed" | "opening" | "open" | "closing"
+  >("closed");
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const productMenuRef = useRef<HTMLDivElement>(null);
+  const productMenuOpenerRef = useRef<HTMLElement | null>(null);
+  const productMenuFrameRef = useRef<number | null>(null);
   const pathname = usePathname();
   const isMainPage = pathname === "/";
   const productIsActive = productGroups.some((group) =>
     group.items.some((item) => pathname === item.href)
   );
+  const productMenuOpen =
+    productMenuPhase === "opening" || productMenuPhase === "open";
+  const productMenuMounted = productMenuPhase !== "closed";
+
+  const closeProductMenu = useCallback(() => {
+    if (productMenuFrameRef.current !== null) {
+      window.cancelAnimationFrame(productMenuFrameRef.current);
+      productMenuFrameRef.current = null;
+    }
+    const opener = productMenuOpenerRef.current;
+    productMenuOpenerRef.current = null;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setProductMenuPhase("closed");
+    } else {
+      setProductMenuPhase((phase) =>
+        phase === "closed" ? "closed" : "closing"
+      );
+    }
+    window.requestAnimationFrame(() => {
+      if (opener?.isConnected) opener.focus();
+    });
+  }, []);
+
+  useEffect(() => {
+    if (productMenuPhase !== "opening") return;
+
+    productMenuFrameRef.current = window.requestAnimationFrame(() => {
+      productMenuFrameRef.current = null;
+      setProductMenuPhase("open");
+    });
+
+    return () => {
+      if (productMenuFrameRef.current !== null) {
+        window.cancelAnimationFrame(productMenuFrameRef.current);
+        productMenuFrameRef.current = null;
+      }
+    };
+  }, [productMenuPhase]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -160,12 +202,12 @@ export function Header() {
         productMenuRef.current &&
         !productMenuRef.current.contains(event.target as Node)
       ) {
-        setProductMenuOpen(false);
+        closeProductMenu();
       }
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setProductMenuOpen(false);
+      if (event.key === "Escape") closeProductMenu();
     };
 
     document.addEventListener("pointerdown", handlePointerDown);
@@ -175,11 +217,25 @@ export function Header() {
       document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [productMenuOpen]);
+  }, [closeProductMenu, productMenuOpen]);
 
   const openCommandMenu = () => {
     window.dispatchEvent(new CustomEvent("lu:open-command-menu"));
     setMobileMenuOpen(false);
+  };
+
+  const toggleProductMenu = (event: React.MouseEvent<HTMLButtonElement>) => {
+    if (productMenuOpen) {
+      closeProductMenu();
+      return;
+    }
+
+    productMenuOpenerRef.current = event.currentTarget;
+    setProductMenuPhase(
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "open"
+        : "opening"
+    );
   };
 
   const handleSectionClick = (
@@ -212,13 +268,17 @@ export function Header() {
   return (
     <header
       className={cn(
-        "fixed left-0 right-0 top-0 z-50 border-b nd-transition",
+        "registration-plate !fixed left-0 right-0 top-0 z-50 border-b-2 nd-transition",
         scrolled || mobileMenuOpen
-          ? "border-nd-border-visible bg-nd-surface/92 shadow-[0_18px_54px_rgba(0,0,0,0.34)] backdrop-blur"
-          : "border-transparent bg-transparent"
+          ? "border-paper bg-dark-brown shadow-[0_6px_0_var(--color-mustard)]"
+          : "border-nd-border-visible bg-ink/96"
       )}
     >
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
+      <div className="mx-auto hidden h-5 max-w-[92rem] items-center justify-between border-b border-nd-border px-4 font-mono text-[8px] uppercase tracking-label text-nd-text-disabled md:flex">
+        <span>Independent software / field notes</span>
+        <span>Build · verify · ship / 2026</span>
+      </div>
+      <div className="mx-auto flex h-14 max-w-[92rem] items-center justify-between px-4 md:h-12">
         <Link
           href={isMainPage ? "#home" : "/"}
           onClick={(event) => isMainPage && handleSectionClick(event, "#home")}
@@ -231,7 +291,7 @@ export function Header() {
           <div ref={productMenuRef} className="relative">
             <button
               type="button"
-              onClick={() => setProductMenuOpen((open) => !open)}
+              onClick={toggleProductMenu}
               aria-expanded={productMenuOpen}
               aria-controls="products-menu"
               className={cn(
@@ -250,10 +310,20 @@ export function Header() {
               />
             </button>
 
-            {productMenuOpen && (
+            {productMenuMounted && (
               <div
                 id="products-menu"
-                className="atlas-paper fixed right-4 top-20 max-h-[calc(100vh-6rem)] w-[360px] overflow-y-auto border-2 border-nd-border-visible bg-nd-surface p-3 shadow-[14px_14px_0_rgba(255,131,183,0.12),0_28px_80px_rgba(0,0,0,0.34)]"
+                data-state={productMenuPhase}
+                onTransitionEnd={(event) => {
+                  if (
+                    event.target === event.currentTarget &&
+                    event.propertyName === "transform" &&
+                    productMenuPhase === "closing"
+                  ) {
+                    setProductMenuPhase("closed");
+                  }
+                }}
+                className="product-menu registration-plate print-dither print-shadow-lg !absolute left-0 top-full z-[60] max-h-[calc(100vh-5.5rem)] w-[min(360px,calc(100vw-2rem))] overflow-y-auto border-2 border-paper bg-dark-brown p-3"
               >
                 <div className="grid gap-3">
                   {productGroups.map((group) => {
@@ -269,7 +339,7 @@ export function Header() {
                             <Link
                               key={item.href}
                               href={item.href}
-                              onClick={() => setProductMenuOpen(false)}
+                              onClick={closeProductMenu}
                               className={cn(
                                 "block border border-transparent px-3 py-2 nd-focus nd-transition hover:border-nd-border-visible hover:bg-nd-surface-raised",
                                 pathname === item.href &&
@@ -314,7 +384,7 @@ export function Header() {
           <button
             type="button"
             onClick={openCommandMenu}
-            className="ml-3 inline-flex items-center gap-2 border border-nd-border-visible bg-nd-surface px-3 py-1.5 font-mono text-[11px] uppercase tracking-label-tight text-nd-text-secondary shadow-[4px_4px_0_rgba(255,131,183,0.1)] nd-focus nd-transition hover:-translate-y-0.5 hover:border-nd-text-display hover:text-nd-text-display"
+            className="print-shadow-xs ml-3 inline-flex items-center gap-2 border border-nd-border-visible bg-nd-surface px-3 py-1.5 font-mono text-[11px] uppercase tracking-label-tight text-nd-text-secondary nd-focus nd-transition hover:-translate-y-0.5 hover:border-nd-text-display hover:text-nd-text-display"
           >
             <Command className="h-3.5 w-3.5" />
             <CommandShortcut />
@@ -342,7 +412,7 @@ export function Header() {
         <div
           id="mobile-menu"
           ref={mobileMenuRef}
-          className="border-t-2 border-nd-border-visible bg-nd-surface px-4 py-4 md:hidden"
+          className="registration-plate max-h-[calc(100svh-3.5rem)] overflow-y-auto border-t-2 border-paper bg-dark-brown px-4 py-4 md:hidden"
         >
           <nav className="grid gap-1">
             {productGroups.map((group) => {

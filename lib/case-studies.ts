@@ -4,14 +4,11 @@ export type CaseStudyRoute =
   | "/meteor"
   | "/sleepr"
   | "/linux-sonar"
-  | "/file-deduplicator"
-  | "/perkaholic"
   | "/risk-of-anticheat"
   | "/brc-trainer"
   | "/dagger-fall"
   | "/super-hacker-golf"
-  | "/meteor/privacy"
-  | "/lumi";
+  | "/meteor/privacy";
 
 export type CaseStudy = {
   route: CaseStudyRoute;
@@ -75,21 +72,6 @@ export const caseStudies: CaseStudy[] = [
     "Setup",
     "Source",
   ]),
-  fromProject("/file-deduplicator", "file-deduplicator", "perceptual cleanup", [
-    "Overview",
-    "Demo",
-    "Features",
-    "Tech",
-    "Get it",
-  ]),
-  fromProject("/perkaholic", "perkaholic", "hybrid Wine/Wayland bridge", [
-    "Overview",
-    "Features",
-    "Architecture",
-    "Tech",
-    "Setup",
-    "Source",
-  ]),
   fromProject("/risk-of-anticheat", "risk-of-anticheat", "runtime instrumentation", [
     "Overview",
     "Features",
@@ -140,15 +122,6 @@ export const caseStudies: CaseStudy[] = [
       "Changes",
       "Contact",
     ],
-  },
-  {
-    route: "/lumi",
-    title: "Lumi",
-    category: "AI Assistant",
-    summary: "Lu's AI assistant and overnight worker.",
-    tags: ["AI", "Assistant", "Maintenance", "Builds"],
-    signal: "support process",
-    sections: ["About", "Stats", "Work"],
   },
 ];
 
