@@ -156,7 +156,7 @@ export function AnomalyHome() {
   return (
     <div className="relative isolate min-h-screen overflow-hidden bg-nd-black text-nd-text-primary">
       <HomeCommandChoreography />
-      <div className="anomaly-backdrop" aria-hidden="true" />
+      <div className="print-backdrop" aria-hidden="true" />
       <main className="relative z-10">
         <section
           id="home"
@@ -166,11 +166,11 @@ export function AnomalyHome() {
           <div className="mx-auto grid max-w-[92rem] gap-8 lg:grid-cols-[minmax(0,1.04fr)_minmax(390px,0.96fr)] lg:items-center">
             <div className="pt-6 md:pt-8">
               <div className="mb-6 flex flex-wrap items-center gap-3" data-command-intro>
-                <span className="anomaly-chip">Verified shipped work</span>
+                <span className="print-chip">Verified shipped work</span>
                 <button
                   type="button"
                   onClick={openCommandMenu}
-                  className="anomaly-chip nd-focus hover:border-nd-accent hover:text-nd-text-display"
+                  className="print-chip nd-focus hover:border-nd-accent hover:text-nd-text-display"
                 >
                   <Command className="h-3.5 w-3.5" />
                   <CommandShortcut />
@@ -196,7 +196,7 @@ export function AnomalyHome() {
               </p>
 
               <div
-                className="mt-7 rounded-[30px] border border-nd-border-visible/45 bg-nd-surface/72 p-3 shadow-[0_24px_70px_rgba(0,0,0,0.28)] backdrop-blur-2xl"
+                className="print-panel print-shadow-md mt-7 p-3"
                 data-primary-surface
               >
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -208,12 +208,12 @@ export function AnomalyHome() {
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
                     placeholder="Search proof loop, stack, annoyance..."
-                    className="min-h-[48px] flex-1 rounded-full border border-nd-border bg-nd-black/52 px-5 font-mono text-sm text-nd-text-display outline-none placeholder:text-nd-text-disabled focus:border-nd-accent"
+                    className="min-h-[48px] flex-1 border border-nd-border bg-nd-black px-5 font-mono text-sm text-nd-text-display outline-none placeholder:text-nd-text-disabled focus:border-nd-accent"
                   />
                   <button
                     type="button"
                     onClick={openCommandMenu}
-                    className="anomaly-button anomaly-button-secondary min-h-[48px] shrink-0"
+                    className="print-button print-button-secondary min-h-[48px] shrink-0"
                   >
                     Command
                     <Command className="h-4 w-4" />
@@ -233,10 +233,10 @@ export function AnomalyHome() {
                             selectBuild(build.id, event.detail === 0 ? "keyboard" : "pointer")
                           }
                           className={cn(
-                            "grid min-h-[54px] grid-cols-[2rem_1fr_auto] items-center gap-3 rounded-2xl border px-3 text-left nd-focus nd-transition",
+                            "grid min-h-[54px] grid-cols-[2rem_1fr_auto] items-center gap-3 border px-3 text-left nd-focus nd-transition",
                             active
                               ? "border-nd-accent/70 bg-nd-accent-subtle text-nd-text-display"
-                              : "border-nd-border bg-nd-black/32 text-nd-text-secondary hover:border-nd-border-visible hover:text-nd-text-display"
+                              : "border-nd-border bg-nd-black text-nd-text-secondary hover:border-nd-border-visible hover:text-nd-text-display"
                           )}
                         >
                           <span className="font-mono text-[10px] text-nd-text-disabled">
@@ -260,7 +260,7 @@ export function AnomalyHome() {
                   {proofLoopSteps.map((step, index) => (
                     <div
                       key={step.label}
-                      className="rounded-2xl border border-nd-border bg-nd-black/36 p-3"
+                      className="border border-nd-border bg-nd-black p-3"
                     >
                       <p className="font-mono text-[10px] uppercase tracking-label-tight text-nd-accent">
                         {String(index + 1).padStart(2, "0")} {step.label}
@@ -276,7 +276,7 @@ export function AnomalyHome() {
               <div className="mt-7 flex flex-col gap-3 sm:flex-row" data-command-intro>
                 <Link
                   href="#builds"
-                  className="anomaly-button anomaly-button-primary"
+                  className="print-button print-button-primary"
                 >
                   Inspect builds
                   <ArrowRight className="h-4 w-4" />
@@ -284,7 +284,7 @@ export function AnomalyHome() {
                 <button
                   type="button"
                   onClick={selectRandom}
-                  className="anomaly-button anomaly-button-secondary"
+                  className="print-button print-button-secondary"
                 >
                   Surprise me
                   <Shuffle className="h-4 w-4" />
@@ -296,9 +296,9 @@ export function AnomalyHome() {
               id="active-case"
               data-active-case
               className={cn(
-                "anomaly-lens min-h-[390px] p-4 sm:p-5",
-                surprise && "anomaly-lens-pulse",
-                attention && "anomaly-lens-attention"
+                "print-lens min-h-[390px] p-4 sm:p-5",
+                surprise && "print-lens-pulse",
+                attention && "print-lens-attention"
               )}
             >
               <motion.div
@@ -317,7 +317,7 @@ export function AnomalyHome() {
                     {selected.shortName} / {selected.tech.slice(0, 3).join(" / ")}
                   </p>
                 </div>
-                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-nd-border-visible/70 bg-nd-accent text-nd-black shadow-[0_18px_45px_rgba(255,131,183,0.24)]">
+                <span className="print-shadow-strong grid h-12 w-12 shrink-0 place-items-center border border-nd-border-visible bg-nd-accent text-nd-black">
                   <SelectedIcon className="h-5 w-5" strokeWidth={1.8} />
                 </span>
               </motion.div>
@@ -333,10 +333,10 @@ export function AnomalyHome() {
                         selectBuild(build.id, event.detail === 0 ? "keyboard" : "pointer")
                       }
                       className={cn(
-                        "grid min-h-[66px] place-items-center gap-1 rounded-2xl border px-2 font-mono text-[9px] uppercase tracking-label-tight nd-focus nd-transition",
+                        "grid min-h-[66px] place-items-center gap-1 border px-2 font-mono text-[9px] uppercase tracking-label-tight nd-focus nd-transition",
                         selected.id === build.id
                           ? "border-nd-accent bg-nd-accent text-nd-black"
-                          : "border-nd-border bg-nd-black/38 text-nd-text-secondary hover:border-nd-border-visible hover:text-nd-text-display"
+                          : "border-nd-border bg-nd-black text-nd-text-secondary hover:border-nd-border-visible hover:text-nd-text-display"
                       )}
                       aria-label={`Inspect ${build.buildName}`}
                     >
@@ -351,7 +351,7 @@ export function AnomalyHome() {
                 initial={false}
                 animate={caseContentControls}
               >
-                <div className="mt-4 grid gap-4 rounded-[28px] border border-nd-border bg-nd-black/58 p-4 backdrop-blur">
+                <div className="mt-4 grid gap-4 border border-nd-border bg-nd-black p-4">
                 <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-start">
                   <div>
                     <p className="font-mono text-[10px] uppercase tracking-label-tight text-nd-accent">
@@ -366,7 +366,7 @@ export function AnomalyHome() {
                   </div>
                   <div className="flex flex-wrap gap-2 lg:max-w-[13rem] lg:justify-end">
                     {selected.tech.map((tech) => (
-                      <span key={tech} className="anomaly-tag">
+                      <span key={tech} className="print-tag">
                         {tech}
                       </span>
                     ))}
@@ -379,7 +379,7 @@ export function AnomalyHome() {
                   <div
                     key={step.label}
                     data-proof-signal
-                    className="min-h-[86px] rounded-3xl border border-nd-border bg-nd-black/36 p-4"
+                    className="min-h-[86px] border border-nd-border bg-nd-black p-4"
                   >
                     <p className="font-mono text-[10px] uppercase tracking-label-tight text-nd-accent">
                       {String(index + 1).padStart(2, "0")} {step.label}
@@ -393,7 +393,7 @@ export function AnomalyHome() {
 
               <div className="mt-4 md:hidden">
                 <div
-                  className="grid grid-cols-4 gap-1 rounded-full border border-nd-border bg-nd-black/36 p-1"
+                  className="grid grid-cols-4 gap-1 border border-nd-border bg-nd-black p-1"
                   role="tablist"
                   aria-label={`${selected.buildName} proof loop`}
                 >
@@ -405,17 +405,17 @@ export function AnomalyHome() {
                       aria-selected={activeProofStep === index}
                       onClick={() => setActiveProofStep(index)}
                       className={cn(
-                        "min-h-[36px] rounded-full px-2 font-mono text-[9px] uppercase tracking-label-tight nd-focus nd-transition",
+                        "min-h-[36px] border px-2 font-mono text-[9px] uppercase tracking-label-tight nd-focus nd-transition",
                         activeProofStep === index
-                          ? "bg-nd-accent text-nd-black"
-                          : "text-nd-text-secondary hover:text-nd-text-display"
+                          ? "border-nd-accent bg-nd-accent text-nd-black"
+                          : "border-transparent text-nd-text-secondary hover:border-nd-border-visible hover:text-nd-text-display"
                       )}
                     >
                       {step.label}
                     </button>
                   ))}
                 </div>
-                <div className="mt-3 rounded-3xl border border-nd-border bg-nd-black/42 p-4">
+                <div className="mt-3 border border-nd-border bg-nd-black p-4">
                   <p className="font-mono text-[10px] uppercase tracking-label-tight text-nd-accent">
                     {selectedProofLoop[activeProofStep].label}
                   </p>
@@ -426,7 +426,7 @@ export function AnomalyHome() {
               </div>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <Link href={selected.href} className="anomaly-button anomaly-button-primary">
+                <Link href={selected.href} className="print-button print-button-primary">
                   Open case
                   <ArrowRight className="h-4 w-4" />
                 </Link>
@@ -435,7 +435,7 @@ export function AnomalyHome() {
                     href={selected.sourceHref}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="anomaly-button anomaly-button-secondary"
+                    className="print-button print-button-secondary"
                   >
                     Source
                     <ExternalLink className="h-4 w-4" />
@@ -447,7 +447,7 @@ export function AnomalyHome() {
           </div>
           <a
             href="#builds"
-            className="mx-auto mt-8 hidden w-max rounded-full border border-nd-border bg-nd-surface/64 px-3 py-2 font-mono text-[10px] uppercase tracking-label text-nd-text-disabled backdrop-blur nd-focus nd-transition hover:border-nd-accent hover:text-nd-text-display md:flex"
+            className="mx-auto mt-8 hidden w-max border border-nd-border bg-nd-surface px-3 py-2 font-mono text-[10px] uppercase tracking-label text-nd-text-disabled nd-focus nd-transition hover:border-nd-accent hover:text-nd-text-display md:flex"
           >
             next: problem selector
           </a>
@@ -478,7 +478,7 @@ export function AnomalyHome() {
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
                     placeholder="Search projects, stacks, problems..."
-                    className="min-h-[52px] rounded-full border border-nd-border bg-nd-surface/68 px-5 font-mono text-sm text-nd-text-display outline-none backdrop-blur placeholder:text-nd-text-disabled focus:border-nd-accent"
+                    className="min-h-[52px] border border-nd-border bg-nd-surface px-5 font-mono text-sm text-nd-text-display outline-none placeholder:text-nd-text-disabled focus:border-nd-accent"
                   />
                   <div className="flex flex-wrap gap-2">
                     {filters.map((filter) => {
@@ -490,10 +490,10 @@ export function AnomalyHome() {
                           type="button"
                           onClick={() => setActiveFilter(filter.value)}
                           className={cn(
-                            "inline-flex min-h-[42px] items-center gap-2 rounded-full border px-4 font-mono text-[11px] uppercase tracking-label-tight nd-focus nd-transition",
+                            "inline-flex min-h-[42px] items-center gap-2 border px-4 font-mono text-[11px] uppercase tracking-label-tight nd-focus nd-transition",
                             active
                               ? "border-nd-accent bg-nd-accent text-nd-black"
-                              : "border-nd-border bg-nd-surface/62 text-nd-text-secondary hover:border-nd-text-display hover:text-nd-text-display"
+                              : "border-nd-border bg-nd-surface text-nd-text-secondary hover:border-nd-text-display hover:text-nd-text-display"
                           )}
                         >
                           <Icon className="h-3.5 w-3.5" />
@@ -533,17 +533,17 @@ export function AnomalyHome() {
                         selectBuild(build.id, event.detail === 0 ? "keyboard" : "pointer")
                       }
                       className={cn(
-                        "anomaly-row group grid gap-4 rounded-[28px] border p-4 text-left nd-focus md:grid-cols-[4.8rem_1fr_auto] md:items-center md:p-5",
+                        "print-row group grid gap-4 border p-4 text-left nd-focus md:grid-cols-[4.8rem_1fr_auto] md:items-center md:p-5",
                         active
-                          ? "border-nd-accent/70 bg-nd-surface/82 text-nd-text-display"
-                          : "border-nd-border bg-nd-surface/45 text-nd-text-secondary hover:border-nd-border-visible hover:bg-nd-surface/70"
+                          ? "border-nd-accent bg-nd-surface-raised text-nd-text-display"
+                          : "border-nd-border bg-nd-surface text-nd-text-secondary hover:border-nd-border-visible hover:bg-nd-surface-raised"
                       )}
                     >
                       <span className="flex items-center gap-3 md:block">
                         <span className="font-mono text-[10px] uppercase tracking-label text-nd-text-disabled">
                           {String(index + 1).padStart(2, "0")}
                         </span>
-                        <span className="mt-0 flex h-11 w-11 items-center justify-center rounded-2xl border border-nd-border bg-nd-black/55 text-nd-accent md:mt-3">
+                        <span className="mt-0 flex h-11 w-11 items-center justify-center border border-nd-border bg-nd-black text-nd-accent md:mt-3">
                           <Icon className="h-5 w-5" strokeWidth={1.5} />
                         </span>
                       </span>
@@ -586,7 +586,7 @@ export function AnomalyHome() {
               {originLines.map((line, index) => (
                 <div
                   key={line}
-                  className="rounded-[28px] border border-nd-border bg-nd-surface/56 p-5 backdrop-blur"
+                  className="border border-nd-border bg-nd-surface p-5"
                 >
                   <span className="font-mono text-[10px] uppercase tracking-label text-nd-text-disabled">
                     {String(index + 1).padStart(2, "0")}
@@ -611,7 +611,7 @@ export function AnomalyHome() {
               {workbenchItems.map((item) => (
                 <div
                   key={item.label}
-                  className="min-h-[150px] rounded-[28px] border border-nd-border bg-nd-surface/54 p-5 backdrop-blur"
+                  className="min-h-[150px] border border-nd-border bg-nd-surface p-5"
                 >
                   <p className="font-mono text-[10px] uppercase tracking-label text-nd-accent">
                     {item.label}
@@ -631,7 +631,7 @@ export function AnomalyHome() {
           data-command-section
           className="px-4 py-16 md:py-24"
         >
-          <div className="mx-auto grid max-w-[92rem] gap-8 rounded-[36px] border border-nd-border-visible/45 bg-nd-surface/68 p-6 backdrop-blur-2xl md:p-10 lg:grid-cols-[1fr_auto] lg:items-end">
+          <div className="print-panel print-shadow-lg mx-auto grid max-w-[92rem] gap-8 p-6 md:p-10 lg:grid-cols-[1fr_auto] lg:items-end">
             <div>
               <p className="font-mono text-[11px] uppercase tracking-label text-nd-accent">
                 Contact
@@ -653,7 +653,7 @@ export function AnomalyHome() {
                     href={link.href}
                     target={external ? "_blank" : undefined}
                     rel={external ? "noopener noreferrer" : undefined}
-                    className="anomaly-button anomaly-button-secondary justify-between"
+                    className="print-button print-button-secondary justify-between"
                   >
                     {link.label}
                     {link.href.startsWith("mailto") ? (

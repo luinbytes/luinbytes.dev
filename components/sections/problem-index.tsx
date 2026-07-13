@@ -68,7 +68,7 @@ export function ProblemIndex() {
             role="tablist"
             aria-label="Problems I refused to accept"
             aria-orientation="vertical"
-            className="atlas-paper border-2 border-nd-border-visible bg-nd-surface shadow-[10px_10px_0_rgba(255,131,183,0.1)]"
+            className="atlas-paper print-shadow-lg border-2 border-nd-border-visible bg-nd-surface"
           >
             {problemBuilds.map((item, index) => {
               const Icon = item.icon;
@@ -138,7 +138,7 @@ export function ProblemIndex() {
 
           <ScrollReveal
             delay={0.08}
-            className="atlas-mark atlas-paper min-h-[420px] border-2 border-nd-border-visible bg-nd-surface shadow-[14px_14px_0_rgba(20,127,148,0.12)]"
+            className="atlas-mark atlas-paper print-shadow-lg min-h-[420px] border-2 border-nd-border-visible bg-nd-surface"
           >
             {problemBuilds.map((item) => {
               const DetailIcon = item.icon;
@@ -163,7 +163,7 @@ export function ProblemIndex() {
                         {item.buildName}
                       </h3>
                     </div>
-                    <span className="flex h-14 w-14 shrink-0 items-center justify-center border-2 border-nd-accent bg-nd-accent text-nd-surface shadow-[5px_5px_0_rgba(255,131,183,0.12)]">
+                    <span className="print-shadow-strong flex h-14 w-14 shrink-0 items-center justify-center border-2 border-nd-accent bg-nd-accent text-nd-surface">
                       <DetailIcon className="h-6 w-6" strokeWidth={1.5} />
                     </span>
                   </div>
@@ -198,7 +198,7 @@ export function ProblemIndex() {
                   <div className="mt-10 flex flex-col gap-3 border-t border-nd-border pt-6 sm:flex-row">
                     <Link
                       href={item.href}
-                      className="atlas-scanline inline-flex min-h-[44px] items-center justify-center gap-2 border-2 border-nd-text-display bg-nd-text-display px-5 py-3 font-mono text-[12px] font-bold uppercase tracking-label-tight text-nd-black shadow-[6px_6px_0_rgba(217,77,47,0.24)] nd-transition hover:-translate-y-0.5"
+                      className="atlas-scanline print-shadow-sm inline-flex min-h-[44px] items-center justify-center gap-2 border-2 border-nd-text-display bg-nd-text-display px-5 py-3 font-mono text-[12px] font-bold uppercase tracking-label-tight text-nd-black nd-transition hover:-translate-y-0.5"
                     >
                       View build
                       <ArrowRight className="h-4 w-4" />

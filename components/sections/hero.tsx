@@ -25,7 +25,7 @@ export function Hero() {
 
       <div className="container relative z-10 mx-auto grid max-w-7xl gap-10 px-4 py-12 md:py-16 lg:grid-cols-[1.08fr_0.92fr] lg:items-center">
         <ScrollReveal>
-          <div className="theme-hero-note mb-7 inline-flex items-center gap-3 border border-nd-border-visible bg-nd-surface px-3 py-2 font-mono text-[10px] uppercase tracking-label-tight text-nd-text-secondary shadow-[6px_6px_0_rgba(255,131,183,0.12)]">
+          <div className="theme-hero-note print-shadow-sm mb-7 inline-flex items-center gap-3 border border-nd-border-visible bg-nd-surface px-3 py-2 font-mono text-[10px] uppercase tracking-label-tight text-nd-text-secondary">
             <span className="h-2 w-2 bg-nd-accent" />
             <span>Field note 00 / working reflex</span>
           </div>
@@ -48,7 +48,7 @@ export function Hero() {
           <div className="mt-10 flex flex-col gap-3 sm:flex-row">
             <Link
               href="#builds"
-              className="atlas-scanline atlas-hover-lift inline-flex min-h-[48px] items-center justify-center gap-2 border-2 border-nd-text-display bg-nd-text-display px-6 py-3 font-mono text-[12px] font-bold uppercase tracking-label-tight text-nd-black shadow-[7px_7px_0_rgba(217,77,47,0.28)]"
+              className="atlas-scanline atlas-hover-lift print-shadow-md inline-flex min-h-[48px] items-center justify-center gap-2 border-2 border-nd-text-display bg-nd-text-display px-6 py-3 font-mono text-[12px] font-bold uppercase tracking-label-tight text-nd-black"
             >
               Explore Problems
               <ArrowRight className="atlas-arrow h-4 w-4 nd-transition" />
@@ -56,7 +56,7 @@ export function Hero() {
             <button
               type="button"
               onClick={openCommandMenu}
-              className="atlas-hover-lift inline-flex min-h-[48px] items-center justify-center gap-2 border-2 border-nd-border-visible bg-nd-surface px-6 py-3 font-mono text-[12px] font-bold uppercase tracking-label-tight text-nd-text-primary shadow-[7px_7px_0_rgba(20,127,148,0.18)]"
+              className="atlas-hover-lift print-shadow-md inline-flex min-h-[48px] items-center justify-center gap-2 border-2 border-nd-border-visible bg-nd-surface px-6 py-3 font-mono text-[12px] font-bold uppercase tracking-label-tight text-nd-text-primary"
             >
               <span className="font-mono text-[13px] leading-none">
                 <CommandShortcut />
@@ -68,7 +68,7 @@ export function Hero() {
 
         <ScrollReveal
           delay={0.08}
-          className="theme-workbench-card atlas-mark atlas-paper border-2 border-nd-border-visible bg-nd-surface p-5 shadow-[12px_12px_0_rgba(255,131,183,0.12)] md:p-6"
+          className="theme-workbench-card atlas-mark atlas-paper print-shadow-lg border-2 border-nd-border-visible bg-nd-surface p-5 md:p-6"
         >
           <div className="theme-workbench-heading mb-6 flex items-center justify-between border-b-2 border-nd-border-visible pb-4 font-mono text-[10px] uppercase tracking-label text-nd-text-secondary">
             <span>Readout</span>

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Doto, Space_Grotesk, Space_Mono } from "next/font/google";
+import { Pixelify_Sans, Space_Grotesk, Space_Mono } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
@@ -13,17 +13,17 @@ const spaceGrotesk = Space_Grotesk({
   display: "swap",
 });
 
-const doto = Doto({
+const pixelify = Pixelify_Sans({
   subsets: ["latin"],
   weight: ["400", "700"],
-  variable: "--font-doto",
+  variable: "--font-pixelify",
   display: "swap",
 });
 
 const spaceMono = Space_Mono({
   subsets: ["latin"],
   weight: ["400", "700"],
-  variable: "--font-mono",
+  variable: "--font-space-mono",
   display: "swap",
 });
 
@@ -102,8 +102,8 @@ export default function RootLayout({
         ║   b) Lu debugging something I broke (sorry)               ║
         ║   c) A recruiter snooping for code quality (it's good!)   ║
         ║                                                           ║
-        ║   Command Deck System. Proof loop interface.               ║
-        ║   Sharp surfaces, strange controls, preserved details.     ║
+        ║   Ink-and-paper system. Proof loop interface.               ║
+        ║   Hard frames, print marks, preserved details.              ║
         ║                                                           ║
         ╚═══════════════════════════════════════════════════════════╝
       */}
@@ -114,14 +114,14 @@ export default function RootLayout({
   try {
     localStorage.removeItem("lu-theme");
   } catch {}
-  document.documentElement.dataset.theme = "anomaly";
+  document.documentElement.dataset.theme = "ink-paper";
   document.documentElement.style.colorScheme = "dark";
 })();`,
           }}
         />
       </head>
       <body
-        className={`${spaceGrotesk.variable} ${doto.variable} ${spaceMono.variable} font-body bg-nd-black text-nd-text-primary antialiased`}
+        className={`${spaceGrotesk.variable} ${pixelify.variable} ${spaceMono.variable} font-body bg-nd-black text-nd-text-primary antialiased`}
         suppressHydrationWarning
       >
         <ConsoleEgg />
@@ -129,7 +129,7 @@ export default function RootLayout({
         <CaseInterfaceOverlay />
         <a
           href="#main"
-          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[200] focus:bg-nd-text-display focus:px-4 focus:py-3 focus:font-mono focus:text-[12px] focus:font-bold focus:uppercase focus:tracking-[0.08em] focus:text-nd-black"
+          className="registration-plate sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[200] focus:border-2 focus:border-dark-brown focus:bg-paper focus:px-4 focus:py-3 focus:font-mono focus:text-[12px] focus:font-bold focus:uppercase focus:tracking-[0.08em] focus:text-dark-brown focus:outline focus:outline-3 focus:outline-paper focus:outline-offset-3"
         >
           Skip to content
         </a>

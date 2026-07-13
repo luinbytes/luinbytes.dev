@@ -4,8 +4,12 @@ import { useEffect } from "react";
 
 export function ConsoleEgg() {
   useEffect(() => {
+    const palette = getComputedStyle(document.documentElement);
+    const paper = palette.getPropertyValue("--color-paper").trim();
+    const secondary = palette.getPropertyValue("--color-nd-text-secondary").trim();
+    const mustard = palette.getPropertyValue("--color-mustard").trim();
     const styles = [
-      "color: #FFFFFF",
+      `color: ${paper}`,
       "font-size: 16px",
       "font-weight: bold",
       "font-family: 'Space Mono', monospace",
@@ -13,13 +17,13 @@ export function ConsoleEgg() {
     ].join(";");
 
     const stylesSmall = [
-      "color: #999999",
+      `color: ${secondary}`,
       "font-size: 12px",
       "font-family: 'Space Mono', monospace",
     ].join(";");
 
     const stylesLink = [
-      "color: #5B9BF6",
+      `color: ${mustard}`,
       "font-size: 12px",
       "font-family: 'Space Mono', monospace",
     ].join(";");

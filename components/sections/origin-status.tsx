@@ -9,7 +9,7 @@ export function OriginStatus() {
         data-journey-section="about"
         className="relative overflow-hidden border-b border-nd-border py-20 md:py-28"
       >
-        <div className="absolute bottom-0 left-0 h-1/2 w-full bg-[linear-gradient(135deg,rgba(217,77,47,0.08),transparent_45%,rgba(20,127,148,0.1))]" />
+        <div className="absolute bottom-0 left-0 h-1/2 w-full bg-[linear-gradient(135deg,var(--color-nd-accent-subtle),transparent_45%,var(--color-nd-border))]" />
         <div className="container mx-auto grid max-w-7xl gap-10 px-4 lg:grid-cols-[0.85fr_1.15fr]">
           <ScrollReveal>
             <span className="mb-4 block font-mono text-[11px] uppercase tracking-label text-nd-accent">
@@ -19,7 +19,7 @@ export function OriginStatus() {
               Started on a PS3. Stayed for the systems.
             </h2>
           </ScrollReveal>
-          <div className="atlas-paper space-y-5 border-l-4 border-nd-accent bg-nd-surface/70 p-6 shadow-[10px_10px_0_rgba(255,131,183,0.1)]">
+          <div className="atlas-paper print-shadow-lg space-y-5 border-l-4 border-nd-accent bg-nd-surface p-6">
             {originLines.map((line, index) => (
               <ScrollReveal key={line} delay={index * 0.05} distance={12}>
                 <p className="text-lg leading-relaxed text-nd-text-secondary md:text-xl">
