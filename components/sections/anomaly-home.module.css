@@ -400,6 +400,63 @@
   to { transform: translate(0, 0); opacity: 0.22; }
 }
 
+@media (min-width: 901px) {
+  .hero {
+    --hero-block-space: clamp(0.75rem, 2dvh, 1.5rem);
+    padding: var(--hero-block-space) var(--poster-pad);
+  }
+
+  .registrationFrame {
+    height: clamp(27rem, calc(100dvh - 15rem), 43.125rem);
+    min-height: 0;
+  }
+
+  .heroCopy {
+    padding: clamp(1.5rem, 4dvh, 3.5rem) clamp(1.75rem, 3vw, 4rem);
+  }
+
+  .hero h1 {
+    margin-top: clamp(1rem, 2dvh, 2.5rem);
+    font-size: clamp(3.3rem, min(6.6vw, 10dvh), 7.35rem);
+  }
+
+  .intro {
+    margin-top: clamp(0.75rem, 1.8dvh, 2rem);
+    font-size: clamp(0.95rem, min(1.4vw, 2.2dvh), 1.2rem);
+    line-height: 1.5;
+  }
+
+  .actions {
+    margin-top: clamp(0.75rem, 1.8dvh, 2rem);
+  }
+
+  .heroSignalPlate {
+    inset: clamp(0.9rem, 2dvh, 3rem);
+  }
+
+  .plateHeader,
+  .plateFooter {
+    padding-block: clamp(0.5rem, 1.2dvh, 0.8rem);
+  }
+
+  .signalRail svg {
+    height: clamp(32px, 5dvh, 44px);
+  }
+
+  .proofStrip {
+    margin-top: clamp(0.65rem, 1.5dvh, 1.5rem);
+  }
+
+  .proofStrip li {
+    min-height: clamp(64px, 10dvh, 92px);
+    padding-block: clamp(0.55rem, 1.2dvh, 0.9rem);
+  }
+
+  .proofStrip p {
+    margin-top: clamp(0.45rem, 1.1dvh, 1rem);
+  }
+}
+
 @media (max-width: 900px) {
   .registrationFrame,
   .builds,

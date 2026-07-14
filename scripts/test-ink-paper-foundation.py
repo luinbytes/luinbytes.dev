@@ -270,6 +270,81 @@ def assert_reduced_motion_product_menu(browser: Browser, base_url: str) -> None:
     context.close()
 
 
+def assert_short_desktop_hero(browser: Browser, base_url: str) -> None:
+    context = browser.new_context(
+        viewport={"width": 1280, "height": 720},
+        reduced_motion="reduce",
+    )
+    page = context.new_page()
+    page.goto(base_url, wait_until="networkidle")
+
+    header = page.locator("header").first
+    registration_frame = page.locator("#home [class*=registrationFrame]")
+    heading = page.locator("#home h1")
+    intro = page.locator("#home [class*=intro]")
+    primary_action = page.get_by_role("link", name="Inspect builds")
+    secondary_action = page.get_by_role("button", name="Surprise me")
+    signal_plate = page.locator("#home [class*=heroSignalPlate]")
+    proof_strip = page.get_by_role("list", name="Proof loop")
+    hero = page.locator("#home")
+
+    for element in (
+        registration_frame,
+        heading,
+        intro,
+        primary_action,
+        secondary_action,
+        signal_plate,
+        proof_strip,
+    ):
+        expect(element).to_be_visible()
+
+    bounds = page.evaluate(
+        """() => {
+            const box = (selector) => {
+                const rect = document.querySelector(selector).getBoundingClientRect();
+                return {top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right};
+            };
+            const byText = (selector, text) => [...document.querySelectorAll(selector)]
+                .find((element) => element.textContent.trim().includes(text));
+            const actionBox = (selector, text) => {
+                const rect = byText(selector, text).getBoundingClientRect();
+                return {top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right};
+            };
+            return {
+                viewport: {width: innerWidth, height: innerHeight},
+                header: box('header'),
+                hero: box('#home'),
+                frame: box('#home [class*=registrationFrame]'),
+                heading: box('#home h1'),
+                intro: box('#home [class*=intro]'),
+                primary: actionBox('#home a', 'Inspect builds'),
+                secondary: actionBox('#home button', 'Surprise me'),
+                signal: box('#home [class*=heroSignalPlate]'),
+                proof: box('#home [class*=proofStrip]'),
+            };
+        }"""
+    )
+    print("Short desktop hero bounds:", bounds)
+
+    viewport_height = bounds["viewport"]["height"]
+    header_bottom = bounds["header"]["bottom"]
+    assert bounds["frame"]["top"] >= header_bottom, bounds
+    for name in ("frame", "heading", "intro", "primary", "secondary", "signal", "proof"):
+        box = bounds[name]
+        assert box["top"] >= header_bottom, (name, bounds)
+        assert box["bottom"] <= viewport_height, (name, bounds)
+    assert bounds["hero"]["bottom"] <= viewport_height, bounds
+    assert page.evaluate(
+        "() => document.documentElement.scrollWidth === document.documentElement.clientWidth"
+    ), bounds
+
+    page.screenshot(
+        path=str(ARTIFACT_DIR / "home-desktop-1280x720-first-fold.png")
+    )
+    context.close()
+
+
 def assert_home_behavior(page: Page) -> None:
     assert page.locator("ol[data-build-list]").count() == 1
     for selector in (
@@ -338,6 +413,7 @@ def main() -> None:
 
         viewports: tuple[tuple[str, ViewportSize], ...] = (
             ("desktop-1280", {"width": 1280, "height": 900}),
+            ("desktop-1440", {"width": 1440, "height": 900}),
             ("mobile-390", {"width": 390, "height": 844}),
         )
         for viewport_name, viewport in viewports:
@@ -366,6 +442,12 @@ def main() -> None:
                     full_page=True,
                 )
                 if route == "/":
+                    if viewport_name == "mobile-390":
+                        page.screenshot(
+                            path=str(
+                                ARTIFACT_DIR / "home-mobile-390x844-first-fold.png"
+                            )
+                        )
                     assert_home_behavior(page)
                     assert_focus_visible(page)
                 elif viewport_name == "desktop-1280":
@@ -385,6 +467,7 @@ def main() -> None:
             all_page_errors.extend(page_errors)
             context.close()
 
+        assert_short_desktop_hero(browser, base_url)
         assert_desktop_product_menu(browser, base_url)
         assert_reduced_motion_product_menu(browser, base_url)
 
@@ -403,7 +486,7 @@ def main() -> None:
     assert not all_console_errors, all_console_errors
     assert not all_page_errors, all_page_errors
     print(
-        f"ink-paper portfolio checks passed: {len(RETAINED_ROUTES)} routes at 1280px and 390px; "
+        f"ink-paper portfolio checks passed: {len(RETAINED_ROUTES)} routes at 1280px, 1440px, and 390px; "
         f"screenshots in {ARTIFACT_DIR}"
     )
 
