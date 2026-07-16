@@ -44,6 +44,11 @@ const productGroups = [
     icon: Gamepad2,
     items: [
       {
+        name: "BallHammer",
+        href: "/ballhammer",
+        description: "Darktide enemy overlays and configurable aim controls.",
+      },
+      {
         name: "Risk of Anticheat",
         href: "/risk-of-anticheat",
         description: "Risk of Rain 2 ESP, aim tools, and runtime systems.",

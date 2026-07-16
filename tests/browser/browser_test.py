@@ -132,6 +132,7 @@ class BrowserTestCase(unittest.TestCase):
 PRODUCTS = (
     ("Meteor", "/meteor"),
     ("Sleepr", "/sleepr"),
+    ("BallHammer", "/ballhammer"),
     ("Risk of Anticheat", "/risk-of-anticheat"),
     ("BrcTrainer", "/brc-trainer"),
     ("DaggerFall", "/dagger-fall"),
@@ -160,6 +161,115 @@ def product_link(page: Page, name: str, path: str, mobile: bool):
 
 
 class ProductNavigationTests(BrowserTestCase):
+    def test_ballhammer_product_at_desktop_and_mobile(self) -> None:
+        viewports = (
+            {"width": 1440, "height": 900},
+            {"width": 412, "height": 915},
+        )
+
+        for viewport in viewports:
+            with self.subTest(viewport=viewport):
+                browser = self.playwright.chromium.launch()
+                page = browser.new_page(viewport=viewport)
+                mobile = viewport["width"] == 412
+                page.goto(self.base_url)
+
+                open_products_navigation(page, mobile)
+                link = product_link(page, "BallHammer", "/ballhammer", mobile)
+                self.assertTrue(link.is_visible())
+                link.click()
+                page.wait_for_url("**/ballhammer")
+
+                lede = page.get_by_text(
+                    "Enemy overlays and configurable aim controls for Darktide.",
+                    exact=True,
+                )
+                lede.wait_for(state="visible")
+                self.assertTrue(lede.is_visible())
+                source = page.get_by_role("link", name="View source on GitHub")
+                self.assertEqual(
+                    source.get_attribute("href"),
+                    "https://github.com/luinbytes/BallHammer",
+                )
+                capabilities = (
+                    "All-enemy ESP with bone-projected boxes",
+                    "Distinct special-enemy names, SPECIAL flags, distances, outlines, and health bars",
+                    "Distance fading and visibility behavior",
+                    "World-space horde grouping with buffered off-screen membership",
+                    "Head or aim-bone dots and reversible join/split animation",
+                    "A configurable normal aimbot chooses the visible target closest to the crosshair",
+                    "Target lock holds while the target remains alive and visible, with immediate replacement on death or occlusion",
+                    "Head or torso aim, configurable distance and field of view, interpolated smoothing, and aim curvature",
+                    "Activate with left mouse, right mouse, either mouse button, or a custom keyboard key",
+                    "Triggerbot and rage modes are not included",
+                )
+                for capability in capabilities:
+                    self.assertTrue(page.get_by_text(capability, exact=True).is_visible())
+                get_it = page.get_by_role("region", name="Get it")
+                self.assertTrue(
+                    get_it.get_by_text("Darktide Mod Loader", exact=True).is_visible()
+                )
+                self.assertTrue(
+                    get_it.get_by_text("Darktide Mod Framework", exact=True).is_visible()
+                )
+                self.assertTrue(
+                    get_it.get_by_text(
+                        "Copy the repository to the game mods directory as BallHammer.",
+                        exact=True,
+                    ).is_visible()
+                )
+                self.assertTrue(
+                    get_it.get_by_text(
+                        "Add BallHammer to mod_load_order.txt.", exact=True
+                    ).is_visible()
+                )
+                self.assertTrue(
+                    get_it.get_by_text(
+                        "Restart Darktide after installing or replacing mod files.",
+                        exact=True,
+                    ).is_visible()
+                )
+                self.assertTrue(
+                    get_it.get_by_text(
+                        "Configure BallHammer in Darktide mod options.", exact=True
+                    ).is_visible()
+                )
+
+                hero = page.get_by_role(
+                    "img", name="Darktide gameplay with BallHammer enemy overlays"
+                )
+                self.assertTrue(hero.is_visible())
+                self.assertTrue(
+                    hero.evaluate(
+                        "element => element.complete && element.naturalWidth > 0"
+                    )
+                )
+                self.assertEqual(hero.evaluate("element => getComputedStyle(element).objectFit"), "contain")
+                if not mobile:
+                    heading_box = page.get_by_role("heading", name="BallHammer.").bounding_box()
+                    hero_box = hero.bounding_box()
+                    self.assertIsNotNone(heading_box)
+                    self.assertIsNotNone(hero_box)
+                    self.assertLessEqual(
+                        heading_box["x"] + heading_box["width"], hero_box["x"]
+                    )
+                self.assertLessEqual(
+                    page.evaluate("document.documentElement.scrollWidth"),
+                    viewport["width"],
+                )
+
+                page.goto(f"{self.base_url}/#builds")
+                builds = page.locator("#builds")
+                builds.scroll_into_view_if_needed()
+                self.assertNotIn(
+                    "BallHammer",
+                    "\n".join(
+                        builds.locator("ol[data-build-list] small").all_text_contents()
+                    ),
+                )
+
+                browser.close()
+
     def test_products_navigation_at_desktop_and_mobile(self) -> None:
         viewports = {
             "desktop": {"width": 1440, "height": 900},
@@ -180,11 +290,11 @@ class ProductNavigationTests(BrowserTestCase):
                     link.click()
                     page.wait_for_url(f"**{path}")
                     self.assertEqual(page.url, f"{self.base_url}{path}")
-                    self.assertTrue(
-                        page.get_by_role(
-                            "heading", level=1, name=f"{name}."
-                        ).is_visible()
+                    heading = page.get_by_role(
+                        "heading", level=1, name=f"{name}."
                     )
+                    heading.wait_for(state="visible")
+                    self.assertTrue(heading.is_visible())
                     open_products_navigation(page, mobile)
 
                 for name, href in EXTERNAL_PRODUCTS:
@@ -242,8 +352,10 @@ class ProductNavigationTests(BrowserTestCase):
 
                 for name, path in PRODUCT_ROUTES:
                     page.goto(f"{self.base_url}{path}")
-                    self.assertTrue(
-                        page.get_by_role("heading", level=1, name=f"{name}.").is_visible()
+                    heading = page.get_by_role(
+                        "heading", level=1, name=f"{name}."
                     )
+                    heading.wait_for(state="visible")
+                    self.assertTrue(heading.is_visible())
 
                 browser.close()
