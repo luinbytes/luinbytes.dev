@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import BallHammerPage from "./BallHammerPage";
 
 const description =
-  "A Darktide Mod Framework Lua 5.1 mod with enemy overlays and configurable aim controls.";
+  "A Darktide mod with all-enemy and pickup ESP plus configurable aim modes.";
 
 export const metadata: Metadata = {
   title: "BallHammer",
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     canonical: "https://luinbytes.github.io/ballhammer",
   },
   openGraph: {
-    title: "BallHammer — Darktide overlays and aim controls",
+    title: "BallHammer — Darktide ESP and configurable aim modes",
     description,
     url: "https://luinbytes.github.io/ballhammer",
     siteName: "Luinbytes",

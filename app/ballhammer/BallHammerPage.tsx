@@ -7,16 +7,16 @@ const overlayFeatures = [
   "Distinct special-enemy names, SPECIAL flags, distances, outlines, and health bars",
   "Distance fading and visibility behavior",
   "Compact world-space horde grouping with separate horizontal and elevation limits, buffered off-screen membership, aim-bone dots, and reversible join/split animation",
+  "Pickup ESP labels plasteel, diamantine, ammo, grenades, deployables, stimms, mission items, and other interactable pickups, with configurable range and distance fading",
 ];
 
 const aimFeatures = [
   "A configurable normal aimbot chooses the visible target closest to the crosshair",
-  "Target lock holds while the target remains alive and visible, with immediate replacement on death or occlusion",
   "Head or torso aim, configurable distance and field of view, interpolated smoothing, and aim curvature",
-  "Activate with left mouse, right mouse, either mouse button, or a custom keyboard key",
-  "Weighted Arbites and Skitarii companion orders prioritize special type, distance, and remaining health without moving the camera",
-  "Normal retargeting waits for companion damage, with a distance-based timeout for rejected orders",
-  "Triggerbot and rage modes are not included",
+  "A configurable magnet triggerbot uses separate aim and fire radii with smoothing",
+  "Rage mode selects visible on-screen targets using danger, range, and crosshair weighting",
+  "Optional timed repeat fire supports press-driven non-automatic weapons",
+  "Optional local recoil and spread suppression works without camera compensation",
 ];
 
 export default function BallHammerPage() {
@@ -29,7 +29,7 @@ export default function BallHammerPage() {
             BallHammer<span>.</span>
           </h1>
           <p className={styles.lede}>
-            Enemy overlays and configurable aim controls for Darktide.
+            All-enemy and pickup ESP with configurable aim modes for Darktide.
           </p>
           <a
             className={styles.primaryCta}
@@ -102,8 +102,17 @@ export default function BallHammerPage() {
             BallHammer is a Darktide Mod Framework mod written for Lua 5.1.
           </p>
           <p>
-            Configuration has separate ESP, Aimbot, and Companion sections in
-            Darktide Mod Options.
+            Weighted Arbites and Skitarii orders account for special type,
+            distance, and health. Native companion-rescue states override those
+            weights, and retargeting waits for companion damage.
+          </p>
+          <p>
+            An optional charged Arbites dog EMP sends press, hold, and release
+            through Darktide networked input frames when the dog connects.
+          </p>
+          <p>
+            Configuration has separate ESP, Pickup ESP, Aimbot, Magnet
+            Triggerbot, Rage Mode, Weapon, and Companion option groups.
           </p>
           <dl>
             <div>

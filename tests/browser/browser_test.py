@@ -231,11 +231,16 @@ class ProductNavigationTests(BrowserTestCase):
                 page.wait_for_url("**/ballhammer")
 
                 lede = page.get_by_text(
-                    "Enemy overlays and configurable aim controls for Darktide.",
+                    "All-enemy and pickup ESP with configurable aim modes for Darktide.",
                     exact=True,
                 )
                 lede.wait_for(state="visible")
                 self.assertTrue(lede.is_visible())
+                self.assertEqual(page.title(), "BallHammer | Lu")
+                self.assertEqual(
+                    page.locator('meta[name="description"]').get_attribute("content"),
+                    "A Darktide mod with all-enemy and pickup ESP plus configurable aim modes.",
+                )
                 source = page.get_by_role("link", name="View source on GitHub")
                 self.assertEqual(
                     source.get_attribute("href"),
@@ -246,17 +251,25 @@ class ProductNavigationTests(BrowserTestCase):
                     "Distinct special-enemy names, SPECIAL flags, distances, outlines, and health bars",
                     "Distance fading and visibility behavior",
                     "Compact world-space horde grouping with separate horizontal and elevation limits, buffered off-screen membership, aim-bone dots, and reversible join/split animation",
+                    "Pickup ESP labels plasteel, diamantine, ammo, grenades, deployables, stimms, mission items, and other interactable pickups, with configurable range and distance fading",
                     "A configurable normal aimbot chooses the visible target closest to the crosshair",
-                    "Target lock holds while the target remains alive and visible, with immediate replacement on death or occlusion",
                     "Head or torso aim, configurable distance and field of view, interpolated smoothing, and aim curvature",
-                    "Activate with left mouse, right mouse, either mouse button, or a custom keyboard key",
-                    "Weighted Arbites and Skitarii companion orders prioritize special type, distance, and remaining health without moving the camera",
-                    "Normal retargeting waits for companion damage, with a distance-based timeout for rejected orders",
-                    "Triggerbot and rage modes are not included",
-                    "Configuration has separate ESP, Aimbot, and Companion sections in Darktide Mod Options.",
+                    "A configurable magnet triggerbot uses separate aim and fire radii with smoothing",
+                    "Rage mode selects visible on-screen targets using danger, range, and crosshair weighting",
+                    "Optional timed repeat fire supports press-driven non-automatic weapons",
+                    "Optional local recoil and spread suppression works without camera compensation",
+                    "Weighted Arbites and Skitarii orders account for special type, distance, and health. Native companion-rescue states override those weights, and retargeting waits for companion damage.",
+                    "An optional charged Arbites dog EMP sends press, hold, and release through Darktide networked input frames when the dog connects.",
+                    "Configuration has separate ESP, Pickup ESP, Aimbot, Magnet Triggerbot, Rage Mode, Weapon, and Companion option groups.",
                 )
                 for capability in capabilities:
                     self.assertTrue(page.get_by_text(capability, exact=True).is_visible())
+                self.assertEqual(
+                    page.get_by_text(
+                        "Triggerbot and rage modes are not included", exact=True
+                    ).count(),
+                    0,
+                )
                 get_it = page.get_by_role("region", name="Get it")
                 self.assertTrue(
                     get_it.get_by_text("Darktide Mod Loader", exact=True).is_visible()
