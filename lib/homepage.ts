@@ -5,7 +5,6 @@ import {
   Boxes,
   CheckSquare,
   Gamepad2,
-  MousePointerBan,
   Smartphone,
   type LucideIcon,
 } from "lucide-react";
@@ -123,7 +122,7 @@ export const problemBuilds: ProblemBuild[] = [
     id: "linux-sonar",
     index: "01",
     problem: "Linux audio tools are stuck in 2005.",
-    buildName: "linux-sonar",
+    buildName: "Linux Sonar",
     shortName: "Linux audio",
     summary:
       "SteelSeries Sonar for Linux: per-app PipeWire routing, ChatMix, mic effects, and hardware-aware controls.",
@@ -189,7 +188,7 @@ export const problemBuilds: ProblemBuild[] = [
     id: "reverse-engineering",
     index: "06",
     problem: "Game systems are opaque black boxes.",
-    buildName: "game systems / reverse engineering",
+    buildName: "Game Systems",
     shortName: "Systems craft",
     summary:
       "Tools to inspect, understand, and work with game internals: overlays, hooks, trainers, and runtime instrumentation.",
@@ -200,57 +199,6 @@ export const problemBuilds: ProblemBuild[] = [
     href: "/risk-of-anticheat",
     filters: ["reverse", "systems", "game", "modding"],
     icon: Gamepad2,
-  },
-  {
-    id: "minecrooft",
-    index: "08",
-    problem: "Voxel engines are best understood by building one.",
-    buildName: "Minecrooft",
-    shortName: "Voxel engine",
-    summary:
-      "Minecraft-style engine built from scratch in Rust with wgpu rendering, procedural biomes, survival/creative modes, and chunk save/load.",
-    outcome:
-      "A deterministic voxel sandbox with culled chunk meshing, generated textures, inventory, HUD, physics, and multithreaded world loading.",
-    proof: "Public Rust source repo contains the wgpu renderer, world generation, and chunk systems.",
-    tech: ["Rust", "wgpu", "winit", "egui"],
-    href: "https://github.com/luinbytes/minecrooft",
-    sourceHref: "https://github.com/luinbytes/minecrooft",
-    filters: ["rust", "game", "systems", "engine"],
-    icon: Boxes,
-  },
-  {
-    id: "cursor-barrier",
-    index: "09",
-    problem: "Pointer boundaries should follow the way the desktop is actually used.",
-    buildName: "Cursor Barrier",
-    shortName: "Pointer control",
-    summary:
-      "Linux cursor utility for controlling pointer movement at workspace and monitor edges without reaching for a heavier desktop tool.",
-    outcome:
-      "Small systems utility shaped around a single desktop annoyance: predictable cursor behavior with minimal moving parts.",
-    proof: "Public C source repo for the Linux pointer-boundary utility.",
-    tech: ["C", "Linux", "Desktop"],
-    href: "https://github.com/luinbytes/cursor-barrier",
-    sourceHref: "https://github.com/luinbytes/cursor-barrier",
-    filters: ["linux", "desktop", "systems", "utility"],
-    icon: MousePointerBan,
-  },
-  {
-    id: "raycast-automation",
-    index: "10",
-    problem: "Automation is more work than doing the thing.",
-    buildName: "Raycast automation",
-    shortName: "Small workflow tools",
-    summary:
-      "Raycast extensions and utilities that remove friction from lookups, window switching, smart-home control, and repeated tasks.",
-    outcome:
-      "Small tools with big leverage: fast to summon, easy to trust, and designed for muscle memory.",
-    proof: "Public extensions repo collects the TypeScript/Raycast workflow tools.",
-    tech: ["TypeScript", "Raycast API", "Node"],
-    href: "https://github.com/luinbytes/extensions",
-    sourceHref: "https://github.com/luinbytes/extensions",
-    filters: ["raycast", "automation", "typescript", "workflow"],
-    icon: Bot,
   },
 ];
 

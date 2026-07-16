@@ -138,6 +138,12 @@ PRODUCTS = (
     ("SuperHackerGolf", "/super-hacker-golf"),
 )
 
+EXTERNAL_PRODUCTS = (
+    ("Minecrooft", "https://github.com/luinbytes/minecrooft"),
+    ("Cursor Barrier", "https://github.com/luinbytes/cursor-barrier"),
+    ("Raycast automation", "https://github.com/luinbytes/extensions"),
+)
+
 PRODUCT_ROUTES = PRODUCTS + (("linux-sonar", "/linux-sonar"),)
 
 
@@ -181,6 +187,15 @@ class ProductNavigationTests(BrowserTestCase):
                     )
                     open_products_navigation(page, mobile)
 
+                for name, href in EXTERNAL_PRODUCTS:
+                    link = page.get_by_role(
+                        "link", name=re.compile(rf"^{re.escape(name)}")
+                    )
+                    self.assertTrue(link.is_visible())
+                    self.assertEqual(link.get_attribute("href"), href)
+                    self.assertEqual(link.get_attribute("target"), "_blank")
+                    self.assertEqual(link.get_attribute("rel"), "noopener noreferrer")
+
                 page.screenshot(
                     path=SCREENSHOTS / f"products-navigation-{viewport_name}.png",
                     full_page=True,
@@ -204,6 +219,13 @@ class ProductNavigationTests(BrowserTestCase):
         self.assertTrue(
             builds.locator("ol[data-build-list]").get_by_role("button").first.is_visible()
         )
+        build_names = builds.locator("ol[data-build-list] small").all_text_contents()
+        self.assertEqual(
+            [name.split(" / ", 1)[0] for name in build_names],
+            ["Linux Sonar", "Meteor", "Poke Android", "Sleepr", "Game Systems"],
+        )
+        for removed_name in ("Minecrooft", "Cursor Barrier", "Raycast automation"):
+            self.assertNotIn(removed_name, "\n".join(build_names))
 
         browser.close()
 
