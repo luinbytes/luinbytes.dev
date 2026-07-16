@@ -1,0 +1,156 @@
+.page {
+  --tool-accent: #e6d66f;
+  --tool-accent-soft: rgba(230, 214, 111, 0.12);
+  min-height: 100vh;
+  overflow: hidden;
+  background: #0b0d0f;
+  color: #f4f1e8;
+}
+
+.risk { --tool-accent: #ef424c; --tool-accent-soft: rgba(239, 66, 76, 0.1); }
+.brc { --tool-accent: #f1cf4a; --tool-accent-soft: rgba(241, 207, 74, 0.1); }
+.dagger { --tool-accent: #8fdbc0; --tool-accent-soft: rgba(143, 219, 192, 0.1); }
+.golf { --tool-accent: #92d56d; --tool-accent-soft: rgba(146, 213, 109, 0.1); }
+
+.main {
+  width: min(100% - 2rem, 70rem);
+  margin-inline: auto;
+  padding: 7rem 0 5rem;
+}
+
+.back,
+.eyebrow,
+.detail,
+.button { font-family: var(--font-geist-mono), monospace; }
+
+.back {
+  display: inline-block;
+  margin-bottom: 3rem;
+  color: #cbc8c0;
+  font-size: .75rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.back:hover { color: #fff; }
+.back:focus-visible, .button:focus-visible { outline: 3px solid var(--tool-accent); outline-offset: 4px; }
+
+.hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(14rem, .55fr);
+  gap: clamp(2rem, 8vw, 7rem);
+  align-items: end;
+  padding-bottom: clamp(3rem, 7vw, 5rem);
+  border-bottom: 1px solid #42464a;
+}
+
+.golf .hero {
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(2rem, 5vw, 3.5rem);
+  align-items: start;
+}
+
+.golf .title {
+  max-width: none;
+  font-size: clamp(2.2rem, 7vw, 6rem);
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.golf .mark {
+  width: min(100%, 34rem);
+  min-height: 10rem;
+  justify-self: end;
+}
+
+.eyebrow { color: var(--tool-accent); font-size: .75rem; letter-spacing: .12em; text-transform: uppercase; }
+.title { max-width: 12ch; margin: .8rem 0 1.25rem; font-size: clamp(3rem, 8vw, 6.8rem); line-height: .9; letter-spacing: -.055em; }
+.title span { color: var(--tool-accent); }
+.lede { max-width: 43rem; margin: 0; color: #d5d2ca; font-size: clamp(1rem, 2vw, 1.2rem); line-height: 1.65; }
+
+.mark { position: relative; min-height: 13rem; border: 1px solid #55595c; background: var(--tool-accent-soft); }
+.risk .mark::before, .risk .mark::after { content: ""; position: absolute; left: 12%; right: 12%; height: 1px; background: var(--tool-accent); }
+.risk .mark::before { top: 36%; box-shadow: 0 2rem 0 #55595c, 0 4rem 0 var(--tool-accent); }
+.risk .mark::after { top: 18%; bottom: 18%; left: 50%; right: auto; width: 1px; height: auto; }
+.brc .mark { background-image: repeating-linear-gradient(135deg, transparent 0 18px, rgba(241,207,74,.13) 18px 20px); }
+.brc .mark::after { content: "WINE / PROTON"; position: absolute; right: 1rem; bottom: 1rem; color: var(--tool-accent); font: 700 .72rem var(--font-geist-mono), monospace; letter-spacing: .12em; }
+.dagger .mark::before { content: ""; position: absolute; inset: 18% 22%; border-left: 1px solid var(--tool-accent); border-bottom: 1px solid var(--tool-accent); transform: skewX(-28deg); }
+.dagger .mark::after { content: "×"; position: absolute; right: 17%; top: 16%; color: var(--tool-accent); font-size: 2rem; }
+.golf .mark { border-radius: 50% 50% 0 0; border-bottom-color: var(--tool-accent); }
+.golf .mark::before { content: ""; position: absolute; left: 15%; right: 18%; bottom: 20%; height: 55%; border-top: 2px dashed var(--tool-accent); border-radius: 50%; transform: rotate(-9deg); }
+.golf .mark::after { content: "○"; position: absolute; right: 12%; bottom: 12%; color: var(--tool-accent); font-size: 2rem; }
+
+.section { padding: clamp(3rem, 7vw, 5rem) 0; border-bottom: 1px solid #42464a; }
+.section h2 { margin: 0 0 1.25rem; font-size: clamp(1.6rem, 4vw, 2.5rem); letter-spacing: -.03em; }
+.copy { max-width: 47rem; color: #d5d2ca; line-height: 1.75; }
+.copy p:first-child { margin-top: 0; }
+.detail { color: var(--tool-accent); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; }
+.actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 1.5rem; }
+.button { display: inline-flex; min-height: 46px; align-items: center; justify-content: center; border: 1px solid var(--tool-accent); padding: .75rem 1rem; color: #fff; font-size: .78rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.button:first-child { background: var(--tool-accent); color: #080a0b; }
+.button:hover { filter: brightness(1.12); }
+
+/* Runtime evidence: broad observation narrows into an assessment path. */
+.riskHeading { display: grid; grid-template-columns: minmax(10rem, .55fr) minmax(0, 1fr); gap: clamp(2rem, 8vw, 7rem); }
+.riskHeading h2, .riskHeading p { margin-top: 0; }
+.riskHeading p, .riskAssessment > div { max-width: 47rem; color: #d5d2ca; line-height: 1.75; }
+.signalFlow { display: grid; grid-template-columns: 1.35fr 1fr; gap: 1px; margin: 2.5rem 0 0; padding: 1px; background: #42464a; list-style: none; }
+.signalFlow li { min-height: 7rem; padding: 1.25rem; background: #101316; color: #eeeae1; }
+.signalFlow li:nth-child(2), .signalFlow li:nth-child(4) { transform: translateY(1.25rem); }
+.signalFlow span, .setupLadder span, .setupLadder strong, .interactionMap dt, .shotFlow span { display: block; margin-bottom: .65rem; color: var(--tool-accent); font: 700 .7rem var(--font-geist-mono), monospace; letter-spacing: .1em; text-transform: uppercase; }
+.riskAssessment { display: grid; grid-template-columns: minmax(10rem, .55fr) minmax(0, 1fr); gap: clamp(2rem, 8vw, 7rem); align-items: start; }
+.riskAssessment h2, .riskAssessment p:first-child { margin-top: 0; }
+.riskAssessment > div { border-left: 1px solid var(--tool-accent); padding-left: 1.5rem; }
+
+/* Compatibility ladder: controls sit above the environment layers that support them. */
+.brcStack > p, .brcEnvironment > div { max-width: 50rem; color: #d5d2ca; line-height: 1.75; }
+.setupLadder { max-width: 50rem; margin: 2rem 0 0; padding: 0; list-style: none; }
+.setupLadder li { display: grid; grid-template-columns: 3rem 8rem minmax(0, 1fr); align-items: baseline; gap: 1rem; padding: 1rem 0; border-top: 1px solid #42464a; color: #eeeae1; }
+.setupLadder span, .setupLadder strong { margin: 0; }
+.setupLadder strong { color: #aaa79f; }
+.setupLadder em { font-style: normal; }
+.environmentStack { border: 1px solid #55595c; box-shadow: .65rem .65rem 0 var(--tool-accent-soft), 1.3rem 1.3rem 0 #15181b; padding: clamp(1.25rem, 4vw, 2rem); margin: 0 1.3rem 1.3rem 0; }
+.environmentStack p:first-child { margin-top: 0; }
+
+/* External field kit: inputs and projected output meet at the process boundary. */
+.fieldKit { display: grid; grid-template-columns: minmax(0, .85fr) minmax(18rem, 1.15fr); gap: clamp(2rem, 8vw, 7rem); }
+.fieldKit > div > p, .externalSetup > div { color: #d5d2ca; line-height: 1.75; }
+.fieldKit h2, .fieldKit p { margin-top: 0; }
+.interactionMap { margin: 0; border: 1px solid #55595c; }
+.interactionMap div { display: grid; grid-template-columns: 7rem minmax(0, 1fr); gap: 1rem; padding: 1.25rem; border-bottom: 1px solid #42464a; }
+.interactionMap div:last-child { border-bottom: 0; }
+.interactionMap dt { margin: 0; }
+.interactionMap dd { margin: 0; color: #eeeae1; }
+.externalSetup { display: grid; grid-template-columns: minmax(10rem, .7fr) minmax(0, 1.3fr); gap: clamp(2rem, 8vw, 7rem); }
+.externalSetup h2, .externalSetup p:first-child { margin-top: 0; }
+.externalSetup > div { padding-top: 1.25rem; border-top: 1px dashed var(--tool-accent); }
+
+/* Shot flow: one horizontal read from assist through trajectory to the wider toolset. */
+.shotSection > p, .physicsStrip > div { max-width: 52rem; color: #d5d2ca; line-height: 1.75; }
+.shotFlow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 2.5rem 0 0; padding: 0; list-style: none; }
+.shotFlow li { position: relative; min-height: 7.5rem; padding: 1.25rem 1.5rem 1.25rem 1.25rem; border-top: 2px solid var(--tool-accent); background: linear-gradient(90deg, var(--tool-accent-soft), transparent); color: #eeeae1; }
+.shotFlow li::after { content: "→"; position: absolute; top: -.8rem; right: -.35rem; z-index: 1; padding: 0 .2rem; background: #0b0d0f; color: var(--tool-accent); }
+.shotFlow li:last-child::after { content: "○"; }
+.physicsStrip { display: grid; grid-template-columns: minmax(10rem, .55fr) minmax(0, 1.45fr); gap: clamp(2rem, 8vw, 7rem); align-items: start; }
+.physicsStrip h2, .physicsStrip p:first-child { margin-top: 0; }
+.physicsStrip > div { padding-left: 1.5rem; border-left: 2px dashed var(--tool-accent); }
+
+@media (max-width: 700px) {
+  .main { width: min(100% - 1.5rem, 70rem); padding-top: 6rem; }
+  .back { margin-bottom: 2rem; }
+  .hero { grid-template-columns: 1fr; gap: 2rem; }
+  .mark { min-height: 9rem; }
+  .riskHeading, .riskAssessment, .fieldKit, .externalSetup, .physicsStrip { grid-template-columns: 1fr; gap: 1.5rem; }
+  .signalFlow { grid-template-columns: 1fr; }
+  .signalFlow li:nth-child(2), .signalFlow li:nth-child(4) { transform: none; }
+  .setupLadder li { grid-template-columns: 2rem minmax(0, 1fr); align-items: start; row-gap: .35rem; }
+  .setupLadder li strong { grid-column: 2; }
+  .setupLadder li em { grid-column: 2; }
+  .interactionMap div { grid-template-columns: 1fr; gap: .35rem; }
+  .shotFlow { grid-template-columns: 1fr; }
+  .shotFlow li { min-height: 0; }
+  .shotFlow li::after { top: auto; right: 1rem; bottom: -.9rem; transform: rotate(90deg); }
+  .shotFlow li:last-child::after { transform: none; }
+  .button { width: 100%; }
+}

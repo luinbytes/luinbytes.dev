@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   ChevronDown,
   Command,
+  ExternalLink,
   Gamepad2,
   Menu,
   Smartphone,
@@ -43,6 +44,11 @@ const productGroups = [
     icon: Gamepad2,
     items: [
       {
+        name: "BallHammer",
+        href: "/ballhammer",
+        description: "Darktide enemy overlays and configurable aim controls.",
+      },
+      {
         name: "Risk of Anticheat",
         href: "/risk-of-anticheat",
         description: "Risk of Rain 2 ESP, aim tools, and runtime systems.",
@@ -61,6 +67,33 @@ const productGroups = [
         name: "SuperHackerGolf",
         href: "/super-hacker-golf",
         description: "Super Battle Golf assist, ESP, and physics tooling.",
+      },
+    ],
+  },
+  {
+    label: "Source projects / no product page",
+    icon: ExternalLink,
+    items: [
+      {
+        name: "Minecrooft",
+        href: "https://github.com/luinbytes/minecrooft",
+        description:
+          "Minecraft-style Rust engine with wgpu rendering, procedural biomes, and chunk save/load.",
+        external: true,
+      },
+      {
+        name: "Cursor Barrier",
+        href: "https://github.com/luinbytes/cursor-barrier",
+        description:
+          "Linux cursor utility for controlling pointer movement at workspace and monitor edges.",
+        external: true,
+      },
+      {
+        name: "Raycast automation",
+        href: "https://github.com/luinbytes/extensions",
+        description:
+          "Raycast extensions and utilities for lookups, window switching, smart-home control, and repeated tasks.",
+        external: true,
       },
     ],
   },
@@ -335,25 +368,38 @@ export function Header() {
                           {group.label}
                         </div>
                         <div className="grid gap-1">
-                          {group.items.map((item) => (
-                            <Link
-                              key={item.href}
-                              href={item.href}
-                              onClick={closeProductMenu}
-                              className={cn(
-                                "block border border-transparent px-3 py-2 nd-focus nd-transition hover:border-nd-border-visible hover:bg-nd-surface-raised",
-                                pathname === item.href &&
-                                  "border-nd-border-visible bg-nd-surface-raised"
-                              )}
-                            >
-                              <span className="block font-mono text-[12px] uppercase tracking-label-tight text-nd-text-display">
-                                {item.name}
+                          {group.items.map((item) => {
+                            const external =
+                              "external" in item && item.external;
+
+                            return (
+                              <Link
+                                key={item.href}
+                                href={item.href}
+                                target={external ? "_blank" : undefined}
+                                rel={external ? "noopener noreferrer" : undefined}
+                                onClick={closeProductMenu}
+                                className={cn(
+                                  "block border border-transparent px-3 py-2 nd-focus nd-transition hover:border-nd-border-visible hover:bg-nd-surface-raised",
+                                  pathname === item.href &&
+                                    "border-nd-border-visible bg-nd-surface-raised"
+                                )}
+                              >
+                               <span className="block font-mono text-[12px] uppercase tracking-label-tight text-nd-text-display">
+                                 {item.name}
+                                {external && (
+                                  <ExternalLink
+                                    aria-hidden="true"
+                                    className="ml-1.5 inline h-3 w-3"
+                                  />
+                                )}
                               </span>
                               <span className="mt-1 block text-xs leading-relaxed text-nd-text-disabled">
                                 {item.description}
                               </span>
-                            </Link>
-                          ))}
+                              </Link>
+                            );
+                          })}
                         </div>
                       </div>
                     );
@@ -424,16 +470,28 @@ export function Header() {
                     {group.label}
                   </div>
                   <div className="grid gap-1">
-                    {group.items.map((item) => (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="py-2 font-mono text-[12px] uppercase tracking-label text-nd-text-primary nd-focus"
-                      >
-                        {item.href}
-                      </Link>
-                    ))}
+                    {group.items.map((item) => {
+                      const external = "external" in item && item.external;
+
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          target={external ? "_blank" : undefined}
+                          rel={external ? "noopener noreferrer" : undefined}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="py-2 font-mono text-[12px] uppercase tracking-label text-nd-text-primary nd-focus"
+                        >
+                          {external ? item.name : item.href}
+                          {external && (
+                            <ExternalLink
+                              aria-hidden="true"
+                              className="ml-1.5 inline h-3 w-3"
+                            />
+                          )}
+                        </Link>
+                      );
+                    })}
                   </div>
                 </div>
               );

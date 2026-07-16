@@ -7,7 +7,9 @@
     "prebuild": "node scripts/generate-sitemap.js",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:e2e:setup": "python3 -m pip install -r requirements-test.txt && python3 -m playwright install chromium",
+    "test:e2e": "python3 -m unittest discover -s tests/browser -p '*_test.py' -v"
   },
   "dependencies": {
     "clsx": "^2.1.1",

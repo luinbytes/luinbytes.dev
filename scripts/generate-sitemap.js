@@ -11,6 +11,7 @@ const outputPath = path.join(projectRoot, 'public/sitemap.xml');
 // Static pages
 const staticPages = [
   '',
+  '/ballhammer',
   '/brc-trainer',
   '/dagger-fall',
   '/linux-sonar',
