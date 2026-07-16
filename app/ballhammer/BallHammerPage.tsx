@@ -6,8 +6,7 @@ const overlayFeatures = [
   "All-enemy ESP with bone-projected boxes",
   "Distinct special-enemy names, SPECIAL flags, distances, outlines, and health bars",
   "Distance fading and visibility behavior",
-  "World-space horde grouping with buffered off-screen membership",
-  "Head or aim-bone dots and reversible join/split animation",
+  "Compact world-space horde grouping with separate horizontal and elevation limits, buffered off-screen membership, aim-bone dots, and reversible join/split animation",
 ];
 
 const aimFeatures = [
@@ -15,6 +14,8 @@ const aimFeatures = [
   "Target lock holds while the target remains alive and visible, with immediate replacement on death or occlusion",
   "Head or torso aim, configurable distance and field of view, interpolated smoothing, and aim curvature",
   "Activate with left mouse, right mouse, either mouse button, or a custom keyboard key",
+  "Weighted Arbites and Skitarii companion orders prioritize special type, distance, and remaining health without moving the camera",
+  "Normal retargeting waits for companion damage, with a distance-based timeout for rejected orders",
   "Triggerbot and rage modes are not included",
 ];
 
@@ -99,6 +100,10 @@ export default function BallHammerPage() {
         <div className={styles.techPanel}>
           <p>
             BallHammer is a Darktide Mod Framework mod written for Lua 5.1.
+          </p>
+          <p>
+            Configuration has separate ESP, Aimbot, and Companion sections in
+            Darktide Mod Options.
           </p>
           <dl>
             <div>

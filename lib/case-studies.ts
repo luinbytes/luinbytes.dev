@@ -1,14 +1,4 @@
-import { projects } from "@/lib/data";
-
-export type CaseStudyRoute =
-  | "/meteor"
-  | "/sleepr"
-  | "/linux-sonar"
-  | "/risk-of-anticheat"
-  | "/brc-trainer"
-  | "/dagger-fall"
-  | "/super-hacker-golf"
-  | "/meteor/privacy";
+export type CaseStudyRoute = "/meteor/privacy";
 
 export type CaseStudy = {
   route: CaseStudyRoute;
@@ -20,90 +10,7 @@ export type CaseStudy = {
   sections: string[];
 };
 
-const projectById = new Map(projects.map((project) => [project.id, project]));
-
-function fromProject(
-  route: CaseStudyRoute,
-  projectId: string,
-  signal: string,
-  sections: string[]
-): CaseStudy {
-  const project = projectById.get(projectId);
-
-  if (!project) {
-    throw new Error(`Missing project data for ${projectId}`);
-  }
-
-  return {
-    route,
-    title: project.name,
-    category: project.type,
-    summary: project.description,
-    tags: project.tags,
-    signal,
-    sections,
-  };
-}
-
 export const caseStudies: CaseStudy[] = [
-  fromProject("/meteor", "meteor", "local-first daily loop", [
-    "Overview",
-    "Habits",
-    "Tasks",
-    "Free vs Pro",
-    "Privacy",
-    "Get the app",
-  ]),
-  fromProject("/sleepr", "sleepr", "cycle-aware sleep guidance", [
-    "Overview",
-    "Wake Windows",
-    "Ticker",
-    "Learning",
-    "Privacy",
-    "Build",
-    "Get the app",
-  ]),
-  fromProject("/linux-sonar", "linux-sonar", "PipeWire routing surface", [
-    "Overview",
-    "Channels",
-    "Features",
-    "Mic Chain",
-    "Tech",
-    "Setup",
-    "Source",
-  ]),
-  fromProject("/risk-of-anticheat", "risk-of-anticheat", "runtime instrumentation", [
-    "Overview",
-    "Features",
-    "Aiming",
-    "Tech",
-    "Setup",
-    "Source",
-  ]),
-  fromProject("/brc-trainer", "brc-trainer", "Proton-safe trainer internals", [
-    "Overview",
-    "Features",
-    "Wine Fonts",
-    "Tech",
-    "Setup",
-    "Source",
-  ]),
-  fromProject("/dagger-fall", "dagger-fall", "external Linux trainer", [
-    "Overview",
-    "Features",
-    "Physics",
-    "Tech",
-    "Setup",
-    "Source",
-  ]),
-  fromProject("/super-hacker-golf", "super-hacker-golf", "decompiled physics assist", [
-    "Overview",
-    "Features",
-    "Trajectory",
-    "Tech",
-    "Setup",
-    "Source",
-  ]),
   {
     route: "/meteor/privacy",
     title: "Meteor Privacy Policy",
