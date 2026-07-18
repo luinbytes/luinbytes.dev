@@ -9,9 +9,11 @@ export const metadata: Metadata = {
     title: "Meteor — Tasks & Habits",
     description:
       "Tasks and habits, unified. Local-first Android app with streaks, heatmaps, and a home screen widget.",
-    url: "https://luinbytes.github.io/meteor",
+    url: "https://luinbytes.dev/meteor",
     siteName: "Luinbytes",
+    images: [{ url: "https://luinbytes.dev/share-cards/meteor.png", width: 1200, height: 630 }],
   },
+  twitter: { card: "summary_large_image", images: "https://luinbytes.dev/share-cards/meteor.png" },
 };
 
 export default function Page() {

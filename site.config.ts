@@ -1,1 +1,1 @@
-export const siteUrl = "https://luinbytes.github.io";
+export const siteUrl = "https://luinbytes.dev";

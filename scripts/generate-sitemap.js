@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Keep in sync with site.config.ts
-const siteUrl = 'https://luinbytes.github.io';
+const siteUrl = 'https://luinbytes.dev';
 const projectRoot = path.join(__dirname, '..');
 const outputPath = path.join(projectRoot, 'public/sitemap.xml');
 

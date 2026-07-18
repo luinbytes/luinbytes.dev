@@ -9,9 +9,11 @@ export const metadata: Metadata = {
     title: "DaggerFall — Devil Daggers trainer for Linux",
     description:
       "External trainer using process_vm_readv. Auto-bhop, air control, dagger trajectory overlay, aim assist with lead prediction. No injection. Wayland-compatible.",
-    url: "https://luinbytes.github.io/dagger-fall",
+    url: "https://luinbytes.dev/dagger-fall",
     siteName: "Luinbytes",
+    images: [{ url: "https://luinbytes.dev/share-cards/dagger-fall.png", width: 1200, height: 630 }],
   },
+  twitter: { card: "summary_large_image", images: "https://luinbytes.dev/share-cards/dagger-fall.png" },
 };
 
 export default function Page() {

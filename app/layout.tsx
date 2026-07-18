@@ -5,6 +5,7 @@ import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { CommandMenu } from "@/components/command-menu";
 import { CaseInterfaceOverlay } from "@/components/case-interface-overlay";
+import { siteUrl } from "@/site.config";
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -34,24 +35,26 @@ export const metadata: Metadata = {
   },
   description:
     "Self-taught software engineer building Android apps, Linux tools, game mods, Raycast extensions, and open-source utilities.",
+  metadataBase: new URL(siteUrl),
   twitter: {
     card: "summary_large_image",
     title: "Lu | Software Engineer",
     description:
       "Self-taught software engineer building Android apps, Linux tools, game mods, Raycast extensions, and open-source utilities.",
     creator: "@luinbytes",
+    images: `${siteUrl}/share-cards/luinbytes-dev-pink-print.png`,
   },
   openGraph: {
     type: "website",
     locale: "en_GB",
-    url: "https://luinbytes.github.io",
+    url: siteUrl,
     title: "Lu | Software Engineer",
     description:
       "Self-taught software engineer building Android apps, Linux tools, game mods, Raycast extensions, and open-source utilities.",
     siteName: "Luinbytes",
     images: [
       {
-        url: "https://luinbytes.github.io/og-image.png",
+        url: `${siteUrl}/share-cards/luinbytes-dev-pink-print.png`,
         width: 1200,
         height: 630,
         alt: "Lu | Software Engineer",
