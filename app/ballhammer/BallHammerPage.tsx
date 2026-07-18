@@ -1,22 +1,35 @@
 import Image from "next/image";
-import { ArrowUpRight, Crosshair, Github, ScanLine } from "lucide-react";
+import { ArrowUpRight, Crosshair, Github, ScanLine, ShieldAlert } from "lucide-react";
 import styles from "./ballhammer.module.css";
 
 const overlayFeatures = [
-  "All-enemy ESP with bone-projected boxes",
+  "Bone-projected boxes for all enemies, including enemies spawned or respawned after the mod loads",
   "Distinct special-enemy names, SPECIAL flags, distances, outlines, and health bars",
-  "Distance fading and visibility behavior",
+  "Distance fading and a visibility check that turns visible ESP white",
   "Compact world-space horde grouping with separate horizontal and elevation limits, buffered off-screen membership, aim-bone dots, and reversible join/split animation",
-  "Pickup ESP labels plasteel, diamantine, ammo, grenades, deployables, stimms, mission items, and other interactable pickups, with configurable range and distance fading",
+  "Collision-spaced pickup cards with compact stacking, fixed screen sizing, category accents, distance fading, category presets, custom per-pickup filters, and distinct Med, Concentration, Combat, and Celerity Stimm labels",
 ];
 
 const aimFeatures = [
-  "A configurable normal aimbot chooses the visible target closest to the crosshair",
+  "Normal aimbot and triggerbot keep an in-FOV target locked, then replace it when it leaves the FOV, dies, or becomes occluded",
   "Head or torso aim, configurable distance and field of view, interpolated smoothing, and aim curvature",
-  "A configurable magnet triggerbot uses separate aim and fire radii with smoothing",
+  "Distance-scaled target preview follows the armor-aware or configured aim bone nearest the crosshair and becomes the activation target",
+  "Left mouse, right mouse, either mouse button, or a custom keyboard activation key",
+  "Configurable magnet triggerbot with aim radius, fire radius, and smoothing",
   "Rage mode selects visible on-screen targets using danger, range, and crosshair weighting",
-  "Optional timed repeat fire supports press-driven non-automatic weapons",
-  "Optional local recoil and spread suppression works without camera compensation",
+  "Melee-aware aim range limits mouse-one targeting to enemies inside the current weapon sweep reach",
+  "Optional timed repeat fire for press-driven, non-automatic weapons whenever mouse one is held",
+  "Optional local weapon recoil and spread suppression without camera compensation",
+];
+
+const tacticalFeatures = [
+  "Weighted Arbites and Skitarii companion orders based on special type, distance, and remaining health without moving the camera; native companion-rescue states override normal weights, retargeting waits for companion damage, and an optional charged Arbites dog EMP sends its press, hold, and release through Darktide's networked input frames when the dog connects",
+  "Armor and Weakspot Director ranks visible hit zones using the current weapon damage profile, live armor overrides, shields, and weakspot finesse; triggerbot skips invulnerable shots and rage mode can choose another target",
+  "Threat Interceptor marks committed hound, trapper, mutant, rager, sniper, flamer, grenade, and verified overhead attacks while a HUD shows the planned reaction and impact countdown",
+  "Opt-in defensive reactions use bounded safe-window timing, preserve held attacks until the final dodge window, keep the player's movement direction, and dodge committed specialist, rager, and overhead attacks",
+  "Opt-in Guard Brain preserves a configurable stamina reserve and pushes only when at least three nearby melee threats cover the available retreat directions",
+  "Opt-in Warp and Heat Governor predicts the next resource increase, stops unsafe generated shots, and can use the current weapon's native quell or non-damaging vent input when no nearby threat exists",
+  "Diagnostic logging records threat timing and reaction decisions for live compatibility checks without changing the safe defaults",
 ];
 
 export default function BallHammerPage() {
@@ -29,7 +42,8 @@ export default function BallHammerPage() {
             BallHammer<span>.</span>
           </h1>
           <p className={styles.lede}>
-            All-enemy and pickup ESP with configurable aim modes for Darktide.
+            All-enemy and pickup ESP, configurable aim and fire controls, and
+            opt-in tactical systems for Darktide.
           </p>
           <a
             className={styles.primaryCta}
@@ -70,7 +84,7 @@ export default function BallHammerPage() {
         <div className={styles.featureGrid}>
           <article className={styles.featureCard}>
             <ScanLine aria-hidden="true" />
-            <h3>Enemy overlays</h3>
+            <h3>Overlay and pickup intelligence</h3>
             <ul>
               {overlayFeatures.map((feature) => (
                 <li key={feature}>{feature}</li>
@@ -79,9 +93,18 @@ export default function BallHammerPage() {
           </article>
           <article className={styles.featureCard}>
             <Crosshair aria-hidden="true" />
-            <h3>Aim controls</h3>
+            <h3>Aim and fire controls</h3>
             <ul>
               {aimFeatures.map((feature) => (
+                <li key={feature}>{feature}</li>
+              ))}
+            </ul>
+          </article>
+          <article className={styles.featureCard}>
+            <ShieldAlert aria-hidden="true" />
+            <h3>Tactical systems</h3>
+            <ul>
+              {tacticalFeatures.map((feature) => (
                 <li key={feature}>{feature}</li>
               ))}
             </ul>
@@ -102,17 +125,10 @@ export default function BallHammerPage() {
             BallHammer is a Darktide Mod Framework mod written for Lua 5.1.
           </p>
           <p>
-            Weighted Arbites and Skitarii orders account for special type,
-            distance, and health. Native companion-rescue states override those
-            weights, and retargeting waits for companion damage.
-          </p>
-          <p>
-            An optional charged Arbites dog EMP sends press, hold, and release
-            through Darktide networked input frames when the dog connects.
-          </p>
-          <p>
-            Configuration has separate ESP, Pickup ESP, Aimbot, Magnet
-            Triggerbot, Rage Mode, Weapon, and Companion option groups.
+            Configure separate ESP, Pickup ESP, Aimbot, Magnet Triggerbot, Rage
+            Mode, Armor and Weakspot Director, Threat Interceptor, Guard Brain,
+            Warp and Heat Governor, Weapon, and Companion sections in Darktide
+            Mod Options.
           </p>
           <dl>
             <div>

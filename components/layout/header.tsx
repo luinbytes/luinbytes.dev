@@ -46,7 +46,8 @@ const productGroups = [
       {
         name: "BallHammer",
         href: "/ballhammer",
-        description: "Darktide enemy overlays and configurable aim controls.",
+        description:
+          "Darktide ESP, aim and fire controls, and opt-in tactical systems.",
       },
       {
         name: "Risk of Anticheat",

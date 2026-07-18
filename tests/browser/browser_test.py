@@ -367,11 +367,18 @@ class ProductNavigationTests(BrowserTestCase):
                 open_products_navigation(page, mobile)
                 link = product_link(page, "BallHammer", "/ballhammer", mobile)
                 self.assertTrue(link.is_visible())
+                if not mobile:
+                    self.assertTrue(
+                        page.get_by_text(
+                            "Darktide ESP, aim and fire controls, and opt-in tactical systems.",
+                            exact=True,
+                        ).is_visible()
+                    )
                 link.click()
                 page.wait_for_url("**/ballhammer")
 
                 lede = page.get_by_text(
-                    "All-enemy and pickup ESP with configurable aim modes for Darktide.",
+                    "All-enemy and pickup ESP, configurable aim and fire controls, and opt-in tactical systems for Darktide.",
                     exact=True,
                 )
                 lede.wait_for(state="visible")
@@ -379,7 +386,11 @@ class ProductNavigationTests(BrowserTestCase):
                 self.assertEqual(page.title(), "BallHammer | Lu")
                 self.assertEqual(
                     page.locator('meta[name="description"]').get_attribute("content"),
-                    "A Darktide mod with all-enemy and pickup ESP plus configurable aim modes.",
+                    "A Darktide mod with all-enemy and pickup ESP, configurable aim and fire controls, and opt-in tactical systems.",
+                )
+                self.assertEqual(
+                    page.locator('meta[property="og:image:alt"]').get_attribute("content"),
+                    "BallHammer — Darktide ESP, aim and fire controls, and tactical systems",
                 )
                 source = page.get_by_role("link", name="View source on GitHub")
                 self.assertEqual(
@@ -387,23 +398,38 @@ class ProductNavigationTests(BrowserTestCase):
                     "https://github.com/luinbytes/BallHammer",
                 )
                 capabilities = (
-                    "All-enemy ESP with bone-projected boxes",
+                    "Bone-projected boxes for all enemies, including enemies spawned or respawned after the mod loads",
                     "Distinct special-enemy names, SPECIAL flags, distances, outlines, and health bars",
-                    "Distance fading and visibility behavior",
+                    "Distance fading and a visibility check that turns visible ESP white",
                     "Compact world-space horde grouping with separate horizontal and elevation limits, buffered off-screen membership, aim-bone dots, and reversible join/split animation",
-                    "Pickup ESP labels plasteel, diamantine, ammo, grenades, deployables, stimms, mission items, and other interactable pickups, with configurable range and distance fading",
-                    "A configurable normal aimbot chooses the visible target closest to the crosshair",
+                    "Collision-spaced pickup cards with compact stacking, fixed screen sizing, category accents, distance fading, category presets, custom per-pickup filters, and distinct Med, Concentration, Combat, and Celerity Stimm labels",
+                    "Normal aimbot and triggerbot keep an in-FOV target locked, then replace it when it leaves the FOV, dies, or becomes occluded",
                     "Head or torso aim, configurable distance and field of view, interpolated smoothing, and aim curvature",
-                    "A configurable magnet triggerbot uses separate aim and fire radii with smoothing",
+                    "Distance-scaled target preview follows the armor-aware or configured aim bone nearest the crosshair and becomes the activation target",
+                    "Left mouse, right mouse, either mouse button, or a custom keyboard activation key",
+                    "Configurable magnet triggerbot with aim radius, fire radius, and smoothing",
                     "Rage mode selects visible on-screen targets using danger, range, and crosshair weighting",
-                    "Optional timed repeat fire supports press-driven non-automatic weapons",
-                    "Optional local recoil and spread suppression works without camera compensation",
-                    "Weighted Arbites and Skitarii orders account for special type, distance, and health. Native companion-rescue states override those weights, and retargeting waits for companion damage.",
-                    "An optional charged Arbites dog EMP sends press, hold, and release through Darktide networked input frames when the dog connects.",
-                    "Configuration has separate ESP, Pickup ESP, Aimbot, Magnet Triggerbot, Rage Mode, Weapon, and Companion option groups.",
+                    "Melee-aware aim range limits mouse-one targeting to enemies inside the current weapon sweep reach",
+                    "Optional timed repeat fire for press-driven, non-automatic weapons whenever mouse one is held",
+                    "Optional local weapon recoil and spread suppression without camera compensation",
+                    "Weighted Arbites and Skitarii companion orders based on special type, distance, and remaining health without moving the camera; native companion-rescue states override normal weights, retargeting waits for companion damage, and an optional charged Arbites dog EMP sends its press, hold, and release through Darktide's networked input frames when the dog connects",
+                    "Armor and Weakspot Director ranks visible hit zones using the current weapon damage profile, live armor overrides, shields, and weakspot finesse; triggerbot skips invulnerable shots and rage mode can choose another target",
+                    "Threat Interceptor marks committed hound, trapper, mutant, rager, sniper, flamer, grenade, and verified overhead attacks while a HUD shows the planned reaction and impact countdown",
+                    "Opt-in defensive reactions use bounded safe-window timing, preserve held attacks until the final dodge window, keep the player's movement direction, and dodge committed specialist, rager, and overhead attacks",
+                    "Opt-in Guard Brain preserves a configurable stamina reserve and pushes only when at least three nearby melee threats cover the available retreat directions",
+                    "Opt-in Warp and Heat Governor predicts the next resource increase, stops unsafe generated shots, and can use the current weapon's native quell or non-damaging vent input when no nearby threat exists",
+                    "Diagnostic logging records threat timing and reaction decisions for live compatibility checks without changing the safe defaults",
                 )
                 for capability in capabilities:
                     self.assertTrue(page.get_by_text(capability, exact=True).is_visible())
+                for heading in (
+                    "Overlay and pickup intelligence",
+                    "Aim and fire controls",
+                    "Tactical systems",
+                ):
+                    self.assertTrue(
+                        page.get_by_role("heading", name=heading, exact=True).is_visible()
+                    )
                 self.assertEqual(
                     page.get_by_text(
                         "Triggerbot and rage modes are not included", exact=True
