@@ -185,7 +185,11 @@
 @media (min-width: 900px) {
   .hero { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); }
   .featureGrid,
-  .installGrid { grid-template-columns: 1fr 1fr; }
+  .installGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1200px) {
+  .featureGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 @media (max-width: 899px) {
