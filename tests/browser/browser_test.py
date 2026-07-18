@@ -1,3 +1,4 @@
+import hashlib
 import os
 import re
 import signal
@@ -8,6 +9,7 @@ import time
 import unittest
 import urllib.request
 import xml.etree.ElementTree as ET
+from html.parser import HTMLParser
 from pathlib import Path
 
 from playwright.sync_api import Page, sync_playwright
@@ -90,7 +92,86 @@ class GeneratedArtifactTests(unittest.TestCase):
         ]
 
         self.assertEqual(len(locations), 10)
-        self.assertEqual(locations.count("https://luinbytes.github.io/ballhammer"), 1)
+        self.assertEqual(locations.count("https://luinbytes.dev/ballhammer"), 1)
+
+
+class MetadataParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.metadata = []
+
+    def handle_starttag(self, tag, attrs) -> None:
+        attributes = dict(attrs)
+        if tag == "meta" or (tag == "link" and attributes.get("rel") == "canonical"):
+            self.metadata.append(attributes)
+
+
+class ShareCardStaticExportTests(unittest.TestCase):
+    route_cards = {
+        "/": "/share-cards/luinbytes-dev-pink-print.png",
+        "/ballhammer": "/share-cards/ballhammer.png",
+        "/super-hacker-golf": "/share-cards/super-hacker-golf.png",
+        "/meteor": "/share-cards/meteor.png",
+        "/meteor/privacy": "/share-cards/meteor-privacy.png",
+        "/linux-sonar": "/share-cards/linux-sonar.png",
+        "/sleepr": "/share-cards/sleepr.png",
+        "/risk-of-anticheat": "/share-cards/risk-of-anticheat.png",
+        "/brc-trainer": "/share-cards/brc-trainer.png",
+        "/dagger-fall": "/share-cards/dagger-fall.png",
+    }
+    expected_sha256 = {
+        "/share-cards/ballhammer.png": "66ffdaa908fa12d5b2ce7afc101168b3f6d613ce858b820021f3e9c9b27fdd6c",
+        "/share-cards/brc-trainer.png": "81a0c985297a959d25f990a71cfc66c28b23468f8c9656ef42dd0ccebc75a784",
+        "/share-cards/dagger-fall.png": "fac041426b34e062cbb23532f4da4730d78ee181923cf747d27d098d1f25a646",
+        "/share-cards/linux-sonar.png": "d2ffacd26aacbc020f4210fa4c8a841a3f4af70e795ccf934021f76a264d933a",
+        "/share-cards/luinbytes-dev-pink-print.png": "06bab5ee959d737dae537d7440c39a516c23e17ce976391dcbc68a7fe3a93548",
+        "/share-cards/meteor.png": "5ce91084e679f7cf91a1d0a398c27f7a1f36fa8381697ffaf720102f31f14bf6",
+        "/share-cards/meteor-privacy.png": "0bcafd678816b610a2a1bc88789c8b2d1c45796abcbcd46922780620c4c52e7e",
+        "/share-cards/risk-of-anticheat.png": "11ff645c3355613d5c6195a61b3327a71882725cd1cfb95c6774439724e139ab",
+        "/share-cards/sleepr.png": "c8335b54f4271d5a46e3ce3982a3d3f9471b339f616c2934a53ae486f6429283",
+        "/share-cards/super-hacker-golf.png": "81a60de7534c679852a6e9f7422d8c3f1d52678b8606e3039f9df7f7d6c0e370",
+    }
+
+    def test_every_scoped_route_exports_a_production_large_image_card(self) -> None:
+        build = subprocess.run(["npm", "run", "build"], check=False)
+        self.assertEqual(build.returncode, 0)
+
+        for route, card_path in self.route_cards.items():
+            with self.subTest(route=route):
+                exported_html = Path("out") / (
+                    "index.html" if route == "/" else f"{route.lstrip('/')}.html"
+                )
+                html = exported_html.read_text()
+                parser = MetadataParser()
+                parser.feed(html)
+                card_url = f"https://luinbytes.dev{card_path}"
+                self.assertNotIn("luinbytes.github.io", html)
+                properties = {
+                    item.get("property"): item.get("content") for item in parser.metadata
+                }
+                names = {
+                    item.get("name"): item.get("content") for item in parser.metadata
+                }
+
+                self.assertEqual(properties.get("og:image"), card_url)
+                self.assertEqual(properties.get("og:image:width"), "1200")
+                self.assertEqual(properties.get("og:image:height"), "630")
+                self.assertEqual(names.get("twitter:card"), "summary_large_image")
+                self.assertEqual(names.get("twitter:image"), card_url)
+
+                png = (Path("out") / card_path.lstrip("/")).read_bytes()
+                self.assertEqual(png[:8], b"\x89PNG\r\n\x1a\n")
+                self.assertEqual(png[12:16], b"IHDR")
+                self.assertEqual(
+                    hashlib.sha256(png).hexdigest(), self.expected_sha256[card_path]
+                )
+                self.assertEqual(
+                    (
+                        int.from_bytes(png[16:20], "big"),
+                        int.from_bytes(png[20:24], "big"),
+                    ),
+                    (1200, 630),
+                )
 
 
 class BrowserTestCase(unittest.TestCase):
