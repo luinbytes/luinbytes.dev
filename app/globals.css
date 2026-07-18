@@ -64,8 +64,9 @@
   --motion-duration-quick: 160ms;
   --motion-duration-standard: 220ms;
   --motion-duration-enter: 360ms;
-  --motion-ease-standard: steps(2, end);
-  --motion-ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-ease-strong: cubic-bezier(0.23, 1, 0.32, 1);
+  --motion-ease-standard: var(--motion-ease-strong);
+  --motion-ease-emphasized: var(--motion-ease-strong);
   --print-shadow-color: color-mix(in srgb, var(--color-mustard) 42%, transparent);
   --print-shadow-color-strong: color-mix(in srgb, var(--color-mustard) 78%, transparent);
   --print-dither-color: color-mix(in srgb, var(--color-paper) 14%, transparent);
@@ -113,7 +114,7 @@ body {
 }
 
 .nd-transition {
-  transition-property: color, background-color, border-color, opacity, transform, box-shadow;
+  transition-property: opacity, transform;
   transition-duration: var(--motion-duration-standard);
   transition-timing-function: var(--motion-ease-standard);
 }
@@ -123,7 +124,7 @@ body {
   transform-origin: top left;
   transition-property: opacity, transform;
   transition-duration: 140ms, 190ms;
-  transition-timing-function: ease-out, var(--motion-ease-emphasized);
+  transition-timing-function: var(--motion-ease-strong), var(--motion-ease-strong);
   will-change: opacity, transform;
 }
 
@@ -225,21 +226,9 @@ body {
 .atlas-mark::before { left: -2px; top: -2px; border-left: 2px solid; border-top: 2px solid; }
 .atlas-mark::after { right: -2px; bottom: -2px; border-right: 2px solid; border-bottom: 2px solid; }
 
-.atlas-scanline { position: relative; overflow: hidden; }
-.atlas-scanline::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(90deg, transparent, rgba(255, 247, 251, 0.22), transparent);
-  transform: translateX(-120%);
-}
-.atlas-scanline:hover::after,
-.atlas-scanline:focus-visible::after { animation: print-register 420ms steps(4, end); }
-
 .atlas-hover-lift {
   transform: translate3d(0, 0, 0);
-  transition: transform var(--motion-duration-standard) steps(2, end), box-shadow var(--motion-duration-standard) steps(2, end), border-color var(--motion-duration-standard) linear;
+  transition: transform var(--motion-duration-standard) var(--motion-ease-strong);
 }
 .atlas-hover-lift:hover,
 .atlas-hover-lift:focus-visible {
@@ -302,7 +291,7 @@ body {
   font-weight: 700;
   letter-spacing: 0.065em;
   text-transform: uppercase;
-  transition: transform 180ms steps(2, end), border-color 180ms linear, background-color 180ms linear, color 180ms linear, box-shadow 180ms steps(2, end);
+  transition: transform 180ms var(--motion-ease-strong);
 }
 .print-button:hover,
 .print-button:focus-visible { transform: translate(-2px, -2px); }
@@ -336,8 +325,6 @@ body {
   box-shadow: -18px 0 0 var(--color-mustard);
 }
 .print-lens > * { position: relative; z-index: 1; }
-.print-lens-pulse { animation: print-pulse 700ms steps(3, end); }
-.print-lens-attention { animation: print-attention 900ms steps(3, end); }
 
 .print-tag {
   display: inline-flex;
@@ -358,7 +345,7 @@ body {
 .print-row {
   position: relative;
   overflow: hidden;
-  transition: transform 180ms steps(2, end), border-color 180ms linear, background-color 180ms linear;
+  transition: transform 180ms var(--motion-ease-strong);
 }
 .print-row::after {
   content: "";
@@ -370,8 +357,6 @@ body {
 }
 .print-row:hover,
 .print-row:focus-visible { transform: translate(-2px, -2px); }
-.print-row:hover::after,
-.print-row:focus-visible::after { animation: print-register 420ms steps(4, end); }
 
 .case-hud { max-height: calc(100svh - 8rem); overflow: auto; }
 html[data-scan-mode] main:not(:has(.cinema)) section { outline: 1px dashed rgba(255, 247, 251, 0.3); outline-offset: -1px; }
@@ -397,10 +382,6 @@ html[data-focus-mode] .case-hud:hover,
 html[data-focus-mode] header:hover,
 html[data-focus-mode] .case-hud:focus-within,
 html[data-focus-mode] header:focus-within { opacity: 1; }
-
-@keyframes print-register { to { transform: translateX(120%); } }
-@keyframes print-pulse { 50% { filter: contrast(1.18); transform: translate(-2px, 1px); } }
-@keyframes print-attention { 50% { box-shadow: 12px 8px 0 var(--color-paper); } }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
