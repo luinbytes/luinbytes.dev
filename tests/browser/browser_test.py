@@ -291,6 +291,65 @@ def product_link(page: Page, name: str, path: str, mobile: bool):
     return page.get_by_role("link", name=accessible_name)
 
 
+class MotionTests(BrowserTestCase):
+    def test_homepage_motion_uses_smooth_static_print_treatment(self) -> None:
+        browser = self.playwright.chromium.launch()
+        page = browser.new_page(viewport={"width": 1440, "height": 900})
+        page.goto(self.base_url, wait_until="networkidle")
+
+        hero_plate = page.locator('[class*="heroSignalPlate"]')
+        poster_mark = page.locator('[class*="posterMark"]')
+        hero_timing = hero_plate.evaluate(
+            """element => {
+                const style = getComputedStyle(element);
+                return {
+                    duration: style.animationDuration,
+                    timing: style.animationTimingFunction,
+                };
+            }"""
+        )
+        decoration_animation = poster_mark.evaluate(
+            "element => getComputedStyle(element, '::before').animationName"
+        )
+        cssom_rules = page.evaluate(
+            """() => {
+                const rules = [];
+                const collect = (ruleList) => {
+                    for (const rule of ruleList) {
+                        rules.push(rule.cssText);
+                        if (rule.cssRules) collect(rule.cssRules);
+                    }
+                };
+                for (const sheet of document.styleSheets) {
+                    if (sheet.href && new URL(sheet.href).origin !== location.origin) continue;
+                    try { collect(sheet.cssRules); } catch (_) {}
+                }
+                return rules.join('\\n');
+            }"""
+        )
+
+        self.assertNotIn("steps", hero_timing["timing"])
+        self.assertLessEqual(float(hero_timing["duration"].removesuffix("s")) * 1000, 220)
+        self.assertIn("cubic-bezier(0.23, 1, 0.32, 1)", hero_timing["timing"])
+        self.assertEqual(decoration_animation, "none")
+        self.assertNotIn("steps(", cssom_rules)
+
+        reduced_page = browser.new_page(viewport={"width": 1440, "height": 900})
+        reduced_page.emulate_media(reduced_motion="reduce")
+        reduced_page.goto(self.base_url, wait_until="networkidle")
+        reduced_plate = reduced_page.locator('[class*="heroSignalPlate"]')
+        self.assertEqual(
+            reduced_plate.evaluate("element => getComputedStyle(element).animationName"),
+            "none",
+        )
+        self.assertEqual(
+            reduced_plate.evaluate("element => getComputedStyle(element).transform"),
+            "none",
+        )
+
+        browser.close()
+
+
 class ProductNavigationTests(BrowserTestCase):
     def test_ballhammer_product_at_desktop_and_mobile(self) -> None:
         viewports = (

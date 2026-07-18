@@ -108,7 +108,7 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  transition: transform 180ms steps(2, end), box-shadow 180ms steps(2, end);
+  transition: transform 180ms var(--motion-ease-strong);
 }
 
 .primaryAction { background: var(--color-paper); color: var(--color-dark-brown); box-shadow: 5px 5px 0 var(--color-mustard); }
@@ -139,7 +139,7 @@
   border: 2px solid var(--color-dark-brown);
   background: color-mix(in srgb, var(--color-mustard) 80%, transparent);
   box-shadow: 8px 8px 0 color-mix(in srgb, var(--color-dark-brown) 35%, transparent);
-  animation: plate-in 700ms steps(3, end) 1 both;
+  animation: plate-in 200ms var(--motion-ease-strong) 1 both;
 }
 
 .heroSignalPlate::before,
@@ -289,7 +289,6 @@
   content: "";
   clip-path: polygon(0 0, 78% 0, 78% 20%, 100% 20%, 100% 80%, 76% 80%, 76% 100%, 0 100%, 0 72%, 18% 72%, 18% 28%, 0 28%);
   opacity: 0.1;
-  animation: register 700ms steps(3, end) 1 both;
 }
 
 .proofStrip {
@@ -393,11 +392,6 @@
 @keyframes plate-in {
   from { transform: translate(6px, -4px); opacity: 0; }
   to { transform: translate(0, 0); opacity: 1; }
-}
-
-@keyframes register {
-  from { transform: translate(6px, -4px); opacity: 0; }
-  to { transform: translate(0, 0); opacity: 0.22; }
 }
 
 @media (min-width: 901px) {
