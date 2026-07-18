@@ -535,9 +535,12 @@ class ProductNavigationTests(BrowserTestCase):
             builds.locator("ol[data-build-list]").get_by_role("button").first.is_visible()
         )
         build_names = builds.locator("ol[data-build-list] small").all_text_contents()
+        visible_build_names = "\n".join(build_names)
+        self.assertIn("Hermes Android", visible_build_names)
+        self.assertNotIn("Poke Android", visible_build_names)
         self.assertEqual(
             [name.split(" / ", 1)[0] for name in build_names],
-            ["Linux Sonar", "Meteor", "Poke Android", "Sleepr", "Game Systems"],
+            ["Linux Sonar", "Meteor", "Hermes Android", "Sleepr", "Game Systems"],
         )
         for removed_name in ("Minecrooft", "Cursor Barrier", "Raycast automation"):
             self.assertNotIn(removed_name, "\n".join(build_names))
