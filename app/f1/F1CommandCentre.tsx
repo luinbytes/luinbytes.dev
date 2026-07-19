@@ -56,7 +56,10 @@ import {
   type Meeting,
   type Session,
   type SessionData,
+  type SessionResult,
+  type Stint,
 } from "@/lib/f1";
+import { cn } from "@/lib/utils";
 import styles from "./f1.module.css";
 
 type View =
@@ -70,7 +73,7 @@ type View =
   | "settings"
   | "diagnostics";
 type Theme = "dark" | "light" | "system";
-type Effects = "full" | "balanced" | "reduced" | "motion";
+type Effects = "full" | "balanced" | "reduced" | "reduced-motion";
 type EventFilter = "all" | "race-control" | "radio";
 type TimingSort = "position" | "last" | "gap" | "tyre" | "team";
 
@@ -85,6 +88,16 @@ interface Preferences {
 interface TrackGeometry {
   path: string;
   project: (point: Pick<LocationPoint, "x" | "y">) => { x: number; y: number };
+}
+
+interface TimingRow {
+  driver: Driver;
+  result?: SessionResult;
+  lap?: Lap;
+  position: number;
+  gap?: number | string | null;
+  stint?: Stint;
+  fastest?: Lap;
 }
 
 const CURRENT_YEAR = new Date().getUTCFullYear();
@@ -109,10 +122,6 @@ const NAV_ITEMS: Array<{ id: View; label: string; icon: typeof Home }> = [
   { id: "settings", label: "Settings", icon: Settings },
   { id: "diagnostics", label: "Health", icon: Activity },
 ];
-
-function cx(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(" ");
-}
 
 function trackGeometry(points: LocationPoint[]): TrackGeometry | null {
   if (points.length < 3) return null;
@@ -221,7 +230,13 @@ export default function F1CommandCentre() {
     const timeout = window.setTimeout(() => {
       try {
         const stored = localStorage.getItem(PREFERENCES_KEY);
-        if (stored) setPreferences({ ...DEFAULT_PREFERENCES, ...JSON.parse(stored) });
+        if (stored) {
+          const saved = JSON.parse(stored) as Omit<Partial<Preferences>, "effects"> & {
+            effects?: Effects | "motion";
+          };
+          if (saved.effects === "motion") saved.effects = "reduced-motion";
+          setPreferences({ ...DEFAULT_PREFERENCES, ...saved } as Preferences);
+        }
       } catch {
         // Defaults are a complete fallback when storage is blocked.
       } finally {
@@ -242,7 +257,7 @@ export default function F1CommandCentre() {
 
   useEffect(() => {
     const node = shellRef.current;
-    if (!node || preferences.effects === "reduced" || preferences.effects === "motion") return;
+    if (!node || preferences.effects === "reduced" || preferences.effects === "reduced-motion") return;
     let frameId = 0;
     const updateReflection = (event: PointerEvent) => {
       window.cancelAnimationFrame(frameId);
@@ -424,7 +439,29 @@ export default function F1CommandCentre() {
     [data, selectedTime],
   );
 
-  const timingRows = useMemo(() => {
+  const fastestByDriver = useMemo(() => {
+    const fastest = new Map<number, Lap>();
+    for (const lap of data?.laps ?? []) {
+      if (!lap.lap_duration) continue;
+      const current = fastest.get(lap.driver_number);
+      if (!current?.lap_duration || lap.lap_duration < current.lap_duration) {
+        fastest.set(lap.driver_number, lap);
+      }
+    }
+    return fastest;
+  }, [data]);
+
+  const stintsByDriver = useMemo(() => {
+    const grouped = new Map<number, Stint[]>();
+    for (const stint of data?.stints ?? []) {
+      const driverStints = grouped.get(stint.driver_number) ?? [];
+      driverStints.push(stint);
+      grouped.set(stint.driver_number, driverStints);
+    }
+    return grouped;
+  }, [data]);
+
+  const timingRows = useMemo<TimingRow[]>(() => {
     if (!data) return [];
     const resultByDriver = new Map(data.results.map((result) => [result.driver_number, result]));
     const favourites = new Set(preferences.favourites);
@@ -434,21 +471,27 @@ export default function F1CommandCentre() {
         const lap = currentLaps.get(driver.driver_number);
         const position = currentPositions.get(driver.driver_number)?.position ?? result?.position ?? 99;
         const interval = currentIntervals.get(driver.driver_number);
-        const stint = data.stints.find(
+        const stint = stintsByDriver.get(driver.driver_number)?.find(
           (item) =>
-            item.driver_number === driver.driver_number &&
             lap &&
             item.lap_start <= lap.lap_number &&
             item.lap_end >= lap.lap_number,
         );
-        const fastest = bestLap(data.laps, driver.driver_number);
-        return { driver, result, lap, position, interval, stint, fastest };
+        return {
+          driver,
+          result,
+          lap,
+          position,
+          gap: interval?.gap_to_leader ?? result?.gap_to_leader,
+          stint,
+          fastest: fastestByDriver.get(driver.driver_number),
+        };
       })
       .sort((a, b) => {
         const favouriteOrder = Number(favourites.has(b.driver.driver_number)) - Number(favourites.has(a.driver.driver_number));
         if (favouriteOrder) return favouriteOrder;
         if (timingSort === "last") return (a.lap?.lap_duration ?? Infinity) - (b.lap?.lap_duration ?? Infinity);
-        if (timingSort === "gap") return Number(a.result?.gap_to_leader ?? Infinity) - Number(b.result?.gap_to_leader ?? Infinity);
+        if (timingSort === "gap") return Number(a.gap ?? Infinity) - Number(b.gap ?? Infinity);
         if (timingSort === "tyre") {
           const aAge = a.stint && a.lap ? a.lap.lap_number - a.stint.lap_start + a.stint.tyre_age_at_start : Infinity;
           const bAge = b.stint && b.lap ? b.lap.lap_number - b.stint.lap_start + b.stint.tyre_age_at_start : Infinity;
@@ -457,7 +500,7 @@ export default function F1CommandCentre() {
         if (timingSort === "team") return a.driver.team_name.localeCompare(b.driver.team_name);
         return a.position - b.position;
       });
-  }, [currentIntervals, currentLaps, currentPositions, data, preferences.favourites, timingSort]);
+  }, [currentIntervals, currentLaps, currentPositions, data, fastestByDriver, preferences.favourites, stintsByDriver, timingSort]);
 
   const events = useMemo(() => {
     if (!data) return [];
@@ -562,7 +605,7 @@ export default function F1CommandCentre() {
       <div className={styles.navItems}>
         {NAV_ITEMS.map(({ id, label, icon: Icon }) => (
           <button
-            className={cx(styles.navButton, view === id && styles.navButtonActive)}
+            className={cn(styles.navButton, view === id && styles.navButtonActive)}
             key={id}
             onClick={() => setView(id)}
             type="button"
@@ -575,7 +618,7 @@ export default function F1CommandCentre() {
         ))}
       </div>
       <div className={styles.sourceBadge}>
-        <span className={cx(styles.statusDot, error && styles.statusDotError)} />
+        <span className={cn(styles.statusDot, error && styles.statusDotError)} />
         <span>OpenF1<br />historical</span>
       </div>
     </nav>
@@ -648,7 +691,7 @@ export default function F1CommandCentre() {
   return (
     <div
       ref={shellRef}
-      className={cx(styles.shell, preferences.highContrast && styles.highContrast)}
+      className={cn(styles.shell, preferences.highContrast && styles.highContrast)}
       data-theme={resolvedTheme}
       data-effects={preferences.effects}
     >
@@ -696,7 +739,7 @@ export default function F1CommandCentre() {
       <main className={styles.workspace}>
         {(view === "live" || view === "replay") && (
           <>
-            <section className={cx(styles.panel, styles.trackPanel)} aria-labelledby="track-title">
+            <section className={cn(styles.panel, styles.trackPanel)} aria-labelledby="track-title">
               <div className={styles.panelHeader}>
                 <div>
                   <span>Track position / sourced</span>
@@ -716,7 +759,7 @@ export default function F1CommandCentre() {
                     style={{
                       "--pull-x": `${(focusPoint.x / 720) * 100}%`,
                       "--pull-y": `${(focusPoint.y / 420) * 100}%`,
-                    } as React.CSSProperties}
+                    } as CSSProperties}
                     aria-hidden="true"
                   />
                 )}
@@ -739,7 +782,7 @@ export default function F1CommandCentre() {
                       const selected = selectedDrivers.includes(point.driver_number);
                       return (
                         <g
-                          className={cx(styles.driverMarker, selected && styles.driverMarkerSelected)}
+                          className={cn(styles.driverMarker, selected && styles.driverMarkerSelected)}
                           key={point.driver_number}
                           transform={`translate(${projected.x} ${projected.y})`}
                           role="button"
@@ -772,7 +815,7 @@ export default function F1CommandCentre() {
               </div>
             </section>
 
-            <section className={cx(styles.panel, styles.timingPanel)} aria-labelledby="timing-title">
+            <section className={cn(styles.panel, styles.timingPanel)} aria-labelledby="timing-title">
               <div className={styles.panelHeader}>
                 <div>
                   <span>Classification / lap {selectedLap?.lap_number ?? 0}</span>
@@ -802,10 +845,10 @@ export default function F1CommandCentre() {
                 <span>POS</span><span>DRIVER</span><span>TYRE</span><span>LAST</span><span>GAP</span>
               </div>
               <div className={styles.timingRows}>
-                {timingRows.map(({ driver, result, lap, position, interval, stint, fastest }) => (
+                {timingRows.map(({ driver, result, lap, position, gap, stint, fastest }) => (
                   <button
                     type="button"
-                    className={cx(
+                    className={cn(
                       styles.timingRow,
                       selectedDrivers.includes(driver.driver_number) && styles.timingRowSelected,
                       result?.dnf && styles.timingRowRetired,
@@ -815,20 +858,20 @@ export default function F1CommandCentre() {
                     aria-pressed={selectedDrivers.includes(driver.driver_number)}
                   >
                     <strong>{position === 99 ? "-" : position}</strong>
-                    <span className={styles.driverCell} style={{ "--team": `#${driver.team_colour}` } as React.CSSProperties}>
+                    <span className={styles.driverCell} style={{ "--team": `#${driver.team_colour}` } as CSSProperties}>
                       <b>{driver.name_acronym}</b><small>{driver.team_name}</small>
                     </span>
                     <span className={styles.tyreCell} data-compound={stint?.compound?.toLowerCase()}>
                       {stint?.compound?.slice(0, 1) ?? "-"}<small>{stint && lap ? lap.lap_number - stint.lap_start + stint.tyre_age_at_start : 0}L</small>
                     </span>
                     <span>{formatLapTime(lap?.lap_duration)}<small>best {formatLapTime(fastest?.lap_duration)}</small></span>
-                    <span>{result?.dnf ? "OUT" : formatGap(interval?.gap_to_leader ?? result?.gap_to_leader)}</span>
+                    <span>{result?.dnf ? "OUT" : formatGap(gap)}</span>
                   </button>
                 ))}
               </div>
             </section>
 
-            <section className={cx(styles.panel, styles.telemetryPanel)} aria-labelledby="telemetry-title">
+            <section className={cn(styles.panel, styles.telemetryPanel)} aria-labelledby="telemetry-title">
               <span
                 className={styles.telemetryReceive}
                 key={`telemetry-${selectedDrivers.join("-")}`}
@@ -872,7 +915,7 @@ export default function F1CommandCentre() {
               </div>
             </section>
 
-            <section className={cx(styles.panel, styles.eventsPanel)} aria-labelledby="events-title">
+            <section className={cn(styles.panel, styles.eventsPanel)} aria-labelledby="events-title">
               <div className={styles.panelHeader}>
                 <div>
                   <span>Shared timeline events</span>
@@ -985,7 +1028,7 @@ export default function F1CommandCentre() {
 
 function CalendarView({ meetings, sessions, now, onSelect }: { meetings: Meeting[]; sessions: Session[]; now: number; onSelect: (session: Session) => void }) {
   return (
-    <section className={cx(styles.panel, styles.fullView)}>
+    <section className={cn(styles.panel, styles.fullView)}>
       <div className={styles.viewIntro}><span>2026 championship</span><h1>Race calendar</h1><p>Times are shown in your local timezone. Select any completed session to load its real timing, telemetry, radio, and race-control archive.</p></div>
       <div className={styles.calendarGrid}>
         {meetings.filter((meeting) => meeting.meeting_name !== "Pre-Season Testing").map((meeting, index) => {
@@ -993,7 +1036,7 @@ function CalendarView({ meetings, sessions, now, onSelect }: { meetings: Meeting
           const race = meetingSessions.find((item) => item.session_name === "Race");
           const completed = race && Date.parse(race.date_end) < now;
           return (
-            <article key={meeting.meeting_key} className={cx(styles.calendarCard, completed && styles.calendarComplete)}>
+            <article key={meeting.meeting_key} className={cn(styles.calendarCard, completed && styles.calendarComplete)}>
               <span>R{String(index + 1).padStart(2, "0")}</span>
               <time>{new Date(meeting.date_start).toLocaleDateString([], { day: "2-digit", month: "short" })}</time>
               <h2>{meeting.country_name}</h2><p>{meeting.circuit_short_name}</p>
@@ -1006,13 +1049,12 @@ function CalendarView({ meetings, sessions, now, onSelect }: { meetings: Meeting
   );
 }
 
-function DriversView({ rows, selected, onSelect }: { rows: ReturnType<typeof Array.prototype.map>; selected: number[]; onSelect: (number: number) => void }) {
-  const typedRows = rows as Array<{ driver: Driver; result?: { position: number | null; points: number; dnf: boolean }; fastest?: Lap }>;
+function DriversView({ rows, selected, onSelect }: { rows: TimingRow[]; selected: number[]; onSelect: (number: number) => void }) {
   return (
-    <section className={cx(styles.panel, styles.fullView)}>
+    <section className={cn(styles.panel, styles.fullView)}>
       <div className={styles.viewIntro}><span>Session field</span><h1>Drivers</h1><p>Select up to two drivers. The same selection follows you into timing, map, telemetry, replay, and strategy.</p></div>
-      <div className={styles.driverGrid}>{typedRows.map(({ driver, result, fastest }) => (
-        <button className={cx(styles.driverCard, selected.includes(driver.driver_number) && styles.driverCardSelected)} type="button" key={driver.driver_number} onClick={() => onSelect(driver.driver_number)}>
+      <div className={styles.driverGrid}>{rows.map(({ driver, result, fastest }) => (
+        <button className={cn(styles.driverCard, selected.includes(driver.driver_number) && styles.driverCardSelected)} type="button" key={driver.driver_number} onClick={() => onSelect(driver.driver_number)}>
           <span className={styles.driverNumber} style={{ color: `#${driver.team_colour}` }}>{driver.driver_number}</span><div><small>{driver.team_name}</small><h2>{driver.first_name}<br /><strong>{driver.last_name}</strong></h2></div><dl><div><dt>Finish</dt><dd>{result?.dnf ? "DNF" : `P${result?.position ?? "-"}`}</dd></div><div><dt>Fastest</dt><dd>{formatLapTime(fastest?.lap_duration)}</dd></div><div><dt>Points</dt><dd>{result?.points ?? 0}</dd></div></dl>
         </button>
       ))}</div>
@@ -1030,7 +1072,7 @@ function StrategyView({ data, driver, lap, compound, onLap, onCompound }: { data
   const estimatedLoss = pitLoss + tyrePenalty * Math.max(0, lapsRemaining - (compound === "SOFT" ? 14 : compound === "MEDIUM" ? 24 : 34));
   const positionsLost = Math.max(1, Math.round(estimatedLoss / 2.3));
   return (
-    <section className={cx(styles.panel, styles.fullView)}>
+    <section className={cn(styles.panel, styles.fullView)}>
       <div className={styles.viewIntro}><span>Derived model / not official</span><h1>Strategy desk</h1><p>Explore a transparent pit-stop scenario built from this session&apos;s lap count and the selected driver&apos;s observed pace.</p></div>
       <div className={styles.strategyLayout}>
         <div className={styles.strategyControls}><label>Pit on lap <strong>{lap}</strong><input type="range" min={2} max={Math.max(3, totalLaps - 1)} value={lap} onChange={(event) => onLap(Number(event.target.value))} /></label><fieldset><legend>Fit compound</legend>{["SOFT", "MEDIUM", "HARD"].map((item) => <button type="button" aria-pressed={compound === item} key={item} onClick={() => onCompound(item)}>{item}</button>)}</fieldset><div className={styles.strategyDriver}><span style={{ background: `#${driver?.team_colour ?? "fff"}` }} /><div><small>Scenario car</small><strong>{driver?.full_name ?? "Select a driver"}</strong></div></div></div>
@@ -1041,16 +1083,16 @@ function StrategyView({ data, driver, lap, compound, onLap, onCompound }: { data
 }
 
 function RoomsView() {
-  return <section className={cx(styles.panel, styles.fullView)}><div className={styles.viewIntro}><span>Invite access</span><h1>Private rooms</h1><p>The dashboard is private by default. Room presence and shared replay cursors require the authenticated room service.</p></div><div className={styles.lockedFeature}><ShieldCheck aria-hidden="true" /><h2>No active room</h2><p>Create and invite controls stay disabled until the room service confirms an authenticated session. No local-only room is presented as shared.</p><button type="button" disabled>Create room</button></div></section>;
+  return <section className={cn(styles.panel, styles.fullView)}><div className={styles.viewIntro}><span>Invite access</span><h1>Private rooms</h1><p>The dashboard is private by default. Room presence and shared replay cursors require the authenticated room service.</p></div><div className={styles.lockedFeature}><ShieldCheck aria-hidden="true" /><h2>No active room</h2><p>Create and invite controls stay disabled until the room service confirms an authenticated session. No local-only room is presented as shared.</p><button type="button" disabled>Create room</button></div></section>;
 }
 
 function AiView({ data, selectedDrivers }: { data: SessionData; selectedDrivers: number[] }) {
   const drivers = selectedDrivers.map((number) => data.drivers.find((driver) => driver.driver_number === number)?.name_acronym).filter(Boolean);
-  return <section className={cx(styles.panel, styles.fullView)}><div className={styles.viewIntro}><span>Optional provider</span><h1>Pit-wall copilot</h1><p>AI remains off until a secure server-side provider is configured. Race data never sends itself to a model.</p></div><div className={styles.aiGrid}><div className={styles.aiPrompt}><Bot aria-hidden="true" /><h2>Ask the race</h2><textarea disabled value={`Compare ${drivers.join(" and ") || "the selected drivers"} while accounting for tyre age.`} readOnly /><button type="button" disabled>Run with evidence</button></div><div className={styles.aiContract}><span>Every answer must include</span>{["Session timestamp", "Current lap", "Source freshness", "Drivers considered", "Evidence references", "Confidence", "Assumptions", "Facts vs inference"].map((item) => <p key={item}><i />{item}</p>)}</div></div></section>;
+  return <section className={cn(styles.panel, styles.fullView)}><div className={styles.viewIntro}><span>Optional provider</span><h1>Pit-wall copilot</h1><p>AI remains off until a secure server-side provider is configured. Race data never sends itself to a model.</p></div><div className={styles.aiGrid}><div className={styles.aiPrompt}><Bot aria-hidden="true" /><h2>Ask the race</h2><textarea disabled value={`Compare ${drivers.join(" and ") || "the selected drivers"} while accounting for tyre age.`} readOnly /><button type="button" disabled>Run with evidence</button></div><div className={styles.aiContract}><span>Every answer must include</span>{["Session timestamp", "Current lap", "Source freshness", "Drivers considered", "Evidence references", "Confidence", "Assumptions", "Facts vs inference"].map((item) => <p key={item}><i />{item}</p>)}</div></div></section>;
 }
 
 function SettingsView({ preferences, setPreference }: { preferences: Preferences; setPreference: <K extends keyof Preferences>(key: K, value: Preferences[K]) => void }) {
-  return <section className={cx(styles.panel, styles.fullView)}><div className={styles.viewIntro}><span>Local preferences</span><h1>Display settings</h1><p>These choices are stored only in this browser and apply immediately.</p></div><div className={styles.settingsGrid}><SettingGroup title="Theme">{(["dark", "light", "system"] as Theme[]).map((value) => <button key={value} type="button" aria-pressed={preferences.theme === value} onClick={() => setPreference("theme", value)}>{value === "dark" ? <Moon /> : value === "light" ? <Sun /> : <CircleGauge />}{value}</button>)}</SettingGroup><SettingGroup title="Glass and motion">{(["full", "balanced", "reduced", "motion"] as Effects[]).map((value) => <button key={value} type="button" aria-pressed={preferences.effects === value} onClick={() => setPreference("effects", value)}><Sparkles />{value === "motion" ? "reduced motion" : value}</button>)}</SettingGroup><SettingGroup title="Accessibility"><button type="button" aria-pressed={preferences.highContrast} onClick={() => setPreference("highContrast", !preferences.highContrast)}><Activity />high contrast</button>{(["metric", "imperial"] as const).map((value) => <button key={value} type="button" aria-pressed={preferences.units === value} onClick={() => setPreference("units", value)}><Gauge />{value}</button>)}</SettingGroup></div></section>;
+  return <section className={cn(styles.panel, styles.fullView)}><div className={styles.viewIntro}><span>Local preferences</span><h1>Display settings</h1><p>These choices are stored only in this browser and apply immediately.</p></div><div className={styles.settingsGrid}><SettingGroup title="Theme">{(["dark", "light", "system"] as Theme[]).map((value) => <button key={value} type="button" aria-pressed={preferences.theme === value} onClick={() => setPreference("theme", value)}>{value === "dark" ? <Moon /> : value === "light" ? <Sun /> : <CircleGauge />}{value}</button>)}</SettingGroup><SettingGroup title="Glass and motion">{(["full", "balanced", "reduced", "reduced-motion"] as Effects[]).map((value) => <button key={value} type="button" aria-pressed={preferences.effects === value} onClick={() => setPreference("effects", value)}><Sparkles />{value === "reduced-motion" ? "reduced motion" : value}</button>)}</SettingGroup><SettingGroup title="Accessibility"><button type="button" aria-pressed={preferences.highContrast} onClick={() => setPreference("highContrast", !preferences.highContrast)}><Activity />high contrast</button>{(["metric", "imperial"] as const).map((value) => <button key={value} type="button" aria-pressed={preferences.units === value} onClick={() => setPreference("units", value)}><Gauge />{value}</button>)}</SettingGroup></div></section>;
 }
 
 function SettingGroup({ title, children }: { title: string; children: React.ReactNode }) {
@@ -1068,5 +1110,5 @@ function DiagnosticsView({ data, frame, error, gateway, session, trackPoints }: 
     ["Radio", `${data.radio.length} clips`, data.radio.length ? "ok" : "warn"],
     ["Replay frame", frame ? `${frame.locations.length} positions` : "waiting", frame ? "ok" : "warn"],
   ];
-  return <section className={cx(styles.panel, styles.fullView)}><div className={styles.viewIntro}><span>Source health</span><h1>Diagnostics</h1><p>Direct readback of the current browser, provider, archive, and replay-frame state.</p></div><div className={styles.diagnosticsGrid}>{checks.map(([label, value, state]) => <article key={label}><span data-state={state} /><small>{label}</small><strong>{value}</strong></article>)}</div><div className={styles.sourceNote}><Wifi aria-hidden="true" /><div><strong>{gateway ? "Luinbytes edge gateway / OpenF1" : "OpenF1 historical API"}</strong><p>Real sourced data with persistent browser caching{gateway ? " and a same-origin edge cache" : ""}. Replay-frame requests are serialized. Live session-window access depends on provider entitlement{gateway ? gateway.realtimeCredentials ? " and is configured at the gateway" : "; no real-time credential is configured" : ""}.</p></div></div></section>;
+  return <section className={cn(styles.panel, styles.fullView)}><div className={styles.viewIntro}><span>Source health</span><h1>Diagnostics</h1><p>Direct readback of the current browser, provider, archive, and replay-frame state.</p></div><div className={styles.diagnosticsGrid}>{checks.map(([label, value, state]) => <article key={label}><span data-state={state} /><small>{label}</small><strong>{value}</strong></article>)}</div><div className={styles.sourceNote}><Wifi aria-hidden="true" /><div><strong>{gateway ? "Luinbytes edge gateway / OpenF1" : "OpenF1 historical API"}</strong><p>Real sourced data with persistent browser caching{gateway ? " and a same-origin edge cache" : ""}. Replay-frame requests are serialized. Live session-window access depends on provider entitlement{gateway ? gateway.realtimeCredentials ? " and is configured at the gateway" : "; no real-time credential is configured" : ""}.</p></div></div></section>;
 }

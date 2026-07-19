@@ -300,20 +300,35 @@ export async function loadFrameData(
   signal?: AbortSignal,
 ): Promise<FrameData> {
   const params = windowParams(sessionKey, timestamp, 12);
-  const locations = await openF1<LocationPoint>("location", params, signal);
+  const readFrame = async <T,>(endpoint: string) => {
+    try {
+      return await openF1<T>(endpoint, params, signal);
+    } catch (reason) {
+      if ((reason as Error).name === "AbortError") throw reason;
+      return [];
+    }
+  };
+  const locations = await readFrame<LocationPoint>("location");
+  const positions = await readFrame<PositionPoint>("position");
+  const intervals = await readFrame<IntervalPoint>("intervals");
   const telemetry: CarDataPoint[] = [];
 
   for (const driverNumber of driverNumbers) {
-    telemetry.push(
-      ...(await openF1<CarDataPoint>(
-        "car_data",
-        { ...params, driver_number: driverNumber },
-        signal,
-      )),
-    );
+    try {
+      telemetry.push(
+        ...(await openF1<CarDataPoint>(
+          "car_data",
+          { ...params, driver_number: driverNumber },
+          signal,
+        )),
+      );
+    } catch (reason) {
+      if ((reason as Error).name === "AbortError") throw reason;
+      // Location data still makes the replay frame useful when telemetry is throttled.
+    }
   }
 
-  return { locations, positions: [], intervals: [], telemetry, fetchedAt: Date.now() };
+  return { locations, positions, intervals, telemetry, fetchedAt: Date.now() };
 }
 
 export async function loadTrackPath(

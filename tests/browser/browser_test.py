@@ -449,6 +449,16 @@ class F1CommandCentreTests(BrowserTestCase):
                     {"date": "2026-07-01T12:02:50Z", "driver_number": number, "brake": 0, "drs": 10, "n_gear": 7, "rpm": 10950, "speed": 298, "throttle": 92},
                     {"date": "2026-07-01T12:02:57Z", "driver_number": number, "brake": 100, "drs": 8, "n_gear": 4, "rpm": 9850, "speed": 182, "throttle": 18},
                 ]
+            elif endpoint == "position":
+                payload = [
+                    {"date": "2026-07-01T12:02:57Z", "driver_number": 12, "position": 2},
+                    {"date": "2026-07-01T12:02:57Z", "driver_number": 16, "position": 1},
+                ]
+            elif endpoint == "intervals":
+                payload = [
+                    {"date": "2026-07-01T12:02:57Z", "driver_number": 12, "gap_to_leader": 0.8, "interval": 0.8},
+                    {"date": "2026-07-01T12:02:57Z", "driver_number": 16, "gap_to_leader": 0, "interval": 0},
+                ]
             else:
                 payload = fixtures.get(endpoint, [])
             route.fulfill(status=200, content_type="application/json", body=json.dumps(payload))
@@ -461,13 +471,17 @@ class F1CommandCentreTests(BrowserTestCase):
 
         self.assertTrue(page.get_by_text("REPLAY", exact=True).is_visible())
         self.assertEqual(page.get_by_role("button", name=re.compile(r"^[12] (ANT|LEC)")).count(), 2)
+        page.wait_for_function(
+            "document.querySelector('[class*=timingRows] button')?.textContent?.includes('LEC')"
+        )
+        self.assertIn("+0.800", page.get_by_role("button", name=re.compile(r"^2 ANT")).inner_text())
         page.get_by_role("button", name=re.compile(r"^Select ")).first.wait_for()
         self.assertEqual(page.get_by_role("button", name=re.compile(r"^Select ")).count(), 2)
 
         page.get_by_role("combobox", name="Sort timing tower").select_option("team")
         self.assertIn("LEC", page.locator('[class*="timingRows"] button').first.inner_text())
 
-        page.get_by_role("button", name=re.compile(r"^2 LEC")).click()
+        page.get_by_role("button", name=re.compile(r"^[12] LEC")).click()
         page.get_by_role("heading", name="ANT vs LEC", level=2).wait_for()
         self.assertTrue(page.get_by_text("2/2", exact=True).is_visible())
         page.get_by_role("button", name="Pin selected driver").click()

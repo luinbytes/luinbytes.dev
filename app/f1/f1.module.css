@@ -81,21 +81,21 @@
 }
 
 .shell[data-effects="reduced"],
-.shell[data-effects="motion"] {
+.shell[data-effects="reduced-motion"] {
   --glass-blur: 0px;
   --f1-panel: var(--f1-panel-solid);
 }
 
-.shell[data-effects="motion"] {
+.shell[data-effects="reduced-motion"] {
   --motion-time: 1ms;
 }
 
-.shell[data-effects="motion"] .navButtonActive,
-.shell[data-effects="motion"] .navButtonActive::after,
-.shell[data-effects="motion"] .selectionPull,
-.shell[data-effects="motion"] .telemetryReceive,
-.shell[data-effects="motion"] .timelineWave,
-.shell[data-effects="motion"] .fullView {
+.shell[data-effects="reduced-motion"] .navButtonActive,
+.shell[data-effects="reduced-motion"] .navButtonActive::after,
+.shell[data-effects="reduced-motion"] .selectionPull,
+.shell[data-effects="reduced-motion"] .telemetryReceive,
+.shell[data-effects="reduced-motion"] .timelineWave,
+.shell[data-effects="reduced-motion"] .fullView {
   animation: none;
 }
 
