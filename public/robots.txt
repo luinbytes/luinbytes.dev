@@ -20,5 +20,6 @@
 User-agent: *
 Allow: /
 Disallow: /api/
+Disallow: /f1
 
 Sitemap: https://luinbytes.github.io/sitemap.xml

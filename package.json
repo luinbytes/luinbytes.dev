@@ -8,6 +8,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "f1:gateway:dev": "wrangler dev --local",
+    "f1:gateway:check": "wrangler types workers/f1-gateway-env.d.ts --check && tsc -p workers/tsconfig.json && wrangler deploy --dry-run",
+    "f1:gateway:deploy": "wrangler deploy",
     "test:e2e:setup": "python3 -m pip install -r requirements-test.txt && python3 -m playwright install chromium",
     "test:e2e": "python3 -m unittest discover -s tests/browser -p '*_test.py' -v"
   },
@@ -17,9 +20,9 @@
     "date-fns": "^4.1.0",
     "framer-motion": "^12.23.26",
     "gsap": "^3.15.0",
-    "isomorphic-dompurify": "^3.7.1",
+    "isomorphic-dompurify": "^3.19.0",
     "lucide-react": "^0.560.0",
-    "next": "16.1.6",
+    "next": "^16.2.10",
     "react": "19.2.1",
     "react-activity-calendar": "^3.0.1",
     "react-dom": "19.2.1",
@@ -31,8 +34,9 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.1.6",
+    "eslint-config-next": "^16.2.10",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wrangler": "^4.112.0"
   }
 }

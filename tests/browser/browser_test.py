@@ -1,4 +1,5 @@
 import hashlib
+import json
 import os
 import re
 import signal
@@ -11,6 +12,7 @@ import urllib.request
 import xml.etree.ElementTree as ET
 from html.parser import HTMLParser
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 from playwright.sync_api import Page, sync_playwright
 
@@ -347,6 +349,151 @@ class MotionTests(BrowserTestCase):
             "none",
         )
 
+        browser.close()
+
+
+class F1CommandCentreTests(BrowserTestCase):
+    def test_real_data_workspace_timeline_preferences_and_mobile_layout(self) -> None:
+        meeting = {
+            "meeting_key": 202601,
+            "meeting_name": "Italian Grand Prix",
+            "meeting_official_name": "Italian Grand Prix",
+            "location": "Monza",
+            "country_name": "Italy",
+            "country_code": "ITA",
+            "circuit_short_name": "Monza",
+            "date_start": "2026-07-01T10:00:00Z",
+            "year": 2026,
+        }
+        session = {
+            "session_key": 202602,
+            "meeting_key": 202601,
+            "session_name": "Race",
+            "session_type": "Race",
+            "date_start": "2026-07-01T12:00:00Z",
+            "date_end": "2026-07-01T13:00:00Z",
+            "location": "Monza",
+            "country_name": "Italy",
+            "country_code": "ITA",
+            "circuit_short_name": "Monza",
+            "gmt_offset": "+00:00",
+            "year": 2026,
+        }
+        drivers = [
+            {
+                "driver_number": 12,
+                "broadcast_name": "K ANTONELLI",
+                "full_name": "Kimi ANTONELLI",
+                "name_acronym": "ANT",
+                "team_name": "Mercedes",
+                "team_colour": "27F4D2",
+                "headshot_url": "",
+                "first_name": "Kimi",
+                "last_name": "Antonelli",
+            },
+            {
+                "driver_number": 16,
+                "broadcast_name": "C LECLERC",
+                "full_name": "Charles LECLERC",
+                "name_acronym": "LEC",
+                "team_name": "Ferrari",
+                "team_colour": "E8002D",
+                "headshot_url": "",
+                "first_name": "Charles",
+                "last_name": "Leclerc",
+            },
+        ]
+        fixtures = {
+            "meetings": [meeting],
+            "sessions": [session],
+            "drivers": drivers,
+            "session_result": [
+                {"position": 1, "driver_number": 12, "number_of_laps": 2, "points": 25, "dnf": False, "dns": False, "dsq": False, "duration": 179, "gap_to_leader": 0},
+                {"position": 2, "driver_number": 16, "number_of_laps": 2, "points": 18, "dnf": False, "dns": False, "dsq": False, "duration": 181, "gap_to_leader": 2.1},
+            ],
+            "laps": [
+                {"driver_number": 12, "lap_number": 1, "date_start": "2026-07-01T12:00:00Z", "duration_sector_1": 29, "duration_sector_2": 31, "duration_sector_3": 30, "lap_duration": 90, "is_pit_out_lap": False, "segments_sector_1": [], "segments_sector_2": [], "segments_sector_3": [], "st_speed": 320},
+                {"driver_number": 12, "lap_number": 2, "date_start": "2026-07-01T12:01:30Z", "duration_sector_1": 28, "duration_sector_2": 31, "duration_sector_3": 30, "lap_duration": 89, "is_pit_out_lap": False, "segments_sector_1": [], "segments_sector_2": [], "segments_sector_3": [], "st_speed": 324},
+                {"driver_number": 16, "lap_number": 1, "date_start": "2026-07-01T12:00:01Z", "duration_sector_1": 29, "duration_sector_2": 32, "duration_sector_3": 30, "lap_duration": 91, "is_pit_out_lap": False, "segments_sector_1": [], "segments_sector_2": [], "segments_sector_3": [], "st_speed": 318},
+                {"driver_number": 16, "lap_number": 2, "date_start": "2026-07-01T12:01:32Z", "duration_sector_1": 29, "duration_sector_2": 31, "duration_sector_3": 30, "lap_duration": 90, "is_pit_out_lap": False, "segments_sector_1": [], "segments_sector_2": [], "segments_sector_3": [], "st_speed": 321},
+            ],
+            "stints": [
+                {"driver_number": 12, "stint_number": 1, "lap_start": 1, "lap_end": 2, "compound": "MEDIUM", "tyre_age_at_start": 0},
+                {"driver_number": 16, "stint_number": 1, "lap_start": 1, "lap_end": 2, "compound": "HARD", "tyre_age_at_start": 0},
+            ],
+            "race_control": [{"date": "2026-07-01T12:02:00Z", "driver_number": None, "lap_number": 2, "category": "Flag", "flag": "YELLOW", "scope": "Sector", "sector": 2, "message": "YELLOW FLAG IN SECTOR 2"}],
+            "team_radio": [{"driver_number": 12, "date": "2026-07-01T12:02:30Z", "recording_url": "https://example.com/radio.mp3"}],
+            "weather": [{"date": "2026-07-01T12:02:00Z", "track_temperature": 36.2, "air_temperature": 24.4, "humidity": 51, "rainfall": 0, "wind_speed": 1.8, "wind_direction": 90, "pressure": 1012}],
+        }
+
+        def route_openf1(route) -> None:
+            parsed = urlparse(route.request.url)
+            endpoint = parsed.path.rsplit("/", 1)[-1]
+            query = parse_qs(parsed.query)
+            if endpoint == "location":
+                if "driver_number" in query:
+                    payload = [
+                        {"date": "2026-07-01T12:01:30Z", "driver_number": 12, "x": 0, "y": 0, "z": 0},
+                        {"date": "2026-07-01T12:01:50Z", "driver_number": 12, "x": 500, "y": 100, "z": 0},
+                        {"date": "2026-07-01T12:02:10Z", "driver_number": 12, "x": 420, "y": 700, "z": 0},
+                        {"date": "2026-07-01T12:02:40Z", "driver_number": 12, "x": 0, "y": 0, "z": 0},
+                    ]
+                else:
+                    payload = [
+                        {"date": "2026-07-01T12:02:57Z", "driver_number": 12, "x": 40, "y": 80, "z": 0},
+                        {"date": "2026-07-01T12:02:57Z", "driver_number": 16, "x": 90, "y": 120, "z": 0},
+                    ]
+            elif endpoint == "car_data":
+                number = int(query["driver_number"][0])
+                payload = [
+                    {"date": "2026-07-01T12:02:50Z", "driver_number": number, "brake": 0, "drs": 10, "n_gear": 7, "rpm": 10950, "speed": 298, "throttle": 92},
+                    {"date": "2026-07-01T12:02:57Z", "driver_number": number, "brake": 100, "drs": 8, "n_gear": 4, "rpm": 9850, "speed": 182, "throttle": 18},
+                ]
+            else:
+                payload = fixtures.get(endpoint, [])
+            route.fulfill(status=200, content_type="application/json", body=json.dumps(payload))
+
+        browser = self.playwright.chromium.launch()
+        page = browser.new_page(viewport={"width": 1440, "height": 900})
+        page.route("https://api.openf1.org/v1/**", route_openf1)
+        page.goto(f"{self.base_url}/f1")
+        page.get_by_role("heading", name="Monza", level=1).wait_for()
+
+        self.assertTrue(page.get_by_text("REPLAY", exact=True).is_visible())
+        self.assertEqual(page.get_by_role("button", name=re.compile(r"^[12] (ANT|LEC)")).count(), 2)
+        page.get_by_role("button", name=re.compile(r"^Select ")).first.wait_for()
+        self.assertEqual(page.get_by_role("button", name=re.compile(r"^Select ")).count(), 2)
+
+        page.get_by_role("combobox", name="Sort timing tower").select_option("team")
+        self.assertIn("LEC", page.locator('[class*="timingRows"] button').first.inner_text())
+
+        page.get_by_role("button", name=re.compile(r"^2 LEC")).click()
+        page.get_by_role("heading", name="ANT vs LEC", level=2).wait_for()
+        self.assertTrue(page.get_by_text("2/2", exact=True).is_visible())
+        page.get_by_role("button", name="Pin selected driver").click()
+
+        page.get_by_role("button", name=re.compile(r"^YELLOW ")).click()
+        self.assertEqual(
+            page.get_by_role("slider", name="Shared race timeline").input_value(),
+            str(int(1782907320 * 1000)),
+        )
+
+        page.get_by_role("button", name="Settings", exact=True).click()
+        page.get_by_role("button", name="light", exact=True).click()
+        page.get_by_role("button", name="reduced motion", exact=True).click()
+        page.reload()
+        page.get_by_role("heading", name="Monza", level=1).wait_for()
+        page.get_by_role("button", name="Settings", exact=True).click()
+        self.assertEqual(page.get_by_role("button", name="light", exact=True).get_attribute("aria-pressed"), "true")
+        self.assertEqual(page.get_by_role("button", name="reduced motion", exact=True).get_attribute("aria-pressed"), "true")
+
+        page.set_viewport_size({"width": 390, "height": 844})
+        page.get_by_role("button", name="Live", exact=True).click()
+        self.assertLessEqual(page.evaluate("document.documentElement.scrollWidth"), 390)
+        self.assertGreaterEqual(
+            page.locator('[class*="timingPanel"]').bounding_box()["height"], 440
+        )
+        page.screenshot(path=SCREENSHOTS / "f1-command-centre-mobile.png")
         browser.close()
 
 

@@ -1,0 +1,19 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "luinbytes-f1-gateway",
+  "main": "workers/f1-gateway.ts",
+  "compatibility_date": "2026-07-01",
+  "routes": [
+    {
+      "pattern": "luinbytes.dev/f1/api/*",
+      "zone_name": "luinbytes.dev"
+    }
+  ],
+  "vars": {
+    "OPENF1_ORIGIN": "https://api.openf1.org"
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  }
+}
