@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   title: "F1 Command Centre",
   description: "A private, real-data Formula 1 race engineering command centre.",
   alternates: { canonical: "https://luinbytes.dev/f1" },
+  manifest: "/f1/manifest.webmanifest",
   robots: { index: false, follow: false, nocache: true },
 };
 

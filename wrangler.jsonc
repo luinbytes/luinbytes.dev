@@ -12,6 +12,20 @@
   "vars": {
     "OPENF1_ORIGIN": "https://api.openf1.org"
   },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "F1_ROOMS",
+        "class_name": "F1Room"
+      }
+    ]
+  },
+  "exports": {
+    "F1Room": {
+      "type": "durable-object",
+      "storage": "sqlite"
+    }
+  },
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1

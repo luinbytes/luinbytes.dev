@@ -29,9 +29,13 @@ export function CaseInterfaceOverlay() {
   const [focusMode, setFocusMode] = useState(false);
 
   useEffect(() => {
+    if (!study) {
+      document.documentElement.removeAttribute("data-scan-mode");
+      return;
+    }
     document.documentElement.setAttribute("data-scan-mode", "");
     return () => document.documentElement.removeAttribute("data-scan-mode");
-  }, []);
+  }, [study]);
 
   useEffect(() => {
     document.documentElement.toggleAttribute("data-focus-mode", focusMode);

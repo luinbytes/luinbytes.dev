@@ -11,6 +11,7 @@ export interface GatewayHealth {
   status: "ok";
   upstream: string;
   realtimeCredentials: boolean;
+  roomsConfigured: boolean;
   checkedAt: string;
 }
 
@@ -239,6 +240,7 @@ async function openF1<T>(
   params: Record<string, string | number>,
   signal?: AbortSignal,
   cache = true,
+  fresh = false,
 ): Promise<T[]> {
   const query = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => query.append(key, String(value)));
@@ -264,7 +266,11 @@ async function openF1<T>(
     lastRequestAt = Date.now();
 
     response = await fetch(url, {
-      headers: { Accept: "application/json" },
+      cache: fresh ? "no-store" : "default",
+      headers: {
+        Accept: "application/json",
+        ...(fresh ? { "X-F1-Fresh": "1" } : {}),
+      },
       referrerPolicy: "strict-origin-when-cross-origin",
       signal,
     });
@@ -304,9 +310,9 @@ export async function loadSeason(year: number, signal?: AbortSignal) {
   return { meetings, sessions };
 }
 
-export async function loadSessionData(sessionKey: number, signal?: AbortSignal) {
+export async function loadSessionData(sessionKey: number, signal?: AbortSignal, fresh = false) {
   const read = <T,>(endpoint: string) =>
-    openF1<T>(endpoint, { session_key: sessionKey }, signal);
+    openF1<T>(endpoint, { session_key: sessionKey }, signal, !fresh, fresh);
 
   const drivers = await read<Driver>("drivers");
   const results = await read<SessionResult>("session_result");

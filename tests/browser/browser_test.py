@@ -514,8 +514,27 @@ class F1CommandCentreTests(BrowserTestCase):
         page.goto(f"{self.base_url}/f1")
         page.get_by_role("heading", name="Monza", level=1).wait_for()
 
+        self.assertEqual(page.locator('link[rel="manifest"]').get_attribute("href"), "/f1/manifest.webmanifest")
+        manifest_response = page.request.get(f"{self.base_url}/f1/manifest.webmanifest")
+        self.assertTrue(manifest_response.ok)
+        manifest = manifest_response.json()
+        self.assertEqual(manifest["start_url"], "/f1")
+        self.assertEqual(manifest["scope"], "/f1")
+        self.assertEqual([icon["sizes"] for icon in manifest["icons"]], ["192x192", "512x512", "512x512"])
+        for icon, expected_size in zip(manifest["icons"], (192, 512, 512), strict=True):
+            icon_response = page.request.get(f"{self.base_url}{icon['src']}")
+            self.assertTrue(icon_response.ok)
+            png = icon_response.body()
+            self.assertEqual((int.from_bytes(png[16:20], "big"), int.from_bytes(png[20:24], "big")), (expected_size, expected_size))
+        self.assertTrue(page.request.get(f"{self.base_url}/f1-sw.js").ok)
+        page.evaluate("navigator.serviceWorker.ready.then(() => true)")
+        cdp = page.context.new_cdp_session(page)
+        self.assertEqual(cdp.send("Page.getAppManifest").get("errors", []), [])
+        self.assertEqual(cdp.send("Page.getInstallabilityErrors").get("installabilityErrors", []), [])
+
         self.assertTrue(page.get_by_text("REPLAY", exact=True).is_visible())
         self.assertEqual(page.get_by_role("button", name=re.compile(r"^[12] (ANT|LEC)")).count(), 2)
+        page.screenshot(path=SCREENSHOTS / "f1-command-centre-dark.png")
         page.wait_for_function(
             "document.querySelector('[class*=timingRows] button')?.textContent?.includes('LEC')"
         )
@@ -545,18 +564,34 @@ class F1CommandCentreTests(BrowserTestCase):
         page.get_by_role("button", name="Settings", exact=True).click()
         page.get_by_role("button", name="light", exact=True).click()
         page.get_by_role("button", name="reduced motion", exact=True).click()
+        page.get_by_role("button", name="imperial", exact=True).click()
+        page.get_by_role("button", name="UTC", exact=True).click()
+        page.get_by_role("button", name="spoiler protection", exact=True).click()
+        page.get_by_role("button", name="map", exact=True).click()
+        page.get_by_role("button", name="Mercedes", exact=True).click()
         page.reload()
         page.get_by_role("heading", name="Monza", level=1).wait_for()
         self.assertEqual(page.get_by_role("button", name="Throttle", exact=True).get_attribute("aria-pressed"), "true")
         saved_preferences = page.evaluate("JSON.parse(localStorage.getItem('f1-command-centre:preferences'))")
         self.assertEqual(saved_preferences["radioBookmarks"], ["radio-0"])
         self.assertEqual(saved_preferences["audioSpeed"], 1.5)
+        self.assertEqual(saved_preferences["units"], "imperial")
+        self.assertEqual(saved_preferences["timezone"], "utc")
+        self.assertTrue(saved_preferences["spoilerMode"])
+        self.assertEqual(saved_preferences["dashboardLayout"], "map")
+        self.assertEqual(saved_preferences["favouriteTeams"], ["Mercedes"])
         page.get_by_role("button", name="Settings", exact=True).click()
         self.assertEqual(page.get_by_role("button", name="light", exact=True).get_attribute("aria-pressed"), "true")
         self.assertEqual(page.get_by_role("button", name="reduced motion", exact=True).get_attribute("aria-pressed"), "true")
 
-        page.set_viewport_size({"width": 390, "height": 844})
+        page.get_by_role("button", name="Rooms", exact=True).click()
+        self.assertTrue(page.get_by_role("heading", name="Private rooms", exact=True).is_visible())
+        self.assertTrue(page.get_by_role("heading", name="Room service locked", exact=True).is_visible())
+
         page.get_by_role("button", name="Live", exact=True).click()
+        page.screenshot(path=SCREENSHOTS / "f1-command-centre-desktop.png")
+
+        page.set_viewport_size({"width": 390, "height": 844})
         self.assertLessEqual(page.evaluate("document.documentElement.scrollWidth"), 390)
         self.assertGreaterEqual(
             page.locator('[class*="timingPanel"]').bounding_box()["height"], 440

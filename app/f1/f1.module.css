@@ -90,6 +90,26 @@
   --motion-time: 1ms;
 }
 
+.shell * {
+  scrollbar-color: color-mix(in srgb, var(--f1-white) 24%, transparent) transparent;
+  scrollbar-width: thin;
+}
+
+.shell *::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.shell *::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.shell *::-webkit-scrollbar-thumb {
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--f1-white) 24%, transparent);
+}
+
 .shell[data-effects="reduced-motion"] .navButtonActive,
 .shell[data-effects="reduced-motion"] .navButtonActive::after,
 .shell[data-effects="reduced-motion"] .selectionPull,
@@ -475,6 +495,20 @@
     grid-template-columns: minmax(250px, 0.64fr) minmax(520px, 1.58fr) minmax(270px, 0.72fr);
   }
 
+  .shell[data-layout="broadcast"] .workspace {
+    grid-template-columns: minmax(330px, 0.72fr) minmax(640px, 1.72fr);
+  }
+
+  .shell[data-layout="broadcast"] .trackPanel {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+
+  .shell[data-layout="broadcast"] .telemetryPanel,
+  .shell[data-layout="broadcast"] .eventsPanel {
+    display: none;
+  }
+
   .workspace[data-hide-telemetry="true"] .trackPanel {
     grid-row: 1 / span 2;
   }
@@ -657,6 +691,15 @@
   filter: drop-shadow(0 0 12px var(--f1-cyan));
 }
 
+.driverMarkerBattle circle {
+  stroke: var(--f1-amber);
+  filter: drop-shadow(0 0 14px var(--f1-amber));
+}
+
+.mapEventMarker { pointer-events: none; }
+.mapEventMarker circle { fill: color-mix(in srgb, var(--f1-amber) 20%, var(--f1-panel-solid)); stroke: var(--f1-amber); stroke-width: 2; filter: drop-shadow(0 0 10px color-mix(in srgb, var(--f1-amber) 56%, transparent)); }
+.mapEventMarker text { fill: var(--f1-white); text-anchor: middle; font: 700 7px/1 var(--font-space-mono), monospace; }
+
 .trackTelemetry {
   position: absolute;
   left: 18px;
@@ -713,6 +756,24 @@
 .trackStatus[data-flag="green"] { color: var(--f1-lime); }
 .trackStatus strong { font: 700 8px/1 var(--font-space-mono), monospace; text-transform: uppercase; }
 .trackStatus span { color: var(--f1-muted); font: 500 7px/1 var(--font-space-mono), monospace; text-transform: uppercase; }
+
+.mapWeather {
+  position: absolute;
+  top: 18px;
+  left: 20px;
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  gap: 2px 9px;
+  padding: 10px 13px;
+  border: 1px solid var(--f1-line-strong);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--f1-panel-solid) 70%, transparent);
+  backdrop-filter: blur(16px);
+}
+.mapWeather svg { grid-row: 1 / span 2; width: 20px; color: var(--f1-cyan); }
+.mapWeather strong { font-size: 13px; }
+.mapWeather span { color: var(--f1-muted); font-size: 9px; }
 
 .mapLegend {
   position: absolute;
@@ -1492,6 +1553,62 @@
 .lockedFeature p { max-width: 480px; margin: 0 auto 20px; color: var(--f1-muted); font-size: 13px; line-height: 1.55; }
 .lockedFeature button:disabled, .aiPrompt button:disabled { opacity: 0.45; cursor: not-allowed; }
 
+.roomLobby,
+.roomActive {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  max-width: 920px;
+}
+
+.roomCreate,
+.roomJoin,
+.roomSummary,
+.roomMembers {
+  min-height: 230px;
+  padding: 26px;
+  border: 1px solid var(--f1-line-strong);
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 18% 0, rgba(255, 255, 255, 0.13), transparent 34%),
+    color-mix(in srgb, var(--f1-panel-solid) 60%, transparent);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.13), 0 22px 60px rgba(0, 0, 0, 0.12);
+}
+
+.roomCreate {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  text-align: left;
+  color: var(--f1-white);
+  cursor: pointer;
+}
+.roomCreate > svg { width: 44px; height: 44px; color: var(--f1-cyan); }
+.roomCreate span { display: grid; gap: 8px; }
+.roomCreate strong, .roomJoin strong, .roomSummary > strong { font-size: 22px; letter-spacing: -0.035em; }
+.roomCreate small, .roomJoin p, .roomSummary p { margin: 0; color: var(--f1-muted); font-size: 12px; line-height: 1.5; }
+
+.roomJoin { display: grid; grid-template-columns: auto 1fr; align-content: center; gap: 10px 14px; }
+.roomJoin > svg { width: 26px; color: var(--f1-cyan); }
+.roomJoin input { grid-column: 1 / -1; min-height: 44px; padding: 0 14px; color: var(--f1-white); border: 1px solid var(--f1-line); border-radius: 14px; background: color-mix(in srgb, var(--f1-bg) 62%, transparent); }
+.roomJoin button, .roomSummary button { min-height: 40px; padding: 0 15px; color: var(--f1-white); border: 1px solid var(--f1-line); border-radius: 14px; background: color-mix(in srgb, var(--f1-cyan) 10%, transparent); cursor: pointer; }
+.roomJoin button { grid-column: 1 / -1; justify-self: start; }
+
+.roomSummary { display: grid; align-content: center; gap: 10px; }
+.roomSummary > span, .roomMembers > span { color: var(--f1-muted); font-size: 10px; font-weight: 650; letter-spacing: 0.04em; text-transform: uppercase; }
+.roomSummary > strong { font-family: var(--font-space-mono), monospace; font-size: 30px; }
+.roomSummary > div { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.roomSummary button { display: inline-flex; align-items: center; gap: 7px; }
+.roomSummary button svg { width: 15px; }
+
+.roomMembers { display: grid; align-content: start; gap: 8px; }
+.roomMembers article { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--f1-line); border-radius: 15px; }
+.roomMembers article > svg { width: 18px; color: var(--f1-cyan); }
+.roomMembers article div { display: grid; min-width: 0; gap: 3px; }
+.roomMembers article strong { overflow: hidden; text-overflow: ellipsis; font-size: 12px; white-space: nowrap; }
+.roomMembers article small { color: var(--f1-muted); font-size: 9px; text-transform: capitalize; }
+.roomError { max-width: 920px; margin: 12px 0 0; color: var(--f1-red); font-size: 12px; }
+
 .aiPrompt > svg { width: 30px; color: var(--f1-cyan); }
 .aiPrompt h2 { margin: 15px 0; }
 .aiPrompt textarea { width: 100%; min-height: 110px; resize: vertical; padding: 14px; color: var(--f1-white); border: 1px solid var(--f1-line); border-radius: 12px; background: var(--f1-bg); font: 500 12px/1.5 var(--font-space-mono), monospace; }
@@ -1506,6 +1623,7 @@
 .settingGroup legend { padding: 0 8px; color: var(--f1-muted); font: 600 9px/1 var(--font-space-mono), monospace; text-transform: uppercase; }
 .settingGroup button { width: 100%; }
 .settingGroup svg { width: 15px; }
+.teamSwatch { width: 9px; height: 24px; border-radius: 999px; box-shadow: inset 0 1px rgba(255, 255, 255, 0.32); }
 
 .diagnosticsGrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .diagnosticsGrid article { position: relative; display: grid; gap: 8px; min-height: 100px; padding: 17px; border: 1px solid var(--f1-line); border-radius: 14px; background: color-mix(in srgb, var(--f1-panel-solid) 72%, transparent); }
@@ -1733,6 +1851,60 @@
   transform: translate3d(0, 0, 0) scale(1);
 }
 
+.liquidAtmosphere {
+  position: absolute;
+  z-index: 0;
+  inset: -8%;
+  overflow: hidden;
+  pointer-events: none;
+  animation: liquidImpulse 920ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.liquidFilter {
+  position: absolute;
+}
+
+.liquidBubble {
+  position: absolute;
+  display: block;
+  border: 1px solid rgba(219, 247, 255, 0.2);
+  border-radius: 47% 53% 62% 38% / 42% 38% 62% 58%;
+  background:
+    radial-gradient(circle at 28% 18%, rgba(255, 255, 255, 0.3), transparent 11%),
+    radial-gradient(circle at 68% 72%, rgba(115, 248, 206, 0.15), transparent 34%),
+    linear-gradient(145deg, rgba(94, 210, 255, 0.2), rgba(112, 84, 226, 0.08) 58%, rgba(255, 255, 255, 0.025));
+  box-shadow:
+    inset 12px 18px 38px rgba(255, 255, 255, 0.1),
+    inset -20px -22px 42px rgba(4, 25, 42, 0.24),
+    0 30px 90px rgba(31, 151, 201, 0.1);
+  filter: url("#f1-liquid-refraction") blur(7px);
+  opacity: 0.42;
+  transform: translate3d(0, 0, 0);
+}
+
+.liquidBubbleOne { width: 34vw; height: 28vw; left: 18%; top: 16%; }
+.liquidBubbleTwo { width: 28vw; height: 23vw; right: 4%; top: -3%; transform: rotate(28deg); }
+.liquidBubbleThree { width: 24vw; height: 20vw; right: 15%; bottom: -3%; transform: rotate(-18deg); }
+.liquidBubbleFour { width: 22vw; height: 18vw; left: -3%; bottom: 2%; transform: rotate(14deg); }
+
+.shell[data-playing="true"] .liquidBubbleOne { animation: liquidDriftOne 10s ease-in-out infinite alternate; }
+.shell[data-playing="true"] .liquidBubbleTwo { animation: liquidDriftTwo 13s ease-in-out infinite alternate; }
+.shell[data-playing="true"] .liquidBubbleThree { animation: liquidDriftThree 11s ease-in-out infinite alternate; }
+.shell[data-playing="true"] .liquidBubbleFour { animation: liquidDriftFour 14s ease-in-out infinite alternate; }
+
+.shell[data-theme="light"] .liquidBubble {
+  border-color: rgba(255, 255, 255, 0.64);
+  background:
+    radial-gradient(circle at 28% 18%, rgba(255, 255, 255, 0.82), transparent 12%),
+    radial-gradient(circle at 68% 72%, rgba(61, 207, 175, 0.2), transparent 36%),
+    linear-gradient(145deg, rgba(83, 197, 239, 0.3), rgba(143, 115, 225, 0.14) 58%, rgba(255, 255, 255, 0.16));
+  opacity: 0.48;
+}
+
+.shell[data-effects="balanced"] .liquidBubble { filter: blur(12px); opacity: 0.28; }
+.shell[data-effects="reduced"] .liquidAtmosphere,
+.shell[data-effects="reduced-motion"] .liquidAtmosphere { display: none; }
+
 .shell[data-effects="full"][data-playing="true"]::after {
   animation: raceAtmosphere 11s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite alternate;
 }
@@ -1942,6 +2114,28 @@
   100% { opacity: 0.38; transform: translate3d(1.8%, 1.2%, 0) scale(1); }
 }
 
+@keyframes liquidImpulse {
+  0% { opacity: 0; transform: scale(0.96); }
+  52% { opacity: 1; transform: scale(1.012); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes liquidDriftOne {
+  to { border-radius: 61% 39% 44% 56% / 55% 62% 38% 45%; transform: translate3d(4%, -3%, 0) rotate(5deg) scale(1.04); }
+}
+
+@keyframes liquidDriftTwo {
+  to { border-radius: 38% 62% 53% 47% / 61% 43% 57% 39%; transform: translate3d(-5%, 5%, 0) rotate(18deg) scale(0.96); }
+}
+
+@keyframes liquidDriftThree {
+  to { border-radius: 57% 43% 36% 64% / 39% 57% 43% 61%; transform: translate3d(-3%, -5%, 0) rotate(-9deg) scale(1.06); }
+}
+
+@keyframes liquidDriftFour {
+  to { border-radius: 42% 58% 63% 37% / 58% 36% 64% 42%; transform: translate3d(6%, -4%, 0) rotate(22deg) scale(1.03); }
+}
+
 @keyframes pulse { 50% { opacity: 0.35; } }
 @keyframes breathe { 50% { transform: scale(1.06); filter: brightness(1.25); } }
 @keyframes loadingSweep { 50% { background-position: -120% 0; } }
@@ -2028,7 +2222,7 @@
   .loadingBar strong { font-size: 12px; }
   .loadingCopy { bottom: 8px; }
   .errorState { inset: 0 0 68px; }
-  .strategyLayout, .aiGrid, .settingsGrid { grid-template-columns: 1fr; }
+  .strategyLayout, .aiGrid, .settingsGrid, .roomLobby, .roomActive { grid-template-columns: 1fr; }
   .preSessionGrid { grid-template-columns: 1fr 1fr; }
   .diagnosticsGrid { grid-template-columns: repeat(2, 1fr); }
 }

@@ -9,11 +9,13 @@ import {
   CircleGauge,
   Cloud,
   CloudRain,
+  Copy,
   Flag,
   Gauge,
   Home,
   Info,
   Lightbulb,
+  LogOut,
   Map as MapIcon,
   Moon,
   Pause,
@@ -25,6 +27,7 @@ import {
   Sparkles,
   Star,
   Sun,
+  UserPlus,
   Users,
   Volume2,
   Wifi,
@@ -78,15 +81,22 @@ type EventFilter = "all" | "race-control" | "radio";
 type TimingSort = "position" | "last" | "gap" | "tyre" | "team";
 type TelemetryMetric = "speed" | "throttle" | "brake" | "rpm" | "n_gear";
 type MapView = "whole" | "leader" | "selected";
-type DashboardLayout = "balanced" | "timing" | "map";
+type MapLayer = "none" | "events" | "weather" | "battles";
+type DashboardLayout = "balanced" | "timing" | "map" | "broadcast";
 type HideablePanel = "telemetry" | "events";
+type Timezone = "local" | "utc";
+type NotificationKind = "safety" | "red-flag" | "favourite-radio" | "favourite-pit";
 
 interface Preferences {
   theme: Theme;
   effects: Effects;
   highContrast: boolean;
   favourites: number[];
+  favouriteTeams: string[];
   units: "metric" | "imperial";
+  timezone: Timezone;
+  spoilerMode: boolean;
+  notifications: NotificationKind[];
   telemetryMetric: TelemetryMetric;
   radioBookmarks: string[];
   audioSpeed: number;
@@ -121,7 +131,11 @@ const DEFAULT_PREFERENCES: Preferences = {
   effects: "full",
   highContrast: false,
   favourites: [],
+  favouriteTeams: [],
   units: "metric",
+  timezone: "local",
+  spoilerMode: false,
+  notifications: [],
   telemetryMetric: "speed",
   radioBookmarks: [],
   audioSpeed: 1,
@@ -136,6 +150,12 @@ const TELEMETRY_METRICS: Array<{ value: TelemetryMetric; label: string }> = [
   { value: "brake", label: "Brake" },
   { value: "rpm", label: "RPM" },
   { value: "n_gear", label: "Gear" },
+];
+const NOTIFICATION_KINDS: Array<{ value: NotificationKind; label: string }> = [
+  { value: "safety", label: "Safety car" },
+  { value: "red-flag", label: "Red flag" },
+  { value: "favourite-radio", label: "Favourite radio" },
+  { value: "favourite-pit", label: "Favourite pit stop" },
 ];
 
 const NAV_ITEMS: Array<{ id: View; label: string; icon: typeof Home }> = [
@@ -193,6 +213,45 @@ function telemetryPath(points: CarDataPoint[], key: TelemetryMetric) {
     .join(" ");
 }
 
+function displaySpeed(speed: number | undefined, units: Preferences["units"]) {
+  const value = speed ?? 0;
+  return Math.round(units === "imperial" ? value * 0.621371 : value);
+}
+
+function displayTemperature(value: number | undefined, units: Preferences["units"]) {
+  if (value == null) return "--";
+  return (units === "imperial" ? value * 1.8 + 32 : value).toFixed(1);
+}
+
+function LiquidAtmosphere({ pulse }: { pulse: number }) {
+  return (
+    <div className={styles.liquidAtmosphere} aria-hidden="true" key={pulse}>
+      <svg className={styles.liquidFilter} width="0" height="0">
+        <defs>
+          <filter id="f1-liquid-refraction" x="-45%" y="-45%" width="190%" height="190%" colorInterpolationFilters="sRGB">
+            <feTurbulence type="fractalNoise" baseFrequency="0.009 0.014" numOctaves={2} seed={7} result="surface" />
+            <feGaussianBlur in="surface" stdDeviation="1.8" result="softSurface" />
+            <feDisplacementMap in="SourceGraphic" in2="softSurface" scale={34} xChannelSelector="R" yChannelSelector="B" />
+          </filter>
+        </defs>
+      </svg>
+      <i className={cn(styles.liquidBubble, styles.liquidBubbleOne)} />
+      <i className={cn(styles.liquidBubble, styles.liquidBubbleTwo)} />
+      <i className={cn(styles.liquidBubble, styles.liquidBubbleThree)} />
+      <i className={cn(styles.liquidBubble, styles.liquidBubbleFour)} />
+    </div>
+  );
+}
+
+function formatRaceTime(value: string | number, timezone: Timezone) {
+  return new Date(value).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    timeZone: timezone === "utc" ? "UTC" : undefined,
+  });
+}
+
 function raceEnd(laps: Lap[], session: Session) {
   const finish = laps.reduce((latest, lap) => {
     if (!lap.lap_duration) return latest;
@@ -235,6 +294,7 @@ export default function F1CommandCentre() {
   const [timingSort, setTimingSort] = useState<TimingSort>("position");
   const [timingCompact, setTimingCompact] = useState(true);
   const [mapView, setMapView] = useState<MapView>("whole");
+  const [mapLayer, setMapLayer] = useState<MapLayer>("events");
   const [preferences, setPreferences] = useState<Preferences>(DEFAULT_PREFERENCES);
   const [preferencesReady, setPreferencesReady] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -246,8 +306,15 @@ export default function F1CommandCentre() {
   const [timelinePulse, setTimelinePulse] = useState(0);
   const [now, setNow] = useState(0);
   const frameRequest = useRef(0);
+  const seenNotificationEvents = useRef<Set<string> | null>(null);
+  const currentView = useRef<View>(view);
+  const pendingRoomState = useRef<{ sessionKey: number; selectedTime: number; selectedDrivers: number[] } | null>(null);
   const shellRef = useRef<HTMLDivElement>(null);
   const resolvedTheme = useSystemTheme(preferences.theme);
+
+  useEffect(() => {
+    currentView.current = view;
+  }, [view]);
 
   useEffect(() => {
     const update = () => setNow(Date.now());
@@ -284,6 +351,14 @@ export default function F1CommandCentre() {
       // Preferences remain usable for the current session.
     }
   }, [preferences, preferencesReady]);
+
+  useEffect(() => {
+    const localHost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    if (!("serviceWorker" in navigator) || (window.location.protocol !== "https:" && !localHost)) return;
+    navigator.serviceWorker.register("/f1-sw.js", { scope: "/f1", updateViaCache: "none" }).catch(() => {
+      // Installation is progressive enhancement and must not block race data.
+    });
+  }, []);
 
   useEffect(() => {
     const node = shellRef.current;
@@ -345,12 +420,14 @@ export default function F1CommandCentre() {
         if (!upcoming && (!nextData.drivers.length || !nextData.laps.length)) {
           throw new Error("This session has no published timing data yet.");
         }
+        const shared = pendingRoomState.current?.sessionKey === session.session_key ? pendingRoomState.current : null;
         const winner = nextData.results.find((result) => result.position === 1)?.driver_number;
-        const primary = winner ?? nextData.grid[0]?.driver_number ?? nextData.drivers[0]?.driver_number;
+        const primary = shared?.selectedDrivers[0] ?? winner ?? nextData.grid[0]?.driver_number ?? nextData.drivers[0]?.driver_number;
         setData(nextData);
-        setSelectedDrivers(primary ? [primary] : []);
+        setSelectedDrivers(shared?.selectedDrivers.length ? shared.selectedDrivers.slice(0, 2) : primary ? [primary] : []);
         if (upcoming) {
-          setSelectedTime(Date.parse(session.date_start));
+          setSelectedTime(shared?.selectedTime ?? Date.parse(session.date_start));
+          if (shared) pendingRoomState.current = null;
           return;
         }
         const end = raceEnd(nextData.laps, session);
@@ -364,7 +441,8 @@ export default function F1CommandCentre() {
           ) ?? bestLap(nextData.laps, primary);
 
         if (!primary) throw new Error("This session has no published driver data yet.");
-        setSelectedTime(Math.min(end, primaryEnd) - 1000);
+        setSelectedTime(shared ? Math.min(end, Math.max(Date.parse(session.date_start), shared.selectedTime)) : Math.min(end, primaryEnd) - 1000);
+        if (shared) pendingRoomState.current = null;
         setStrategyLap(Math.max(2, Math.round((nextData.results[0]?.number_of_laps ?? 44) * 0.6)));
         if (outlineLap) {
           const points = await loadTrackPath(
@@ -392,6 +470,7 @@ export default function F1CommandCentre() {
     () => (session && data ? raceEnd(data.laps, session) : 0),
     [data, session],
   );
+  const activeSession = Boolean(session && now >= Date.parse(session.date_start) && now <= Date.parse(session.date_end));
   const frameWindow = 3000 * playbackSpeed;
   const frameTimestamp = playing ? Math.floor(selectedTime / frameWindow) * frameWindow : selectedTime;
 
@@ -449,6 +528,31 @@ export default function F1CommandCentre() {
     }, 250);
     return () => window.clearInterval(interval);
   }, [playing, playbackSpeed, timelineEnd]);
+
+  useEffect(() => {
+    if (!session || !activeSession) return;
+    const controller = new AbortController();
+    let refreshing = false;
+    const refresh = async () => {
+      if (refreshing) return;
+      refreshing = true;
+      try {
+        const nextData = await loadSessionData(session.session_key, controller.signal, true);
+        setData(nextData);
+        setError(null);
+        if (currentView.current === "live") setSelectedTime(raceEnd(nextData.laps, session));
+      } catch (reason) {
+        if ((reason as Error).name !== "AbortError") setError(reason instanceof Error ? reason.message : "Live timing refresh failed.");
+      } finally {
+        refreshing = false;
+      }
+    };
+    const interval = window.setInterval(refresh, 30_000);
+    return () => {
+      window.clearInterval(interval);
+      controller.abort();
+    };
+  }, [activeSession, session]);
 
   const driverByNumber = useMemo(
     () => new Map(data?.drivers.map((driver) => [driver.driver_number, driver]) ?? []),
@@ -534,7 +638,7 @@ export default function F1CommandCentre() {
     const favourites = new Set(preferences.favourites);
     return data.drivers
       .map((driver) => {
-        const result = resultByDriver.get(driver.driver_number);
+        const result = preferences.spoilerMode ? undefined : resultByDriver.get(driver.driver_number);
         const lap = currentLaps.get(driver.driver_number);
         const position = currentPositions.get(driver.driver_number)?.position ?? result?.position ?? 99;
         const interval = currentIntervals.get(driver.driver_number);
@@ -562,7 +666,9 @@ export default function F1CommandCentre() {
         };
       })
       .sort((a, b) => {
-        const favouriteOrder = Number(favourites.has(b.driver.driver_number)) - Number(favourites.has(a.driver.driver_number));
+        const aFavourite = favourites.has(a.driver.driver_number) || preferences.favouriteTeams.includes(a.driver.team_name);
+        const bFavourite = favourites.has(b.driver.driver_number) || preferences.favouriteTeams.includes(b.driver.team_name);
+        const favouriteOrder = Number(bFavourite) - Number(aFavourite);
         if (favouriteOrder) return favouriteOrder;
         if (timingSort === "last") return (a.lap?.lap_duration ?? Infinity) - (b.lap?.lap_duration ?? Infinity);
         if (timingSort === "gap") return Number(a.gap ?? Infinity) - Number(b.gap ?? Infinity);
@@ -574,7 +680,7 @@ export default function F1CommandCentre() {
         if (timingSort === "team") return a.driver.team_name.localeCompare(b.driver.team_name);
         return a.position - b.position;
       });
-  }, [currentIntervals, currentLaps, currentPositions, currentTelemetry, data, fastestByDriver, gridByDriver, pitsByDriver, preferences.favourites, selectedTime, stintsByDriver, timingSort]);
+  }, [currentIntervals, currentLaps, currentPositions, currentTelemetry, data, fastestByDriver, gridByDriver, pitsByDriver, preferences.favouriteTeams, preferences.favourites, preferences.spoilerMode, selectedTime, stintsByDriver, timingSort]);
 
   const events = useMemo(() => {
     if (!data) return [];
@@ -666,6 +772,49 @@ export default function F1CommandCentre() {
     [timelineEnd, timelineStart],
   );
 
+  const applyRoomState = useCallback((time: number, drivers: number[], sessionKey: number) => {
+    if (sessionKey !== session?.session_key) {
+      const sharedSession = sessions.find((candidate) => candidate.session_key === sessionKey);
+      if (!sharedSession) return;
+      pendingRoomState.current = { sessionKey, selectedTime: time, selectedDrivers: drivers };
+      setFrame(null);
+      setTrackPoints([]);
+      setSession(sharedSession);
+      return;
+    }
+    seekTo(time);
+    if (drivers.length) setSelectedDrivers(drivers.slice(0, 2));
+  }, [seekTo, session?.session_key, sessions]);
+
+  useEffect(() => {
+    const currentIds = new Set(events.map((event) => event.id));
+    if (!activeSession || !seenNotificationEvents.current) {
+      seenNotificationEvents.current = currentIds;
+      return;
+    }
+    const newEvents = events.filter((event) => !seenNotificationEvents.current!.has(event.id));
+    seenNotificationEvents.current = currentIds;
+    if (!newEvents.length || typeof Notification === "undefined" || Notification.permission !== "granted") return;
+    for (const event of newEvents) {
+      const favourite = event.driverNumber != null && preferences.favourites.includes(event.driverNumber);
+      const enabled =
+        (event.type === "radio" && favourite && preferences.notifications.includes("favourite-radio")) ||
+        (event.type === "pit" && favourite && preferences.notifications.includes("favourite-pit")) ||
+        (event.type === "race-control" && /SAFETY CAR|VSC/i.test(event.detail) && preferences.notifications.includes("safety")) ||
+        (event.type === "race-control" && /RED FLAG/i.test(`${event.title} ${event.detail}`) && preferences.notifications.includes("red-flag"));
+      if (!enabled) continue;
+      navigator.serviceWorker.ready
+        .then((registration) => registration.showNotification(event.title, {
+          body: event.detail,
+          tag: event.id,
+          data: { url: `/f1#time=${Date.parse(event.date)}` },
+        }))
+        .catch(() => {
+          // Notifications are optional and must not interrupt live timing.
+        });
+    }
+  }, [activeSession, events, preferences.favourites, preferences.notifications, seekTo]);
+
   const jumpEvent = (direction: -1 | 1) => {
     const eventTimes = events.map((event) => Date.parse(event.date));
     const candidate =
@@ -733,7 +882,13 @@ export default function F1CommandCentre() {
           <button
             className={cn(styles.navButton, view === id && styles.navButtonActive)}
             key={id}
-            onClick={() => setView(id)}
+            onClick={() => {
+              setView(id);
+              if (id === "live" && timelineEnd) {
+                setPlaying(false);
+                setSelectedTime(timelineEnd);
+              }
+            }}
             type="button"
             aria-label={label}
             aria-pressed={view === id}
@@ -745,7 +900,7 @@ export default function F1CommandCentre() {
       </div>
       <div className={styles.sourceBadge}>
         <span className={cn(styles.statusDot, error && styles.statusDotError)} />
-        <span>OpenF1<br />historical</span>
+        <span>OpenF1<br />{activeSession ? "live feed" : "historical"}</span>
       </div>
     </nav>
   );
@@ -753,6 +908,7 @@ export default function F1CommandCentre() {
   if (loading) {
     return (
       <div ref={shellRef} className={styles.shell} data-theme={resolvedTheme} data-effects={preferences.effects}>
+        <LiquidAtmosphere pulse={timelinePulse} />
         {navigation}
         <div className={styles.loadingWorkspace} role="status" aria-live="polite">
           <header className={styles.loadingBar}>
@@ -794,6 +950,7 @@ export default function F1CommandCentre() {
   if (!session || !data) {
     return (
       <div ref={shellRef} className={styles.shell} data-theme={resolvedTheme} data-effects={preferences.effects}>
+        <LiquidAtmosphere pulse={timelinePulse} />
         {navigation}
         <div className={styles.errorState} role="alert">
           <WifiOff aria-hidden="true" />
@@ -814,6 +971,12 @@ export default function F1CommandCentre() {
   const trackStatus = data.raceControl
     .filter((event) => Date.parse(event.date) <= selectedTime && ["Flag", "SafetyCar", "SessionStatus", "Drs"].includes(event.category))
     .at(-1);
+  const mapEvents = events.filter((event) => event.driverNumber != null && Math.abs(Date.parse(event.date) - selectedTime) <= 15_000);
+  const battlingDrivers = new Set(
+    Array.from(currentIntervals.entries())
+      .filter(([, interval]) => typeof interval.interval === "number" && interval.interval > 0 && interval.interval < 1)
+      .map(([driverNumber]) => driverNumber),
+  );
   const frameAge = frame ? Math.max(0, Math.round((now - frame.fetchedAt) / 1000)) : null;
   const focusLocation = currentLocations.get(selectedDrivers.at(-1) ?? selectedDrivers[0]);
   const focusPoint = geometry && focusLocation ? geometry.project(focusLocation) : null;
@@ -830,11 +993,12 @@ export default function F1CommandCentre() {
       data-layout={preferences.dashboardLayout}
       data-playing={playing}
     >
+      <LiquidAtmosphere pulse={timelinePulse} />
       {navigation}
 
       <header className={styles.sessionBar}>
         <div className={styles.sessionIdentity}>
-          <span className={styles.livePill}>{view === "live" ? "REPLAY" : view.toUpperCase()}</span>
+          <span className={styles.livePill}>{view === "live" ? activeSession ? "LIVE" : "REPLAY" : view.toUpperCase()}</span>
           <div>
             <strong>{meeting?.meeting_name ?? session.location}</strong>
             <span>{session.session_name} / {session.circuit_short_name}</span>
@@ -847,9 +1011,9 @@ export default function F1CommandCentre() {
         </div>
         <div className={styles.weatherStrip}>
           {currentWeather?.rainfall ? <CloudRain aria-hidden="true" /> : <Cloud aria-hidden="true" />}
-          <span>{currentWeather?.air_temperature?.toFixed(1) ?? "--"}° air</span>
-          <span>{currentWeather?.track_temperature?.toFixed(1) ?? "--"}° track</span>
-          <span>{currentWeather?.wind_speed?.toFixed(1) ?? "--"} m/s</span>
+          <span>{displayTemperature(currentWeather?.air_temperature, preferences.units)}°{preferences.units === "imperial" ? "F" : "C"} air</span>
+          <span>{displayTemperature(currentWeather?.track_temperature, preferences.units)}°{preferences.units === "imperial" ? "F" : "C"} track</span>
+          <span>{currentWeather?.wind_speed == null ? "--" : (preferences.units === "imperial" ? currentWeather.wind_speed * 2.23694 : currentWeather.wind_speed).toFixed(1)} {preferences.units === "imperial" ? "mph" : "m/s"}</span>
         </div>
         <select
           className={styles.sessionSelect}
@@ -880,7 +1044,7 @@ export default function F1CommandCentre() {
         data-hide-events={preferences.hiddenPanels.includes("events")}
       >
         {(view === "live" || view === "replay") && upcoming && (
-          <PreSessionView session={session} meeting={meeting} data={data} now={now} />
+          <PreSessionView session={session} meeting={meeting} data={data} now={now} preferences={preferences} />
         )}
         {(view === "live" || view === "replay") && !upcoming && (
           <>
@@ -895,6 +1059,12 @@ export default function F1CommandCentre() {
                     <option value="whole">Whole track</option>
                     <option value="leader">Leader follow</option>
                     <option value="selected">Selected drivers</option>
+                  </select>
+                  <select className={styles.mapViewSelect} value={mapLayer} onChange={(event) => setMapLayer(event.target.value as MapLayer)} aria-label="Track overlay">
+                    <option value="none">No overlay</option>
+                    <option value="events">Event markers</option>
+                    <option value="weather">Weather</option>
+                    <option value="battles">Battles</option>
                   </select>
                   <span className={cn(styles.dataFreshness, frameAge != null && frameAge > 15 && styles.dataStale)}><Wifi aria-hidden="true" /> {frameAge == null ? "waiting" : `${frameAge}s old`}</span>
                   {frameLoading && <span className={styles.syncing}>syncing</span>}
@@ -932,7 +1102,7 @@ export default function F1CommandCentre() {
                       const selected = selectedDrivers.includes(point.driver_number);
                       return (
                         <g
-                          className={cn(styles.driverMarker, selected && styles.driverMarkerSelected)}
+                          className={cn(styles.driverMarker, selected && styles.driverMarkerSelected, mapLayer === "battles" && battlingDrivers.has(point.driver_number) && styles.driverMarkerBattle)}
                           key={point.driver_number}
                           transform={`translate(${projected.x} ${projected.y})`}
                           style={{ opacity: mapView === "whole" || selected || (mapView === "leader" && point.driver_number === leaderNumber) ? 1 : 0.16 }}
@@ -949,19 +1119,37 @@ export default function F1CommandCentre() {
                         </g>
                       );
                     })}
+                    {mapLayer === "events" && mapEvents.map((event) => {
+                      const point = currentLocations.get(event.driverNumber!);
+                      if (!point) return null;
+                      const projected = geometry.project(point);
+                      return (
+                        <g className={styles.mapEventMarker} key={event.id} transform={`translate(${projected.x} ${projected.y})`} aria-label={event.title}>
+                          <circle r="22" />
+                          <text y="4">{event.type === "pit" ? "PIT" : event.type === "overtake" ? "OVR" : "!"}</text>
+                        </g>
+                      );
+                    })}
                   </svg>
                 ) : (
                   <div className={styles.emptyPanel}><MapIcon aria-hidden="true" />Building circuit trace</div>
                 )}
                 <div className={styles.trackTelemetry}>
                   <span>{primaryDriver?.name_acronym ?? "--"}</span>
-                  <strong>{selectedTelemetry[0]?.points.at(-1)?.speed ?? 0}<small> km/h</small></strong>
+                  <strong>{displaySpeed(selectedTelemetry[0]?.points.at(-1)?.speed, preferences.units)}<small> {preferences.units === "imperial" ? "mph" : "km/h"}</small></strong>
                   <em>Selected car / sourced telemetry</em>
                 </div>
                 {trackStatus && (
                   <div className={styles.trackStatus} data-flag={trackStatus.flag?.toLowerCase().replaceAll(" ", "-") ?? trackStatus.category.toLowerCase()}>
                     <strong>{trackStatus.flag ?? trackStatus.category}</strong>
                     <span>{trackStatus.scope}{trackStatus.sector ? ` / sector ${trackStatus.sector}` : ""}</span>
+                  </div>
+                )}
+                {mapLayer === "weather" && currentWeather && (
+                  <div className={styles.mapWeather}>
+                    {currentWeather.rainfall ? <CloudRain aria-hidden="true" /> : <Cloud aria-hidden="true" />}
+                    <strong>{displayTemperature(currentWeather.track_temperature, preferences.units)}°{preferences.units === "imperial" ? "F" : "C"}</strong>
+                    <span>{currentWeather.rainfall ? "Wet track" : "Dry track"} / {currentWeather.humidity}% humidity</span>
                   </div>
                 )}
                 <div className={styles.mapLegend}>
@@ -1067,7 +1255,7 @@ export default function F1CommandCentre() {
                   const latest = points.at(-1);
                   return (
                     <div className={styles.metrics} key="primary-metrics">
-                      <span><small>Speed</small><strong>{latest?.speed ?? 0}</strong><em>km/h</em></span>
+                      <span><small>Speed</small><strong>{displaySpeed(latest?.speed, preferences.units)}</strong><em>{preferences.units === "imperial" ? "mph" : "km/h"}</em></span>
                       <span><small>Throttle</small><strong>{latest?.throttle ?? 0}</strong><em>%</em></span>
                       <span><small>Brake</small><strong>{latest?.brake ? "ON" : "OFF"}</strong><em>state</em></span>
                       <span><small>Gear</small><strong>{latest?.n_gear ?? 0}</strong><em>selected</em></span>
@@ -1136,7 +1324,7 @@ export default function F1CommandCentre() {
                   <article className={cn(styles.eventItem, event.important && styles.eventImportant)} key={event.id}>
                     <button type="button" onClick={() => seekTo(Date.parse(event.date))}>
                       {event.type === "radio" ? <Radio aria-hidden="true" /> : <Flag aria-hidden="true" />}
-                      <span><strong>{event.title}</strong><small>{new Date(event.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}{event.lap ? ` / lap ${event.lap}` : ""} / received {new Date(data.fetchedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</small></span>
+                      <span><strong>{event.title}</strong><small>{formatRaceTime(event.date, preferences.timezone)}{event.lap ? ` / lap ${event.lap}` : ""} / received {formatRaceTime(data.fetchedAt, preferences.timezone)}</small></span>
                       <p>{event.detail}</p>
                     </button>
                     {event.type === "radio" && (
@@ -1180,10 +1368,17 @@ export default function F1CommandCentre() {
             onCompound={setStrategyCompound}
           />
         )}
-        {view === "rooms" && <RoomsView />}
+        <RoomsView
+          visible={view === "rooms"}
+          enabled={Boolean(gatewayHealth?.roomsConfigured)}
+          sessionKey={session.session_key}
+          selectedTime={selectedTime}
+          selectedDrivers={selectedDrivers}
+          onRemoteState={applyRoomState}
+        />
         {view === "ai" && <AiView data={data} selectedDrivers={selectedDrivers} />}
         {view === "settings" && (
-          <SettingsView preferences={preferences} setPreference={setPreference} />
+          <SettingsView preferences={preferences} setPreference={setPreference} data={data} />
         )}
         {view === "diagnostics" && (
           <DiagnosticsView data={data} frame={frame} error={error} gateway={gatewayHealth} session={session} trackPoints={trackPoints} now={now} selectedTime={selectedTime} />
@@ -1204,7 +1399,7 @@ export default function F1CommandCentre() {
             <button type="button" onClick={() => jumpLap(1)} aria-label="Next lap">L+</button>
             <button type="button" onClick={skipQuiet} aria-label="Skip quiet section">SKIP</button>
           </div>
-          <span className={styles.timelineTime}>{new Date(selectedTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
+          <span className={styles.timelineTime}>{formatRaceTime(selectedTime, preferences.timezone)}</span>
           <div className={styles.scrubber}>
             <span
               className={styles.timelineWave}
@@ -1264,7 +1459,7 @@ function CalendarView({ meetings, sessions, now, onSelect }: { meetings: Meeting
   );
 }
 
-function PreSessionView({ session, meeting, data, now }: { session: Session; meeting?: Meeting; data: SessionData; now: number }) {
+function PreSessionView({ session, meeting, data, now, preferences }: { session: Session; meeting?: Meeting; data: SessionData; now: number; preferences: Preferences }) {
   const remaining = Math.max(0, Date.parse(session.date_start) - now);
   const days = Math.floor(remaining / 86_400_000);
   const hours = Math.floor((remaining % 86_400_000) / 3_600_000);
@@ -1276,7 +1471,7 @@ function PreSessionView({ session, meeting, data, now }: { session: Session; mee
       <div className={styles.viewIntro}>
         <span>Weekend context / upcoming</span>
         <h1>{meeting?.meeting_name ?? session.location}</h1>
-        <p>{session.session_name} starts {new Date(session.date_start).toLocaleString([], { weekday: "long", hour: "2-digit", minute: "2-digit", timeZoneName: "short" })}.</p>
+        <p>{session.session_name} starts {new Date(session.date_start).toLocaleString([], { weekday: "long", hour: "2-digit", minute: "2-digit", timeZoneName: "short", timeZone: preferences.timezone === "utc" ? "UTC" : undefined })}.</p>
       </div>
       <div className={styles.preSessionGrid}>
         <article className={styles.countdownCard}>
@@ -1291,8 +1486,8 @@ function PreSessionView({ session, meeting, data, now }: { session: Session; mee
         </article>
         <article>
           <small>Weather snapshot</small>
-          <strong>{weather ? `${weather.air_temperature.toFixed(1)}° air` : "Awaiting forecast"}</strong>
-          <span>{weather ? `${weather.track_temperature.toFixed(1)}° track / ${weather.rainfall ? "rain" : "dry"}` : "Provider data not published"}</span>
+          <strong>{weather ? `${displayTemperature(weather.air_temperature, preferences.units)}°${preferences.units === "imperial" ? "F" : "C"} air` : "Awaiting forecast"}</strong>
+          <span>{weather ? `${displayTemperature(weather.track_temperature, preferences.units)}°${preferences.units === "imperial" ? "F" : "C"} track / ${weather.rainfall ? "rain" : "dry"}` : "Provider data not published"}</span>
         </article>
         <article className={styles.contextList}>
           <small>Provisional grid</small>
@@ -1349,8 +1544,218 @@ function StrategyView({ data, driver, currentLap, lap, compound, onLap, onCompou
   );
 }
 
-function RoomsView() {
-  return <section className={cn(styles.panel, styles.fullView)}><div className={styles.viewIntro}><span>Invite access</span><h1>Private rooms</h1><p>The dashboard is private by default. Room presence and shared replay cursors require the authenticated room service.</p></div><div className={styles.lockedFeature}><ShieldCheck aria-hidden="true" /><h2>No active room</h2><p>Create and invite controls stay disabled until the room service confirms an authenticated session. No local-only room is presented as shared.</p><button type="button" disabled>Create room</button></div></section>;
+interface RoomMember {
+  email: string;
+  role: "owner" | "friend";
+}
+
+interface RoomConnection {
+  roomId: string;
+  inviteToken: string;
+  role: "owner" | "friend";
+  inviteExpiresAt?: string;
+}
+
+function RoomsView({ visible, enabled, sessionKey, selectedTime, selectedDrivers, onRemoteState }: { visible: boolean; enabled: boolean; sessionKey: number; selectedTime: number; selectedDrivers: number[]; onRemoteState: (time: number, drivers: number[], sessionKey: number) => void }) {
+  const [connection, setConnection] = useState<RoomConnection | null>(null);
+  const [members, setMembers] = useState<RoomMember[]>([]);
+  const [joinCode, setJoinCode] = useState("");
+  const [roomStatus, setRoomStatus] = useState<"idle" | "connecting" | "connected" | "error">("idle");
+  const [roomError, setRoomError] = useState<string | null>(null);
+  const socketRef = useRef<WebSocket | null>(null);
+  const remoteSignature = useRef("");
+  const connectRef = useRef<((next: RoomConnection) => Promise<void>) | null>(null);
+  const reconnectTimer = useRef<number | null>(null);
+  const intentionalClose = useRef(false);
+  const lastSentAt = useRef(0);
+  const pendingSend = useRef<number | null>(null);
+
+  const connect = useCallback(async (next: RoomConnection) => {
+    intentionalClose.current = false;
+    setRoomStatus("connecting");
+    setRoomError(null);
+    const response = await fetch(`/f1/api/rooms/${next.roomId}`, { headers: { Accept: "application/json", "X-F1-Room-Invite": next.inviteToken } });
+    if (!response.ok) {
+      const body = await response.json().catch(() => null) as { error?: string } | null;
+      throw new Error(body?.error ?? `Room connection failed (${response.status})`);
+    }
+    const snapshot = await response.json() as { role: RoomConnection["role"]; members: RoomMember[]; state: { sessionKey: number | null; selectedTime: number | null; selectedDrivers: number[] }; socketTicket: string; inviteExpiresAt?: string };
+    if (!snapshot.socketTicket) throw new Error("Room socket authorization was not issued");
+    const resolved = { ...next, role: snapshot.role, inviteExpiresAt: snapshot.inviteExpiresAt };
+    setConnection(resolved);
+    setMembers(snapshot.members);
+    if (snapshot.state.sessionKey && snapshot.state.selectedTime) onRemoteState(snapshot.state.selectedTime, snapshot.state.selectedDrivers, snapshot.state.sessionKey);
+    sessionStorage.setItem("f1-room", JSON.stringify(resolved));
+    if (window.location.hash.startsWith("#room=")) window.history.replaceState(null, "", window.location.pathname);
+
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const socket = new WebSocket(`${protocol}//${window.location.host}/f1/api/rooms/${next.roomId}/socket`, ["f1-room", snapshot.socketTicket]);
+    socketRef.current = socket;
+    socket.addEventListener("open", () => setRoomStatus("connected"));
+    socket.addEventListener("message", (event) => {
+      let message: { type?: string; members?: RoomMember[]; state?: { sessionKey: number | null; selectedTime: number | null; selectedDrivers: number[] } };
+      try {
+        message = JSON.parse(String(event.data)) as typeof message;
+      } catch {
+        setRoomError("The room sent an unreadable update.");
+        return;
+      }
+      if (message.type !== "room-state") return;
+      setMembers(message.members ?? []);
+      if (message.state?.sessionKey && message.state.selectedTime) {
+        remoteSignature.current = `${message.state.sessionKey}:${message.state.selectedTime}:${message.state.selectedDrivers.join(",")}`;
+        onRemoteState(message.state.selectedTime, message.state.selectedDrivers, message.state.sessionKey);
+      }
+    });
+    socket.addEventListener("close", () => {
+      if (socketRef.current !== socket || intentionalClose.current) return;
+      setRoomStatus("connecting");
+      reconnectTimer.current = window.setTimeout(() => {
+        connectRef.current?.(resolved).catch((reason: unknown) => {
+          setRoomStatus("error");
+          setRoomError(reason instanceof Error ? reason.message : "Room reconnection failed");
+        });
+      }, 1500);
+    });
+    socket.addEventListener("error", () => {
+      setRoomStatus("error");
+      setRoomError("The shared room connection was interrupted.");
+    });
+  }, [onRemoteState]);
+
+  useEffect(() => {
+    connectRef.current = connect;
+  }, [connect]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    const params = new URLSearchParams(window.location.hash.slice(1));
+    const roomId = params.get("room");
+    const inviteToken = params.get("invite");
+    let saved: RoomConnection | null = null;
+    try {
+      saved = JSON.parse(sessionStorage.getItem("f1-room") ?? "null") as RoomConnection | null;
+    } catch {
+      sessionStorage.removeItem("f1-room");
+    }
+    const target = roomId && inviteToken ? { roomId, inviteToken, role: "friend" as const } : saved;
+    if (!target) return;
+    connect(target).catch((reason: unknown) => {
+      setRoomStatus("error");
+      setRoomError(reason instanceof Error ? reason.message : "Room connection failed");
+    });
+    return () => {
+      intentionalClose.current = true;
+      if (reconnectTimer.current) window.clearTimeout(reconnectTimer.current);
+      if (pendingSend.current) window.clearTimeout(pendingSend.current);
+      socketRef.current?.close(1000, "Room closed");
+    };
+  }, [connect, enabled]);
+
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!connection || !socket || socket.readyState !== WebSocket.OPEN) return;
+    const signature = `${sessionKey}:${selectedTime}:${selectedDrivers.join(",")}`;
+    if (signature === remoteSignature.current) {
+      remoteSignature.current = "";
+      return;
+    }
+    const delay = Math.max(0, 600 - (Date.now() - lastSentAt.current));
+    if (pendingSend.current) window.clearTimeout(pendingSend.current);
+    pendingSend.current = window.setTimeout(() => {
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: "sync", sessionKey, selectedTime, selectedDrivers }));
+        lastSentAt.current = Date.now();
+      }
+    }, delay);
+    return () => {
+      if (pendingSend.current) window.clearTimeout(pendingSend.current);
+    };
+  }, [connection, roomStatus, selectedDrivers, selectedTime, sessionKey]);
+
+  const createRoom = async () => {
+    setRoomStatus("connecting");
+    setRoomError(null);
+    try {
+      const response = await fetch("/f1/api/rooms", { method: "POST", headers: { Accept: "application/json" } });
+      const body = await response.json() as { roomId?: string; inviteToken?: string; role?: "owner"; error?: string };
+      if (!response.ok || !body.roomId || !body.inviteToken) throw new Error(body.error ?? "Room creation failed");
+      await connect({ roomId: body.roomId, inviteToken: body.inviteToken, role: "owner" });
+    } catch (reason) {
+      setRoomStatus("error");
+      setRoomError(reason instanceof Error ? reason.message : "Room creation failed");
+    }
+  };
+
+  const joinRoom = async () => {
+    const [roomId, inviteToken] = joinCode.trim().split(".", 2);
+    if (!roomId || !inviteToken) {
+      setRoomError("Paste a room code in the form room.invite.");
+      return;
+    }
+    try {
+      await connect({ roomId, inviteToken, role: "friend" });
+    } catch (reason) {
+      setRoomStatus("error");
+      setRoomError(reason instanceof Error ? reason.message : "Room connection failed");
+    }
+  };
+
+  const leaveRoom = () => {
+    intentionalClose.current = true;
+    if (reconnectTimer.current) window.clearTimeout(reconnectTimer.current);
+    socketRef.current?.close(1000, "Left room");
+    socketRef.current = null;
+    sessionStorage.removeItem("f1-room");
+    setConnection(null);
+    setMembers([]);
+    setRoomStatus("idle");
+    setRoomError(null);
+    window.history.replaceState(null, "", window.location.pathname);
+  };
+
+  const rotateInvite = async () => {
+    if (!connection || connection.role !== "owner") return;
+    try {
+      const response = await fetch(`/f1/api/rooms/${connection.roomId}/invite`, { method: "POST", headers: { Accept: "application/json" } });
+      const body = await response.json() as { inviteToken?: string; error?: string };
+      if (!response.ok || !body.inviteToken) throw new Error(body.error ?? "Invite rotation failed");
+      const updated = { ...connection, inviteToken: body.inviteToken };
+      setConnection(updated);
+      sessionStorage.setItem("f1-room", JSON.stringify(updated));
+    } catch (reason) {
+      setRoomError(reason instanceof Error ? reason.message : "Invite rotation failed");
+    }
+  };
+
+  const copyInvite = async () => {
+    if (!connection) return;
+    const url = new URL("/f1", window.location.origin);
+    url.hash = new URLSearchParams({ room: connection.roomId, invite: connection.inviteToken }).toString();
+    await navigator.clipboard.writeText(url.toString());
+  };
+
+  if (!visible) return null;
+
+  return (
+    <section className={cn(styles.panel, styles.fullView)}>
+      <div className={styles.viewIntro}><span>Access-controlled sharing</span><h1>Private rooms</h1><p>Share the selected drivers and replay cursor with up to eight invited viewers. Cloudflare Access verifies every member before the room service accepts them.</p></div>
+      {!enabled ? (
+        <div className={styles.lockedFeature}><ShieldCheck aria-hidden="true" /><h2>Room service locked</h2><p>The room worker is ready, but it stays closed until Cloudflare Access is configured for this route.</p><button type="button" disabled>Create private room</button></div>
+      ) : connection ? (
+        <div className={styles.roomActive}>
+          <div className={styles.roomSummary}><span>Connected room</span><strong>{connection.roomId}</strong><p>{roomStatus === "connected" ? "Replay and driver selection are synchronized." : roomStatus === "connecting" ? "Reconnecting shared race state..." : "Room connection needs attention."}</p><div><button type="button" onClick={copyInvite}><Copy aria-hidden="true" />Copy invite link</button>{connection.role === "owner" && <button type="button" onClick={rotateInvite}><ShieldCheck aria-hidden="true" />Rotate invite</button>}<button type="button" onClick={leaveRoom}><LogOut aria-hidden="true" />Leave room</button></div></div>
+          <div className={styles.roomMembers}><span>People here / {members.length}</span>{members.map((member) => <article key={member.email}><Users aria-hidden="true" /><div><strong>{member.email}</strong><small>{member.role}</small></div></article>)}</div>
+        </div>
+      ) : (
+        <div className={styles.roomLobby}>
+          <button type="button" className={styles.roomCreate} onClick={createRoom} disabled={roomStatus === "connecting"}><ShieldCheck aria-hidden="true" /><span><strong>Create private room</strong><small>Start from the current replay position</small></span></button>
+          <div className={styles.roomJoin}><UserPlus aria-hidden="true" /><div><strong>Join an invite</strong><p>Paste the compact room code from a friend.</p></div><input value={joinCode} onChange={(event) => setJoinCode(event.target.value)} placeholder="room.invite" aria-label="Room invite code" /><button type="button" onClick={joinRoom} disabled={roomStatus === "connecting"}>Join room</button></div>
+        </div>
+      )}
+      {roomError && <p className={styles.roomError} role="alert">{roomError}</p>}
+    </section>
+  );
 }
 
 function AiView({ data, selectedDrivers }: { data: SessionData; selectedDrivers: number[] }) {
@@ -1358,13 +1763,38 @@ function AiView({ data, selectedDrivers }: { data: SessionData; selectedDrivers:
   return <section className={cn(styles.panel, styles.fullView)}><div className={styles.viewIntro}><span>Optional provider</span><h1>Pit-wall copilot</h1><p>AI remains off until a secure server-side provider is configured. Race data never sends itself to a model.</p></div><div className={styles.aiGrid}><div className={styles.aiPrompt}><Bot aria-hidden="true" /><h2>Ask the race</h2><textarea disabled value={`Compare ${drivers.join(" and ") || "the selected drivers"} while accounting for tyre age.`} readOnly /><button type="button" disabled>Run with evidence</button></div><div className={styles.aiContract}><span>Every answer must include</span>{["Session timestamp", "Current lap", "Source freshness", "Drivers considered", "Evidence references", "Confidence", "Assumptions", "Facts vs inference"].map((item) => <p key={item}><i />{item}</p>)}</div></div></section>;
 }
 
-function SettingsView({ preferences, setPreference }: { preferences: Preferences; setPreference: <K extends keyof Preferences>(key: K, value: Preferences[K]) => void }) {
+function SettingsView({ preferences, setPreference, data }: { preferences: Preferences; setPreference: <K extends keyof Preferences>(key: K, value: Preferences[K]) => void; data: SessionData }) {
+  const [notificationStatus, setNotificationStatus] = useState<string | null>(null);
+  const notificationsSupported = typeof window !== "undefined" && "Notification" in window && "serviceWorker" in navigator;
   const togglePanel = (panel: HideablePanel) => setPreference(
     "hiddenPanels",
     preferences.hiddenPanels.includes(panel)
       ? preferences.hiddenPanels.filter((item) => item !== panel)
       : [...preferences.hiddenPanels, panel],
   );
+  const teams = Array.from(new Map(data.drivers.map((driver) => [driver.team_name, driver.team_colour])).entries()).sort(([a], [b]) => a.localeCompare(b));
+  const toggleTeam = (team: string) => setPreference(
+    "favouriteTeams",
+    preferences.favouriteTeams.includes(team)
+      ? preferences.favouriteTeams.filter((item) => item !== team)
+      : [...preferences.favouriteTeams, team],
+  );
+  const toggleNotification = async (kind: NotificationKind) => {
+    if (!notificationsSupported) {
+      setNotificationStatus("This browser does not support service-worker notifications.");
+      return;
+    }
+    const enabled = preferences.notifications.includes(kind);
+    if (!enabled && Notification.permission !== "granted") {
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") {
+        setNotificationStatus("Notification permission was not granted. No alert preference was saved.");
+        return;
+      }
+    }
+    setNotificationStatus(null);
+    setPreference("notifications", enabled ? preferences.notifications.filter((item) => item !== kind) : [...preferences.notifications, kind]);
+  };
   return (
     <section className={cn(styles.panel, styles.fullView)}>
       <div className={styles.viewIntro}><span>Local preferences</span><h1>Display settings</h1><p>These choices are stored only in this browser and apply immediately.</p></div>
@@ -1373,8 +1803,19 @@ function SettingsView({ preferences, setPreference }: { preferences: Preferences
         <SettingGroup title="Glass and motion">{(["full", "balanced", "reduced", "reduced-motion"] as Effects[]).map((value) => <button key={value} type="button" aria-pressed={preferences.effects === value} onClick={() => setPreference("effects", value)}><Sparkles />{value === "reduced-motion" ? "reduced motion" : value}</button>)}</SettingGroup>
         <SettingGroup title="Accessibility"><button type="button" aria-pressed={preferences.highContrast} onClick={() => setPreference("highContrast", !preferences.highContrast)}><Activity />high contrast</button>{(["metric", "imperial"] as const).map((value) => <button key={value} type="button" aria-pressed={preferences.units === value} onClick={() => setPreference("units", value)}><Gauge />{value}</button>)}</SettingGroup>
         <SettingGroup title="Dashboard">
-          {(["balanced", "timing", "map"] as DashboardLayout[]).map((value) => <button key={value} type="button" aria-pressed={preferences.dashboardLayout === value} onClick={() => setPreference("dashboardLayout", value)}><CircleGauge />{value}</button>)}
+          {(["balanced", "timing", "map", "broadcast"] as DashboardLayout[]).map((value) => <button key={value} type="button" aria-pressed={preferences.dashboardLayout === value} onClick={() => setPreference("dashboardLayout", value)}><CircleGauge />{value}</button>)}
           {(["telemetry", "events"] as HideablePanel[]).map((panel) => <button key={panel} type="button" aria-pressed={!preferences.hiddenPanels.includes(panel)} onClick={() => togglePanel(panel)}><Activity />{panel} panel</button>)}
+        </SettingGroup>
+        <SettingGroup title="Race view">
+          <button type="button" aria-pressed={preferences.spoilerMode} onClick={() => setPreference("spoilerMode", !preferences.spoilerMode)}><ShieldCheck />spoiler protection</button>
+          {(["local", "utc"] as Timezone[]).map((value) => <button key={value} type="button" aria-pressed={preferences.timezone === value} onClick={() => setPreference("timezone", value)}><CircleGauge />{value === "local" ? "local time" : "UTC"}</button>)}
+        </SettingGroup>
+        <SettingGroup title="Favourite teams">
+          {teams.map(([team, colour]) => <button key={team} type="button" aria-pressed={preferences.favouriteTeams.includes(team)} onClick={() => toggleTeam(team)}><span className={styles.teamSwatch} style={{ background: `#${colour}` }} />{team}</button>)}
+        </SettingGroup>
+        <SettingGroup title="Browser notifications">
+          {NOTIFICATION_KINDS.map((item) => <button key={item.value} type="button" disabled={!notificationsSupported} aria-pressed={preferences.notifications.includes(item.value)} onClick={() => toggleNotification(item.value)}><Radio />{item.label}</button>)}
+          {notificationStatus && <small role="status">{notificationStatus}</small>}
         </SettingGroup>
       </div>
     </section>
