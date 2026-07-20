@@ -127,6 +127,35 @@ export interface Weather {
   pressure: number;
 }
 
+export interface PitStop {
+  date: string;
+  driver_number: number;
+  lap_number: number;
+  lane_duration: number | null;
+  stop_duration: number | null;
+}
+
+export interface StartingGridEntry {
+  position: number;
+  driver_number: number;
+  lap_duration: number | null;
+}
+
+export interface ChampionshipDriver {
+  driver_number: number;
+  points_current: number;
+  points_start: number;
+  position_current: number;
+  position_start: number;
+}
+
+export interface Overtake {
+  date: string;
+  overtaken_driver_number: number;
+  overtaking_driver_number: number;
+  position: number;
+}
+
 export interface LocationPoint {
   date: string;
   driver_number: number;
@@ -164,9 +193,14 @@ export interface SessionData {
   results: SessionResult[];
   laps: Lap[];
   stints: Stint[];
+  pits: PitStop[];
+  grid: StartingGridEntry[];
+  championship: ChampionshipDriver[];
+  overtakes: Overtake[];
   raceControl: RaceControlEvent[];
   radio: RadioMessage[];
   weather: Weather[];
+  fetchedAt: number;
 }
 
 export interface FrameData {
@@ -278,11 +312,28 @@ export async function loadSessionData(sessionKey: number, signal?: AbortSignal) 
   const results = await read<SessionResult>("session_result");
   const laps = await read<Lap>("laps");
   const stints = await read<Stint>("stints");
+  const pits = await read<PitStop>("pit");
+  const grid = await read<StartingGridEntry>("starting_grid");
+  const championship = await read<ChampionshipDriver>("championship_drivers");
+  const overtakes = await read<Overtake>("overtakes");
   const raceControl = await read<RaceControlEvent>("race_control");
   const radio = await read<RadioMessage>("team_radio");
   const weather = await read<Weather>("weather");
 
-  return { drivers, results, laps, stints, raceControl, radio, weather };
+  return {
+    drivers,
+    results,
+    laps,
+    stints,
+    pits,
+    grid,
+    championship,
+    overtakes,
+    raceControl,
+    radio,
+    weather,
+    fetchedAt: Date.now(),
+  };
 }
 
 function windowParams(sessionKey: number, timestamp: number, seconds: number) {

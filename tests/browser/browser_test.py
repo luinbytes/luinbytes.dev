@@ -379,6 +379,28 @@ class F1CommandCentreTests(BrowserTestCase):
             "gmt_offset": "+00:00",
             "year": 2026,
         }
+        future_meeting = {
+            **meeting,
+            "meeting_key": 202611,
+            "meeting_name": "Hungarian Grand Prix",
+            "meeting_official_name": "Hungarian Grand Prix",
+            "location": "Budapest",
+            "country_name": "Hungary",
+            "country_code": "HUN",
+            "circuit_short_name": "Hungaroring",
+            "date_start": "2026-12-01T10:00:00Z",
+        }
+        future_session = {
+            **session,
+            "session_key": 202612,
+            "meeting_key": 202611,
+            "date_start": "2026-12-01T12:00:00Z",
+            "date_end": "2026-12-01T14:00:00Z",
+            "location": "Budapest",
+            "country_name": "Hungary",
+            "country_code": "HUN",
+            "circuit_short_name": "Hungaroring",
+        }
         drivers = [
             {
                 "driver_number": 12,
@@ -404,8 +426,8 @@ class F1CommandCentreTests(BrowserTestCase):
             },
         ]
         fixtures = {
-            "meetings": [meeting],
-            "sessions": [session],
+            "meetings": [meeting, future_meeting],
+            "sessions": [session, future_session],
             "drivers": drivers,
             "session_result": [
                 {"position": 1, "driver_number": 12, "number_of_laps": 2, "points": 25, "dnf": False, "dns": False, "dsq": False, "duration": 179, "gap_to_leader": 0},
@@ -421,6 +443,16 @@ class F1CommandCentreTests(BrowserTestCase):
                 {"driver_number": 12, "stint_number": 1, "lap_start": 1, "lap_end": 2, "compound": "MEDIUM", "tyre_age_at_start": 0},
                 {"driver_number": 16, "stint_number": 1, "lap_start": 1, "lap_end": 2, "compound": "HARD", "tyre_age_at_start": 0},
             ],
+            "pit": [{"date": "2026-07-01T12:01:45Z", "driver_number": 12, "lap_number": 2, "lane_duration": 22.4, "stop_duration": 2.3}],
+            "starting_grid": [
+                {"position": 1, "driver_number": 12, "lap_duration": 89},
+                {"position": 2, "driver_number": 16, "lap_duration": 90},
+            ],
+            "championship_drivers": [
+                {"driver_number": 12, "points_current": 220, "points_start": 195, "position_current": 1, "position_start": 2},
+                {"driver_number": 16, "points_current": 210, "points_start": 192, "position_current": 2, "position_start": 1},
+            ],
+            "overtakes": [{"date": "2026-07-01T12:02:10Z", "overtaken_driver_number": 12, "overtaking_driver_number": 16, "position": 1}],
             "race_control": [{"date": "2026-07-01T12:02:00Z", "driver_number": None, "lap_number": 2, "category": "Flag", "flag": "YELLOW", "scope": "Sector", "sector": 2, "message": "YELLOW FLAG IN SECTOR 2"}],
             "team_radio": [{"driver_number": 12, "date": "2026-07-01T12:02:30Z", "recording_url": "https://example.com/radio.mp3"}],
             "weather": [{"date": "2026-07-01T12:02:00Z", "track_temperature": 36.2, "air_temperature": 24.4, "humidity": 51, "rainfall": 0, "wind_speed": 1.8, "wind_direction": 90, "pressure": 1012}],
@@ -430,7 +462,20 @@ class F1CommandCentreTests(BrowserTestCase):
             parsed = urlparse(route.request.url)
             endpoint = parsed.path.rsplit("/", 1)[-1]
             query = parse_qs(parsed.query)
-            if endpoint == "location":
+            future_request = query.get("session_key") == ["202612"]
+            if future_request:
+                payload = {
+                    "drivers": drivers,
+                    "starting_grid": [
+                        {"position": 1, "driver_number": 12, "lap_duration": 89},
+                        {"position": 2, "driver_number": 16, "lap_duration": 90},
+                    ],
+                    "championship_drivers": [
+                        {"driver_number": 12, "points_current": 220, "points_start": 195, "position_current": 1, "position_start": 2},
+                        {"driver_number": 16, "points_current": 210, "points_start": 192, "position_current": 2, "position_start": 1},
+                    ],
+                }.get(endpoint, [])
+            elif endpoint == "location":
                 if "driver_number" in query:
                     payload = [
                         {"date": "2026-07-01T12:01:30Z", "driver_number": 12, "x": 0, "y": 0, "z": 0},
@@ -475,6 +520,11 @@ class F1CommandCentreTests(BrowserTestCase):
             "document.querySelector('[class*=timingRows] button')?.textContent?.includes('LEC')"
         )
         self.assertIn("+0.800", page.get_by_role("button", name=re.compile(r"^2 ANT")).inner_text())
+        page.get_by_role("button", name="Expand", exact=True).click()
+        self.assertTrue(page.get_by_text("INT +0.800", exact=True).is_visible())
+        page.get_by_role("button", name="Throttle", exact=True).click()
+        page.get_by_role("button", name="Bookmark ANT radio", exact=True).click()
+        page.get_by_role("combobox", name="Radio playback speed").select_option("1.5")
         page.get_by_role("button", name=re.compile(r"^Select ")).first.wait_for()
         self.assertEqual(page.get_by_role("button", name=re.compile(r"^Select ")).count(), 2)
 
@@ -497,6 +547,10 @@ class F1CommandCentreTests(BrowserTestCase):
         page.get_by_role("button", name="reduced motion", exact=True).click()
         page.reload()
         page.get_by_role("heading", name="Monza", level=1).wait_for()
+        self.assertEqual(page.get_by_role("button", name="Throttle", exact=True).get_attribute("aria-pressed"), "true")
+        saved_preferences = page.evaluate("JSON.parse(localStorage.getItem('f1-command-centre:preferences'))")
+        self.assertEqual(saved_preferences["radioBookmarks"], ["radio-0"])
+        self.assertEqual(saved_preferences["audioSpeed"], 1.5)
         page.get_by_role("button", name="Settings", exact=True).click()
         self.assertEqual(page.get_by_role("button", name="light", exact=True).get_attribute("aria-pressed"), "true")
         self.assertEqual(page.get_by_role("button", name="reduced motion", exact=True).get_attribute("aria-pressed"), "true")
@@ -508,6 +562,16 @@ class F1CommandCentreTests(BrowserTestCase):
             page.locator('[class*="timingPanel"]').bounding_box()["height"], 440
         )
         page.screenshot(path=SCREENSHOTS / "f1-command-centre-mobile.png")
+
+        page.set_viewport_size({"width": 1440, "height": 900})
+        page.get_by_role("button", name="Calendar", exact=True).click()
+        future_card = page.locator('[class*="calendarCard"]').filter(has_text="Hungary")
+        self.assertEqual(future_card.count(), 1)
+        future_race = future_card.get_by_role("button", name="Race", exact=True)
+        self.assertEqual(future_race.count(), 1)
+        future_race.click()
+        page.get_by_role("heading", name="Hungarian Grand Prix", level=1).wait_for()
+        self.assertTrue(page.get_by_text("Session countdown", exact=True).is_visible())
         browser.close()
 
 

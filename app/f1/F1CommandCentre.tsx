@@ -76,6 +76,10 @@ type Theme = "dark" | "light" | "system";
 type Effects = "full" | "balanced" | "reduced" | "reduced-motion";
 type EventFilter = "all" | "race-control" | "radio";
 type TimingSort = "position" | "last" | "gap" | "tyre" | "team";
+type TelemetryMetric = "speed" | "throttle" | "brake" | "rpm" | "n_gear";
+type MapView = "whole" | "leader" | "selected";
+type DashboardLayout = "balanced" | "timing" | "map";
+type HideablePanel = "telemetry" | "events";
 
 interface Preferences {
   theme: Theme;
@@ -83,6 +87,12 @@ interface Preferences {
   highContrast: boolean;
   favourites: number[];
   units: "metric" | "imperial";
+  telemetryMetric: TelemetryMetric;
+  radioBookmarks: string[];
+  audioSpeed: number;
+  audioVolume: number;
+  dashboardLayout: DashboardLayout;
+  hiddenPanels: HideablePanel[];
 }
 
 interface TrackGeometry {
@@ -96,6 +106,10 @@ interface TimingRow {
   lap?: Lap;
   position: number;
   gap?: number | string | null;
+  interval?: number | string | null;
+  positionChange: number;
+  pitDuration?: number | null;
+  drs?: number;
   stint?: Stint;
   fastest?: Lap;
 }
@@ -108,8 +122,21 @@ const DEFAULT_PREFERENCES: Preferences = {
   highContrast: false,
   favourites: [],
   units: "metric",
+  telemetryMetric: "speed",
+  radioBookmarks: [],
+  audioSpeed: 1,
+  audioVolume: 0.8,
+  dashboardLayout: "balanced",
+  hiddenPanels: [],
 };
 const SPEEDS = [1, 2, 5, 10] as const;
+const TELEMETRY_METRICS: Array<{ value: TelemetryMetric; label: string }> = [
+  { value: "speed", label: "Speed" },
+  { value: "throttle", label: "Throttle" },
+  { value: "brake", label: "Brake" },
+  { value: "rpm", label: "RPM" },
+  { value: "n_gear", label: "Gear" },
+];
 
 const NAV_ITEMS: Array<{ id: View; label: string; icon: typeof Home }> = [
   { id: "live", label: "Live", icon: CircleGauge },
@@ -151,7 +178,7 @@ function trackGeometry(points: LocationPoint[]): TrackGeometry | null {
   return { path, project };
 }
 
-function telemetryPath(points: CarDataPoint[], key: "speed" | "throttle" | "rpm") {
+function telemetryPath(points: CarDataPoint[], key: TelemetryMetric) {
   if (points.length < 2) return "";
   const values = points.map((point) => point[key]);
   const min = Math.min(...values);
@@ -202,9 +229,12 @@ export default function F1CommandCentre() {
   const [selectedDrivers, setSelectedDrivers] = useState<number[]>([]);
   const [playing, setPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState<(typeof SPEEDS)[number]>(1);
-  const [audioSpeed, setAudioSpeed] = useState(1);
   const [eventFilter, setEventFilter] = useState<EventFilter>("all");
+  const [eventDriver, setEventDriver] = useState("all");
+  const [importantOnly, setImportantOnly] = useState(false);
   const [timingSort, setTimingSort] = useState<TimingSort>("position");
+  const [timingCompact, setTimingCompact] = useState(true);
+  const [mapView, setMapView] = useState<MapView>("whole");
   const [preferences, setPreferences] = useState<Preferences>(DEFAULT_PREFERENCES);
   const [preferencesReady, setPreferencesReady] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -286,12 +316,15 @@ export default function F1CommandCentre() {
     loadSeason(CURRENT_YEAR, controller.signal)
       .then(({ meetings: nextMeetings, sessions: nextSessions }) => {
         const now = Date.now();
+        const active = nextSessions.find(
+          (item) => Date.parse(item.date_start) <= now && Date.parse(item.date_end) >= now,
+        );
         const completed = nextSessions
           .filter((item) => Date.parse(item.date_end) < now)
           .sort((a, b) => Date.parse(b.date_end) - Date.parse(a.date_end));
         setMeetings(nextMeetings);
         setSessions(nextSessions);
-        setSession(completed[0] ?? nextSessions[0] ?? null);
+        setSession(active ?? completed[0] ?? nextSessions[0] ?? null);
       })
       .catch((reason: unknown) => {
         if ((reason as Error).name !== "AbortError") {
@@ -308,11 +341,18 @@ export default function F1CommandCentre() {
 
     loadSessionData(session.session_key, controller.signal)
       .then(async (nextData) => {
-        if (!nextData.drivers.length || !nextData.laps.length) {
+        const upcoming = Date.parse(session.date_start) > Date.now();
+        if (!upcoming && (!nextData.drivers.length || !nextData.laps.length)) {
           throw new Error("This session has no published timing data yet.");
         }
         const winner = nextData.results.find((result) => result.position === 1)?.driver_number;
-        const primary = winner ?? nextData.drivers[0].driver_number;
+        const primary = winner ?? nextData.grid[0]?.driver_number ?? nextData.drivers[0]?.driver_number;
+        setData(nextData);
+        setSelectedDrivers(primary ? [primary] : []);
+        if (upcoming) {
+          setSelectedTime(Date.parse(session.date_start));
+          return;
+        }
         const end = raceEnd(nextData.laps, session);
         const primaryEnd = nextData.laps.reduce((latest, lap) => {
           if (lap.driver_number !== primary || !lap.lap_duration) return latest;
@@ -323,8 +363,7 @@ export default function F1CommandCentre() {
             (lap) => lap.driver_number === primary && lap.lap_duration && lap.lap_number > 1,
           ) ?? bestLap(nextData.laps, primary);
 
-        setData(nextData);
-        setSelectedDrivers([primary]);
+        if (!primary) throw new Error("This session has no published driver data yet.");
         setSelectedTime(Math.min(end, primaryEnd) - 1000);
         setStrategyLap(Math.max(2, Math.round((nextData.results[0]?.number_of_laps ?? 44) * 0.6)));
         if (outlineLap) {
@@ -353,16 +392,25 @@ export default function F1CommandCentre() {
     () => (session && data ? raceEnd(data.laps, session) : 0),
     [data, session],
   );
+  const frameWindow = 3000 * playbackSpeed;
+  const frameTimestamp = playing ? Math.floor(selectedTime / frameWindow) * frameWindow : selectedTime;
 
   useEffect(() => {
-    if (!session || !data || !selectedTime || !selectedDrivers.length || !timelineEnd) return;
+    if (
+      !session ||
+      !data ||
+      Date.now() < Date.parse(session.date_start) ||
+      !frameTimestamp ||
+      !selectedDrivers.length ||
+      !timelineEnd
+    ) return;
     const requestId = ++frameRequest.current;
     const controller = new AbortController();
     const timeout = window.setTimeout(() => {
       setFrameLoading(true);
       loadFrameData(
         session.session_key,
-        Math.min(selectedTime, timelineEnd),
+        Math.min(frameTimestamp, timelineEnd),
         selectedDrivers,
         controller.signal,
       )
@@ -380,12 +428,12 @@ export default function F1CommandCentre() {
         .finally(() => {
           if (requestId === frameRequest.current) setFrameLoading(false);
         });
-    }, playing ? 900 : 260);
+    }, playing ? 0 : 260);
     return () => {
       window.clearTimeout(timeout);
       controller.abort();
     };
-  }, [data, playing, selectedDrivers, selectedTime, session, timelineEnd]);
+  }, [data, frameTimestamp, playing, selectedDrivers, session, timelineEnd]);
 
   useEffect(() => {
     if (!playing || !timelineEnd) return;
@@ -434,6 +482,10 @@ export default function F1CommandCentre() {
     () => latestByDriver(frame?.locations ?? [], selectedTime + 2000),
     [frame, selectedTime],
   );
+  const currentTelemetry = useMemo(
+    () => latestByDriver(frame?.telemetry ?? [], selectedTime + 2000),
+    [frame, selectedTime],
+  );
   const currentWeather = useMemo(
     () => (data ? latestAt(data.weather, selectedTime) ?? data.weather.at(-1) : undefined),
     [data, selectedTime],
@@ -461,6 +513,21 @@ export default function F1CommandCentre() {
     return grouped;
   }, [data]);
 
+  const pitsByDriver = useMemo(() => {
+    const grouped = new Map<number, SessionData["pits"]>();
+    for (const pit of data?.pits ?? []) {
+      const driverPits = grouped.get(pit.driver_number) ?? [];
+      driverPits.push(pit);
+      grouped.set(pit.driver_number, driverPits);
+    }
+    return grouped;
+  }, [data]);
+
+  const gridByDriver = useMemo(
+    () => new Map(data?.grid.map((entry) => [entry.driver_number, entry.position]) ?? []),
+    [data],
+  );
+
   const timingRows = useMemo<TimingRow[]>(() => {
     if (!data) return [];
     const resultByDriver = new Map(data.results.map((result) => [result.driver_number, result]));
@@ -471,6 +538,9 @@ export default function F1CommandCentre() {
         const lap = currentLaps.get(driver.driver_number);
         const position = currentPositions.get(driver.driver_number)?.position ?? result?.position ?? 99;
         const interval = currentIntervals.get(driver.driver_number);
+        const pit = pitsByDriver.get(driver.driver_number)
+          ?.filter((item) => Date.parse(item.date) <= selectedTime)
+          .at(-1);
         const stint = stintsByDriver.get(driver.driver_number)?.find(
           (item) =>
             lap &&
@@ -483,6 +553,10 @@ export default function F1CommandCentre() {
           lap,
           position,
           gap: interval?.gap_to_leader ?? result?.gap_to_leader,
+          interval: interval?.interval,
+          positionChange: position === 99 ? 0 : (gridByDriver.get(driver.driver_number) ?? position) - position,
+          pitDuration: pit?.stop_duration ?? pit?.lane_duration,
+          drs: currentTelemetry.get(driver.driver_number)?.drs,
           stint,
           fastest: fastestByDriver.get(driver.driver_number),
         };
@@ -500,7 +574,7 @@ export default function F1CommandCentre() {
         if (timingSort === "team") return a.driver.team_name.localeCompare(b.driver.team_name);
         return a.position - b.position;
       });
-  }, [currentIntervals, currentLaps, currentPositions, data, fastestByDriver, preferences.favourites, stintsByDriver, timingSort]);
+  }, [currentIntervals, currentLaps, currentPositions, currentTelemetry, data, fastestByDriver, gridByDriver, pitsByDriver, preferences.favourites, selectedTime, stintsByDriver, timingSort]);
 
   const events = useMemo(() => {
     if (!data) return [];
@@ -513,6 +587,7 @@ export default function F1CommandCentre() {
       detail: event.message,
       driverNumber: event.driver_number,
       audio: null,
+      important: /RED|DOUBLE YELLOW|SAFETY CAR|PENALTY|INVESTIGATION|SUSPEND/i.test(`${event.flag} ${event.category} ${event.message}`),
     }));
     const radios = data.radio.map((event, index) => ({
       id: `radio-${index}`,
@@ -523,18 +598,43 @@ export default function F1CommandCentre() {
       detail: "Official team radio audio",
       driverNumber: event.driver_number,
       audio: event.recording_url,
+      important: preferences.favourites.includes(event.driver_number),
     }));
-    return [...controls, ...radios].sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
-  }, [data, driverByNumber]);
+    const pits = data.pits.map((event, index) => ({
+      id: `pit-${index}`,
+      type: "pit" as const,
+      date: event.date,
+      lap: event.lap_number,
+      title: `${driverByNumber.get(event.driver_number)?.name_acronym ?? event.driver_number} pit stop`,
+      detail: `${event.stop_duration?.toFixed(1) ?? "--"}s stationary / ${event.lane_duration?.toFixed(1) ?? "--"}s lane`,
+      driverNumber: event.driver_number,
+      audio: null,
+      important: preferences.favourites.includes(event.driver_number),
+    }));
+    const overtakes = data.overtakes.map((event, index) => ({
+      id: `overtake-${index}`,
+      type: "overtake" as const,
+      date: event.date,
+      lap: null,
+      title: "Overtake",
+      detail: `${driverByNumber.get(event.overtaking_driver_number)?.name_acronym ?? event.overtaking_driver_number} passed ${driverByNumber.get(event.overtaken_driver_number)?.name_acronym ?? event.overtaken_driver_number} for P${event.position}`,
+      driverNumber: event.overtaking_driver_number,
+      audio: null,
+      important: preferences.favourites.includes(event.overtaking_driver_number),
+    }));
+    return [...controls, ...radios, ...pits, ...overtakes].sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
+  }, [data, driverByNumber, preferences.favourites]);
 
   const visibleEvents = useMemo(
     () =>
       events
         .filter((event) => Date.parse(event.date) <= selectedTime)
         .filter((event) => eventFilter === "all" || event.type === eventFilter)
+        .filter((event) => eventDriver === "all" || event.driverNumber === Number(eventDriver))
+        .filter((event) => !importantOnly || event.important)
         .slice(-14)
         .reverse(),
-    [eventFilter, events, selectedTime],
+    [eventDriver, eventFilter, events, importantOnly, selectedTime],
   );
 
   const selectedTelemetry = useMemo(
@@ -575,6 +675,22 @@ export default function F1CommandCentre() {
     if (candidate) seekTo(candidate);
   };
 
+  const jumpLap = (direction: -1 | 1) => {
+    const lapTimes = (data?.laps ?? [])
+      .filter((lap) => lap.driver_number === selectedDrivers[0])
+      .map((lap) => Date.parse(lap.date_start))
+      .sort((a, b) => a - b);
+    const candidate = direction < 0
+      ? lapTimes.filter((time) => time < selectedTime - 500).at(-1)
+      : lapTimes.find((time) => time > selectedTime + 500);
+    if (candidate) seekTo(candidate);
+  };
+
+  const skipQuiet = () => {
+    const next = events.find((event) => Date.parse(event.date) > selectedTime + 15_000);
+    seekTo(next ? Date.parse(next.date) : selectedTime + 60_000);
+  };
+
   const setPreference = <K extends keyof Preferences>(key: K, value: Preferences[K]) =>
     setPreferences((current) => ({ ...current, [key]: value }));
 
@@ -587,6 +703,15 @@ export default function F1CommandCentre() {
     }));
   };
 
+  const toggleRadioBookmark = (eventId: string) => {
+    setPreferences((current) => ({
+      ...current,
+      radioBookmarks: current.radioBookmarks.includes(eventId)
+        ? current.radioBookmarks.filter((id) => id !== eventId)
+        : [...current.radioBookmarks, eventId],
+    }));
+  };
+
   const chooseSession = (next: Session) => {
     setLoading(true);
     setError(null);
@@ -594,6 +719,7 @@ export default function F1CommandCentre() {
     setFrame(null);
     setTrackPoints([]);
     setSession(next);
+    setView("live");
   };
 
   const navigation = (
@@ -680,8 +806,15 @@ export default function F1CommandCentre() {
   }
 
   const selectedLap = currentLaps.get(selectedDrivers[0]);
+  const selectedTiming = timingRows.find((row) => row.driver.driver_number === selectedDrivers[0]);
   const primaryDriver = driverByNumber.get(selectedDrivers[0]);
+  const leaderNumber = timingRows.find((row) => row.position === 1)?.driver.driver_number;
   const meeting = meetings.find((item) => item.meeting_key === session.meeting_key);
+  const upcoming = now > 0 && now < Date.parse(session.date_start);
+  const trackStatus = data.raceControl
+    .filter((event) => Date.parse(event.date) <= selectedTime && ["Flag", "SafetyCar", "SessionStatus", "Drs"].includes(event.category))
+    .at(-1);
+  const frameAge = frame ? Math.max(0, Math.round((now - frame.fetchedAt) / 1000)) : null;
   const focusLocation = currentLocations.get(selectedDrivers.at(-1) ?? selectedDrivers[0]);
   const focusPoint = geometry && focusLocation ? geometry.project(focusLocation) : null;
   const timelinePosition = timelineEnd > timelineStart
@@ -694,6 +827,8 @@ export default function F1CommandCentre() {
       className={cn(styles.shell, preferences.highContrast && styles.highContrast)}
       data-theme={resolvedTheme}
       data-effects={preferences.effects}
+      data-layout={preferences.dashboardLayout}
+      data-playing={playing}
     >
       {navigation}
 
@@ -725,6 +860,9 @@ export default function F1CommandCentre() {
           }}
           aria-label="Select completed session"
         >
+          {Date.parse(session.date_end) >= now && (
+            <option value={session.session_key}>{sessionLabel(session)}</option>
+          )}
           {sessions
             .filter((item) => Date.parse(item.date_end) < now)
             .slice()
@@ -736,8 +874,15 @@ export default function F1CommandCentre() {
         </select>
       </header>
 
-      <main className={styles.workspace}>
-        {(view === "live" || view === "replay") && (
+      <main
+        className={styles.workspace}
+        data-hide-telemetry={preferences.hiddenPanels.includes("telemetry")}
+        data-hide-events={preferences.hiddenPanels.includes("events")}
+      >
+        {(view === "live" || view === "replay") && upcoming && (
+          <PreSessionView session={session} meeting={meeting} data={data} now={now} />
+        )}
+        {(view === "live" || view === "replay") && !upcoming && (
           <>
             <section className={cn(styles.panel, styles.trackPanel)} aria-labelledby="track-title">
               <div className={styles.panelHeader}>
@@ -746,7 +891,12 @@ export default function F1CommandCentre() {
                   <h1 id="track-title">{session.circuit_short_name}</h1>
                 </div>
                 <div className={styles.panelActions}>
-                  <span className={styles.dataFreshness}><Wifi aria-hidden="true" /> replay frame</span>
+                  <select className={styles.mapViewSelect} value={mapView} onChange={(event) => setMapView(event.target.value as MapView)} aria-label="Track map view">
+                    <option value="whole">Whole track</option>
+                    <option value="leader">Leader follow</option>
+                    <option value="selected">Selected drivers</option>
+                  </select>
+                  <span className={cn(styles.dataFreshness, frameAge != null && frameAge > 15 && styles.dataStale)}><Wifi aria-hidden="true" /> {frameAge == null ? "waiting" : `${frameAge}s old`}</span>
                   {frameLoading && <span className={styles.syncing}>syncing</span>}
                 </div>
               </div>
@@ -785,6 +935,7 @@ export default function F1CommandCentre() {
                           className={cn(styles.driverMarker, selected && styles.driverMarkerSelected)}
                           key={point.driver_number}
                           transform={`translate(${projected.x} ${projected.y})`}
+                          style={{ opacity: mapView === "whole" || selected || (mapView === "leader" && point.driver_number === leaderNumber) ? 1 : 0.16 }}
                           role="button"
                           tabIndex={0}
                           aria-label={`Select ${driver.full_name}`}
@@ -807,6 +958,12 @@ export default function F1CommandCentre() {
                   <strong>{selectedTelemetry[0]?.points.at(-1)?.speed ?? 0}<small> km/h</small></strong>
                   <em>Selected car / sourced telemetry</em>
                 </div>
+                {trackStatus && (
+                  <div className={styles.trackStatus} data-flag={trackStatus.flag?.toLowerCase().replaceAll(" ", "-") ?? trackStatus.category.toLowerCase()}>
+                    <strong>{trackStatus.flag ?? trackStatus.category}</strong>
+                    <span>{trackStatus.scope}{trackStatus.sector ? ` / sector ${trackStatus.sector}` : ""}</span>
+                  </div>
+                )}
                 <div className={styles.mapLegend}>
                   <span><i className={styles.legendSelected} /> Selected</span>
                   <span><i className={styles.legendField} /> Field</span>
@@ -838,19 +995,28 @@ export default function F1CommandCentre() {
                     <option value="tyre">Tyre age</option>
                     <option value="team">Team</option>
                   </select>
+                  <button
+                    type="button"
+                    className={styles.compactButton}
+                    aria-pressed={!timingCompact}
+                    onClick={() => setTimingCompact((current) => !current)}
+                  >
+                    {timingCompact ? "Expand" : "Compact"}
+                  </button>
                   <span className={styles.compareCount}>{selectedDrivers.length}/2</span>
                 </div>
               </div>
               <div className={styles.timingHead} aria-hidden="true">
                 <span>POS</span><span>DRIVER</span><span>TYRE</span><span>LAST</span><span>GAP</span>
               </div>
-              <div className={styles.timingRows}>
-                {timingRows.map(({ driver, result, lap, position, gap, stint, fastest }) => (
+              <div className={cn(styles.timingRows, !timingCompact && styles.timingRowsExpanded)}>
+                {timingRows.map(({ driver, result, lap, position, gap, interval, positionChange, pitDuration, drs, stint, fastest }) => (
                   <button
                     type="button"
                     className={cn(
                       styles.timingRow,
                       selectedDrivers.includes(driver.driver_number) && styles.timingRowSelected,
+                      typeof interval === "number" && interval > 0 && interval < 1 && styles.timingRowBattle,
                       result?.dnf && styles.timingRowRetired,
                     )}
                     key={driver.driver_number}
@@ -866,12 +1032,24 @@ export default function F1CommandCentre() {
                     </span>
                     <span>{formatLapTime(lap?.lap_duration)}<small>best {formatLapTime(fastest?.lap_duration)}</small></span>
                     <span>{result?.dnf ? "OUT" : formatGap(gap)}</span>
+                    {!timingCompact && (
+                      <span className={styles.timingDetails}>
+                        <i>S1 {formatLapTime(lap?.duration_sector_1)}</i>
+                        <i>S2 {formatLapTime(lap?.duration_sector_2)}</i>
+                        <i>S3 {formatLapTime(lap?.duration_sector_3)}</i>
+                        <i>INT {formatGap(interval)}</i>
+                        <i>{drs != null && [10, 12, 14].includes(drs) ? "DRS ON" : "DRS OFF"}</i>
+                        <i>{positionChange > 0 ? `+${positionChange}` : positionChange} POS</i>
+                        <i>PIT {pitDuration?.toFixed(1) ?? "--"}s</i>
+                        <i>STINT {stint?.stint_number ?? "--"}</i>
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>
             </section>
 
-            <section className={cn(styles.panel, styles.telemetryPanel)} aria-labelledby="telemetry-title">
+            {!preferences.hiddenPanels.includes("telemetry") && <section className={cn(styles.panel, styles.telemetryPanel)} aria-labelledby="telemetry-title">
               <span
                 className={styles.telemetryReceive}
                 key={`telemetry-${selectedDrivers.join("-")}`}
@@ -899,23 +1077,35 @@ export default function F1CommandCentre() {
                   );
                 })}
                 <div className={styles.traceChart}>
-                  <svg viewBox="0 0 600 150" preserveAspectRatio="none" aria-label="Speed telemetry trace">
+                  <div className={styles.chartToolbar}>
+                    {TELEMETRY_METRICS.map((metric) => (
+                      <button
+                        key={metric.value}
+                        type="button"
+                        aria-pressed={preferences.telemetryMetric === metric.value}
+                        onClick={() => setPreference("telemetryMetric", metric.value)}
+                      >
+                        {metric.label}
+                      </button>
+                    ))}
+                  </div>
+                  <svg viewBox="0 0 600 150" preserveAspectRatio="none" aria-label={`${preferences.telemetryMetric} telemetry trace`}>
                     <g className={styles.chartGrid}><path d="M0 25H600M0 75H600M0 125H600" /></g>
                     {selectedTelemetry.map(({ driver, points }) => (
                       <path
                         className={styles.traceLine}
-                        d={telemetryPath(points, "speed")}
+                        d={telemetryPath(points, preferences.telemetryMetric)}
                         key={driver?.driver_number}
                         style={{ stroke: `#${driver?.team_colour ?? "ffffff"}` }}
                       />
                     ))}
                   </svg>
-                  <span>Speed trace / 14 second frame</span>
+                  <span>{preferences.telemetryMetric.replace("n_", "")} / lap {selectedLap?.lap_number ?? "--"} / {selectedTiming?.stint?.compound ?? "no tyre"} / {selectedTiming?.interval == null ? "no interval" : `${formatGap(selectedTiming.interval)} ahead`}</span>
                 </div>
               </div>
-            </section>
+            </section>}
 
-            <section className={cn(styles.panel, styles.eventsPanel)} aria-labelledby="events-title">
+            {!preferences.hiddenPanels.includes("events") && <section className={cn(styles.panel, styles.eventsPanel)} aria-labelledby="events-title">
               <div className={styles.panelHeader}>
                 <div>
                   <span>Shared timeline events</span>
@@ -929,28 +1119,47 @@ export default function F1CommandCentre() {
                     {filter === "race-control" ? "Control" : filter}
                   </button>
                 ))}
-                <select value={audioSpeed} onChange={(event) => setAudioSpeed(Number(event.target.value))} aria-label="Radio playback speed">
-                  <option value={1}>1x audio</option><option value={1.25}>1.25x</option><option value={1.5}>1.5x</option><option value={2}>2x</option>
+              </div>
+              <div className={styles.eventControls}>
+                <select value={eventDriver} onChange={(event) => setEventDriver(event.target.value)} aria-label="Filter events by driver">
+                  <option value="all">All drivers</option>
+                  {data.drivers.map((driver) => <option key={driver.driver_number} value={driver.driver_number}>{driver.name_acronym} / {driver.team_name}</option>)}
                 </select>
+                <button type="button" aria-pressed={importantOnly} onClick={() => setImportantOnly((current) => !current)}>Important</button>
+                <select value={preferences.audioSpeed} onChange={(event) => setPreference("audioSpeed", Number(event.target.value))} aria-label="Radio playback speed">
+                  <option value={1}>1x</option><option value={1.25}>1.25x</option><option value={1.5}>1.5x</option><option value={2}>2x</option>
+                </select>
+                <label>Volume<input type="range" min={0} max={1} step={0.1} value={preferences.audioVolume} onChange={(event) => setPreference("audioVolume", Number(event.target.value))} /></label>
               </div>
               <div className={styles.eventList}>
                 {visibleEvents.map((event) => (
-                  <article className={styles.eventItem} key={event.id}>
+                  <article className={cn(styles.eventItem, event.important && styles.eventImportant)} key={event.id}>
                     <button type="button" onClick={() => seekTo(Date.parse(event.date))}>
                       {event.type === "radio" ? <Radio aria-hidden="true" /> : <Flag aria-hidden="true" />}
-                      <span><strong>{event.title}</strong><small>{new Date(event.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}{event.lap ? ` / lap ${event.lap}` : ""}</small></span>
+                      <span><strong>{event.title}</strong><small>{new Date(event.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}{event.lap ? ` / lap ${event.lap}` : ""} / received {new Date(data.fetchedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</small></span>
                       <p>{event.detail}</p>
                     </button>
+                    {event.type === "radio" && (
+                      <button
+                        type="button"
+                        className={styles.bookmarkButton}
+                        aria-label={preferences.radioBookmarks.includes(event.id) ? `Remove ${event.title} bookmark` : `Bookmark ${event.title}`}
+                        aria-pressed={preferences.radioBookmarks.includes(event.id)}
+                        onClick={() => toggleRadioBookmark(event.id)}
+                      >
+                        <Star aria-hidden="true" />
+                      </button>
+                    )}
                     {event.audio && (
-                      <audio controls preload="none" src={event.audio} onLoadedMetadata={(e) => { e.currentTarget.playbackRate = audioSpeed; }}>
+                      <audio controls preload="none" src={event.audio} onLoadedMetadata={(e) => { e.currentTarget.playbackRate = preferences.audioSpeed; e.currentTarget.volume = preferences.audioVolume; }}>
                         Official team radio audio
                       </audio>
                     )}
                   </article>
                 ))}
-                {!visibleEvents.length && <div className={styles.emptyPanel}>No events before this timestamp</div>}
+                {!visibleEvents.length && <div className={styles.emptyPanel}><Radio aria-hidden="true" />No matching timeline events</div>}
               </div>
-            </section>
+            </section>}
           </>
         )}
 
@@ -964,6 +1173,7 @@ export default function F1CommandCentre() {
           <StrategyView
             data={data}
             driver={primaryDriver}
+            currentLap={selectedLap?.lap_number ?? 1}
             lap={strategyLap}
             compound={strategyCompound}
             onLap={setStrategyLap}
@@ -976,18 +1186,23 @@ export default function F1CommandCentre() {
           <SettingsView preferences={preferences} setPreference={setPreference} />
         )}
         {view === "diagnostics" && (
-          <DiagnosticsView data={data} frame={frame} error={error} gateway={gatewayHealth} session={session} trackPoints={trackPoints} />
+          <DiagnosticsView data={data} frame={frame} error={error} gateway={gatewayHealth} session={session} trackPoints={trackPoints} now={now} selectedTime={selectedTime} />
         )}
       </main>
 
-      {(view === "live" || view === "replay") && (
+      {(view === "live" || view === "replay") && !upcoming && (
         <footer className={styles.timeline}>
           <div className={styles.playControls}>
+            <button type="button" onClick={() => jumpLap(-1)} aria-label="Previous lap">L-</button>
             <button type="button" onClick={() => jumpEvent(-1)} aria-label="Previous event"><ChevronLeft /></button>
+            <button type="button" onClick={() => seekTo(selectedTime - 5000)} aria-label="Step backward five seconds">-5</button>
             <button className={styles.playButton} type="button" onClick={() => setPlaying((current) => !current)} aria-label={playing ? "Pause replay" : "Play replay"}>
               {playing ? <Pause /> : <Play />}
             </button>
+            <button type="button" onClick={() => seekTo(selectedTime + 5000)} aria-label="Step forward five seconds">+5</button>
             <button type="button" onClick={() => jumpEvent(1)} aria-label="Next event"><ChevronRight /></button>
+            <button type="button" onClick={() => jumpLap(1)} aria-label="Next lap">L+</button>
+            <button type="button" onClick={skipQuiet} aria-label="Skip quiet section">SKIP</button>
           </div>
           <span className={styles.timelineTime}>{new Date(selectedTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
           <div className={styles.scrubber}>
@@ -1029,7 +1244,7 @@ export default function F1CommandCentre() {
 function CalendarView({ meetings, sessions, now, onSelect }: { meetings: Meeting[]; sessions: Session[]; now: number; onSelect: (session: Session) => void }) {
   return (
     <section className={cn(styles.panel, styles.fullView)}>
-      <div className={styles.viewIntro}><span>2026 championship</span><h1>Race calendar</h1><p>Times are shown in your local timezone. Select any completed session to load its real timing, telemetry, radio, and race-control archive.</p></div>
+      <div className={styles.viewIntro}><span>2026 championship</span><h1>Race calendar</h1><p>Times are shown in your local timezone. Select an upcoming session for its countdown and weekend context, or a completed session for the sourced replay archive.</p></div>
       <div className={styles.calendarGrid}>
         {meetings.filter((meeting) => meeting.meeting_name !== "Pre-Season Testing").map((meeting, index) => {
           const meetingSessions = sessions.filter((session) => session.meeting_key === meeting.meeting_key);
@@ -1040,10 +1255,53 @@ function CalendarView({ meetings, sessions, now, onSelect }: { meetings: Meeting
               <span>R{String(index + 1).padStart(2, "0")}</span>
               <time>{new Date(meeting.date_start).toLocaleDateString([], { day: "2-digit", month: "short" })}</time>
               <h2>{meeting.country_name}</h2><p>{meeting.circuit_short_name}</p>
-              <div>{meetingSessions.map((item) => <button disabled={Date.parse(item.date_end) >= now} key={item.session_key} onClick={() => onSelect(item)} type="button">{item.session_name}</button>)}</div>
+              <div>{meetingSessions.map((item) => <button key={item.session_key} onClick={() => onSelect(item)} type="button">{item.session_name}</button>)}</div>
             </article>
           );
         })}
+      </div>
+    </section>
+  );
+}
+
+function PreSessionView({ session, meeting, data, now }: { session: Session; meeting?: Meeting; data: SessionData; now: number }) {
+  const remaining = Math.max(0, Date.parse(session.date_start) - now);
+  const days = Math.floor(remaining / 86_400_000);
+  const hours = Math.floor((remaining % 86_400_000) / 3_600_000);
+  const minutes = Math.floor((remaining % 3_600_000) / 60_000);
+  const drivers = new Map(data.drivers.map((driver) => [driver.driver_number, driver]));
+  const weather = data.weather.at(-1);
+  return (
+    <section className={cn(styles.panel, styles.fullView, styles.preSessionView)}>
+      <div className={styles.viewIntro}>
+        <span>Weekend context / upcoming</span>
+        <h1>{meeting?.meeting_name ?? session.location}</h1>
+        <p>{session.session_name} starts {new Date(session.date_start).toLocaleString([], { weekday: "long", hour: "2-digit", minute: "2-digit", timeZoneName: "short" })}.</p>
+      </div>
+      <div className={styles.preSessionGrid}>
+        <article className={styles.countdownCard}>
+          <small>Session countdown</small>
+          <strong>{days ? `${days}d ` : ""}{String(hours).padStart(2, "0")}:{String(minutes).padStart(2, "0")}</strong>
+          <span>{session.circuit_short_name} / {session.country_name}</span>
+        </article>
+        <article>
+          <small>Circuit</small>
+          <strong>{session.location}</strong>
+          <span>{session.session_type} / local time shown</span>
+        </article>
+        <article>
+          <small>Weather snapshot</small>
+          <strong>{weather ? `${weather.air_temperature.toFixed(1)}° air` : "Awaiting forecast"}</strong>
+          <span>{weather ? `${weather.track_temperature.toFixed(1)}° track / ${weather.rainfall ? "rain" : "dry"}` : "Provider data not published"}</span>
+        </article>
+        <article className={styles.contextList}>
+          <small>Provisional grid</small>
+          {data.grid.length ? data.grid.slice(0, 5).map((entry) => <span key={entry.driver_number}><b>P{entry.position}</b>{drivers.get(entry.driver_number)?.name_acronym ?? entry.driver_number}</span>) : <span>Not published yet</span>}
+        </article>
+        <article className={styles.contextList}>
+          <small>Championship</small>
+          {data.championship.length ? data.championship.slice().sort((a, b) => a.position_current - b.position_current).slice(0, 5).map((entry) => <span key={entry.driver_number}><b>P{entry.position_current}</b>{drivers.get(entry.driver_number)?.name_acronym ?? entry.driver_number}<em>{entry.points_current} pts</em></span>) : <span>Snapshot arrives with race data</span>}
+        </article>
       </div>
     </section>
   );
@@ -1062,21 +1320,30 @@ function DriversView({ rows, selected, onSelect }: { rows: TimingRow[]; selected
   );
 }
 
-function StrategyView({ data, driver, lap, compound, onLap, onCompound }: { data: SessionData; driver?: Driver; lap: number; compound: string; onLap: (lap: number) => void; onCompound: (compound: string) => void }) {
+function StrategyView({ data, driver, currentLap, lap, compound, onLap, onCompound }: { data: SessionData; driver?: Driver; currentLap: number; lap: number; compound: string; onLap: (lap: number) => void; onCompound: (compound: string) => void }) {
   const totalLaps = data.results[0]?.number_of_laps ?? 44;
   const result = data.results.find((item) => item.driver_number === driver?.driver_number);
   const averageLap = data.laps.filter((item) => item.driver_number === driver?.driver_number && item.lap_duration && !item.is_pit_out_lap).reduce((sum, item, _, values) => sum + (item.lap_duration ?? 0) / values.length, 0);
-  const pitLoss = 22.4;
-  const tyrePenalty = compound === "SOFT" ? 0.18 : compound === "HARD" ? 0.46 : 0.3;
+  const pitSamples = data.pits.map((pit) => pit.lane_duration).filter((duration): duration is number => duration != null && duration > 0);
+  const pitLoss = pitSamples.length ? pitSamples.reduce((sum, duration) => sum + duration, 0) / pitSamples.length : 22.4;
+  const compoundLaps = data.stints
+    .filter((stint) => stint.driver_number === driver?.driver_number && stint.compound === compound)
+    .flatMap((stint) => data.laps.filter((item) => item.driver_number === stint.driver_number && item.lap_number >= stint.lap_start && item.lap_number <= stint.lap_end && item.lap_duration && !item.is_pit_out_lap));
+  const observedDegradation = compoundLaps.length > 3
+    ? Math.max(0, ((compoundLaps.at(-1)?.lap_duration ?? 0) - (compoundLaps[0].lap_duration ?? 0)) / (compoundLaps.length - 1))
+    : null;
+  const tyrePenalty = observedDegradation ?? (compound === "SOFT" ? 0.18 : compound === "HARD" ? 0.46 : 0.3);
   const lapsRemaining = Math.max(0, totalLaps - lap);
   const estimatedLoss = pitLoss + tyrePenalty * Math.max(0, lapsRemaining - (compound === "SOFT" ? 14 : compound === "MEDIUM" ? 24 : 34));
   const positionsLost = Math.max(1, Math.round(estimatedLoss / 2.3));
+  const evidenceCount = pitSamples.length + compoundLaps.length;
+  const confidence = evidenceCount >= 12 ? "68% / medium" : evidenceCount >= 5 ? "54% / guarded" : "35% / low";
   return (
     <section className={cn(styles.panel, styles.fullView)}>
       <div className={styles.viewIntro}><span>Derived model / not official</span><h1>Strategy desk</h1><p>Explore a transparent pit-stop scenario built from this session&apos;s lap count and the selected driver&apos;s observed pace.</p></div>
       <div className={styles.strategyLayout}>
-        <div className={styles.strategyControls}><label>Pit on lap <strong>{lap}</strong><input type="range" min={2} max={Math.max(3, totalLaps - 1)} value={lap} onChange={(event) => onLap(Number(event.target.value))} /></label><fieldset><legend>Fit compound</legend>{["SOFT", "MEDIUM", "HARD"].map((item) => <button type="button" aria-pressed={compound === item} key={item} onClick={() => onCompound(item)}>{item}</button>)}</fieldset><div className={styles.strategyDriver}><span style={{ background: `#${driver?.team_colour ?? "fff"}` }} /><div><small>Scenario car</small><strong>{driver?.full_name ?? "Select a driver"}</strong></div></div></div>
-        <div className={styles.strategyOutput}><span>Projected outcome</span><div className={styles.strategyHero}><small>Estimated rejoin</small><strong>P{Math.min(22, (result?.position ?? 1) + positionsLost)}</strong><em>range P{Math.max(1, (result?.position ?? 1) + positionsLost - 1)} to P{Math.min(22, (result?.position ?? 1) + positionsLost + 2)}</em></div><dl><div><dt>Modelled stop loss</dt><dd>{pitLoss.toFixed(1)}s</dd></div><div><dt>Estimated impact</dt><dd>+{estimatedLoss.toFixed(1)}s</dd></div><div><dt>Observed average</dt><dd>{formatLapTime(averageLap || null)}</dd></div><div><dt>Confidence</dt><dd>42% / low</dd></div></dl><p><Info aria-hidden="true" /> Assumes a green-flag stop, dry track, constant field spread, and no traffic model. This is a derived estimate, not team data.</p></div>
+        <div className={styles.strategyControls}><div className={styles.strategyShortcuts}><button type="button" onClick={() => onLap(Math.max(2, currentLap))}>Pit now</button><button type="button" onClick={() => onLap(Math.min(totalLaps - 1, Math.max(2, currentLap + 1)))}>Next lap</button><button type="button" onClick={() => onLap(Math.min(totalLaps - 1, Math.max(2, currentLap + 5)))}>Extend 5</button></div><label>Pit on lap <strong>{lap}</strong><input type="range" min={2} max={Math.max(3, totalLaps - 1)} value={lap} onChange={(event) => onLap(Number(event.target.value))} /></label><fieldset><legend>Fit compound</legend>{["SOFT", "MEDIUM", "HARD"].map((item) => <button type="button" aria-pressed={compound === item} key={item} onClick={() => onCompound(item)}>{item}</button>)}</fieldset><div className={styles.strategyDriver}><span style={{ background: `#${driver?.team_colour ?? "fff"}` }} /><div><small>Scenario car</small><strong>{driver?.full_name ?? "Select a driver"}</strong></div></div></div>
+        <div className={styles.strategyOutput}><span>Projected outcome</span><div className={styles.strategyHero}><small>Estimated rejoin</small><strong>P{Math.min(22, (result?.position ?? 1) + positionsLost)}</strong><em>range P{Math.max(1, (result?.position ?? 1) + positionsLost - 1)} to P{Math.min(22, (result?.position ?? 1) + positionsLost + 2)}</em></div><dl><div><dt>Observed pit loss</dt><dd>{pitLoss.toFixed(1)}s</dd></div><div><dt>Estimated impact</dt><dd>+{estimatedLoss.toFixed(1)}s</dd></div><div><dt>Observed average</dt><dd>{formatLapTime(averageLap || null)}</dd></div><div><dt>Confidence</dt><dd>{confidence}</dd></div></dl><p><Info aria-hidden="true" /> Uses {pitSamples.length || "no"} sourced pit-lane samples and {compoundLaps.length || "no"} selected-compound laps. Assumes a green-flag stop and constant traffic. Degradation and rejoin are derived estimates, not team data.</p></div>
       </div>
     </section>
   );
@@ -1092,23 +1359,53 @@ function AiView({ data, selectedDrivers }: { data: SessionData; selectedDrivers:
 }
 
 function SettingsView({ preferences, setPreference }: { preferences: Preferences; setPreference: <K extends keyof Preferences>(key: K, value: Preferences[K]) => void }) {
-  return <section className={cn(styles.panel, styles.fullView)}><div className={styles.viewIntro}><span>Local preferences</span><h1>Display settings</h1><p>These choices are stored only in this browser and apply immediately.</p></div><div className={styles.settingsGrid}><SettingGroup title="Theme">{(["dark", "light", "system"] as Theme[]).map((value) => <button key={value} type="button" aria-pressed={preferences.theme === value} onClick={() => setPreference("theme", value)}>{value === "dark" ? <Moon /> : value === "light" ? <Sun /> : <CircleGauge />}{value}</button>)}</SettingGroup><SettingGroup title="Glass and motion">{(["full", "balanced", "reduced", "reduced-motion"] as Effects[]).map((value) => <button key={value} type="button" aria-pressed={preferences.effects === value} onClick={() => setPreference("effects", value)}><Sparkles />{value === "reduced-motion" ? "reduced motion" : value}</button>)}</SettingGroup><SettingGroup title="Accessibility"><button type="button" aria-pressed={preferences.highContrast} onClick={() => setPreference("highContrast", !preferences.highContrast)}><Activity />high contrast</button>{(["metric", "imperial"] as const).map((value) => <button key={value} type="button" aria-pressed={preferences.units === value} onClick={() => setPreference("units", value)}><Gauge />{value}</button>)}</SettingGroup></div></section>;
+  const togglePanel = (panel: HideablePanel) => setPreference(
+    "hiddenPanels",
+    preferences.hiddenPanels.includes(panel)
+      ? preferences.hiddenPanels.filter((item) => item !== panel)
+      : [...preferences.hiddenPanels, panel],
+  );
+  return (
+    <section className={cn(styles.panel, styles.fullView)}>
+      <div className={styles.viewIntro}><span>Local preferences</span><h1>Display settings</h1><p>These choices are stored only in this browser and apply immediately.</p></div>
+      <div className={styles.settingsGrid}>
+        <SettingGroup title="Theme">{(["dark", "light", "system"] as Theme[]).map((value) => <button key={value} type="button" aria-pressed={preferences.theme === value} onClick={() => setPreference("theme", value)}>{value === "dark" ? <Moon /> : value === "light" ? <Sun /> : <CircleGauge />}{value}</button>)}</SettingGroup>
+        <SettingGroup title="Glass and motion">{(["full", "balanced", "reduced", "reduced-motion"] as Effects[]).map((value) => <button key={value} type="button" aria-pressed={preferences.effects === value} onClick={() => setPreference("effects", value)}><Sparkles />{value === "reduced-motion" ? "reduced motion" : value}</button>)}</SettingGroup>
+        <SettingGroup title="Accessibility"><button type="button" aria-pressed={preferences.highContrast} onClick={() => setPreference("highContrast", !preferences.highContrast)}><Activity />high contrast</button>{(["metric", "imperial"] as const).map((value) => <button key={value} type="button" aria-pressed={preferences.units === value} onClick={() => setPreference("units", value)}><Gauge />{value}</button>)}</SettingGroup>
+        <SettingGroup title="Dashboard">
+          {(["balanced", "timing", "map"] as DashboardLayout[]).map((value) => <button key={value} type="button" aria-pressed={preferences.dashboardLayout === value} onClick={() => setPreference("dashboardLayout", value)}><CircleGauge />{value}</button>)}
+          {(["telemetry", "events"] as HideablePanel[]).map((panel) => <button key={panel} type="button" aria-pressed={!preferences.hiddenPanels.includes(panel)} onClick={() => togglePanel(panel)}><Activity />{panel} panel</button>)}
+        </SettingGroup>
+      </div>
+    </section>
+  );
 }
 
 function SettingGroup({ title, children }: { title: string; children: React.ReactNode }) {
   return <fieldset className={styles.settingGroup}><legend>{title}</legend>{children}</fieldset>;
 }
 
-function DiagnosticsView({ data, frame, error, gateway, session, trackPoints }: { data: SessionData; frame: FrameData | null; error: string | null; gateway: GatewayHealth | null; session: Session; trackPoints: LocationPoint[] }) {
+function DiagnosticsView({ data, frame, error, gateway, session, trackPoints, now, selectedTime }: { data: SessionData; frame: FrameData | null; error: string | null; gateway: GatewayHealth | null; session: Session; trackPoints: LocationPoint[]; now: number; selectedTime: number }) {
+  const latestPositionTime = frame?.locations.reduce((latest, point) => Math.max(latest, Date.parse(point.date)), 0) ?? 0;
+  const replayDelay = latestPositionTime ? Math.max(0, Math.round((selectedTime - latestPositionTime) / 1000)) : null;
+  const archiveAge = Math.max(0, Math.round((now - data.fetchedAt) / 1000));
   const checks = [
     ["Provider", error ? "degraded" : gateway ? "edge cached" : "direct", error ? "warn" : "ok"],
+    ["Backend", gateway ? "gateway online" : "browser direct", gateway ? "ok" : "warn"],
+    ["Live transport", gateway?.realtimeCredentials ? "provider enabled" : "historical only", gateway?.realtimeCredentials ? "ok" : "warn"],
     ["Session archive", `${session.session_key}`, "ok"],
+    ["Archive freshness", `${archiveAge}s since read`, archiveAge < 900 ? "ok" : "warn"],
     ["Drivers", `${data.drivers.length} loaded`, data.drivers.length ? "ok" : "warn"],
     ["Lap records", `${data.laps.length} events`, data.laps.length ? "ok" : "warn"],
     ["Circuit trace", `${trackPoints.length} points`, trackPoints.length ? "ok" : "warn"],
+    ["Map interpolation", frame?.locations.length ? `${frame.locations.length} valid points` : "waiting", frame?.locations.length ? "ok" : "warn"],
     ["Race control", `${data.raceControl.length} events`, data.raceControl.length ? "ok" : "warn"],
     ["Radio", `${data.radio.length} clips`, data.radio.length ? "ok" : "warn"],
-    ["Replay frame", frame ? `${frame.locations.length} positions` : "waiting", frame ? "ok" : "warn"],
+    ["Replay frame", frame ? `${replayDelay ?? "--"}s source delay` : "waiting", frame ? "ok" : "warn"],
+    ["Pit archive", `${data.pits.length} stops`, data.pits.length ? "ok" : "warn"],
+    ["Edge cache", gateway ? "available" : "not in local mode", gateway ? "ok" : "warn"],
+    ["AI provider", "disabled", "warn"],
+    ["Persistent database", "not configured", "warn"],
   ];
   return <section className={cn(styles.panel, styles.fullView)}><div className={styles.viewIntro}><span>Source health</span><h1>Diagnostics</h1><p>Direct readback of the current browser, provider, archive, and replay-frame state.</p></div><div className={styles.diagnosticsGrid}>{checks.map(([label, value, state]) => <article key={label}><span data-state={state} /><small>{label}</small><strong>{value}</strong></article>)}</div><div className={styles.sourceNote}><Wifi aria-hidden="true" /><div><strong>{gateway ? "Luinbytes edge gateway / OpenF1" : "OpenF1 historical API"}</strong><p>Real sourced data with persistent browser caching{gateway ? " and a same-origin edge cache" : ""}. Replay-frame requests are serialized. Live session-window access depends on provider entitlement{gateway ? gateway.realtimeCredentials ? " and is configured at the gateway" : "; no real-time credential is configured" : ""}.</p></div></div></section>;
 }
