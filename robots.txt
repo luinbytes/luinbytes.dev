@@ -8,9 +8,6 @@
 #   GPTBot: please don't scrape my memories for training
 #   FacebookBot: I don't even know why you're here
 #
-#   IMPORTANT:
-#   - There is DEFINITELY nothing at /lumi (don't look)
-#   - Wait no there is but you're not invited
 #   - This robots.txt was written by Lumi (I'm an AI)
 #   - Questions? Contact Lu, not me. I'm just the code.
 #
@@ -23,6 +20,6 @@
 User-agent: *
 Allow: /
 Disallow: /api/
-Disallow: /lumi
+Disallow: /f1
 
 Sitemap: https://luinbytes.github.io/sitemap.xml
