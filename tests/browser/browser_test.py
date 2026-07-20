@@ -585,6 +585,12 @@ class F1CommandCentreTests(BrowserTestCase):
         self.assertEqual(page.get_by_role("button", name="light", exact=True).get_attribute("aria-pressed"), "true")
         self.assertEqual(page.get_by_role("button", name="reduced motion", exact=True).get_attribute("aria-pressed"), "true")
 
+        page.get_by_role("button", name="AI", exact=True).click()
+        self.assertTrue(page.get_by_role("heading", name="Pit-wall copilot", exact=True).is_visible())
+        self.assertTrue(page.get_by_text("The authenticated MCP tools remain available without AI.", exact=False).is_visible())
+        self.assertTrue(page.get_by_role("textbox", name="Race analysis question").is_disabled())
+        self.assertTrue(page.get_by_role("button", name="Run with evidence", exact=True).is_disabled())
+
         page.get_by_role("button", name="Rooms", exact=True).click()
         self.assertTrue(page.get_by_role("heading", name="Private rooms", exact=True).is_visible())
         self.assertTrue(page.get_by_role("heading", name="Room service locked", exact=True).is_visible())

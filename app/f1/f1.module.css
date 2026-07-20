@@ -1576,13 +1576,15 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
-  max-width: 920px;
+  max-width: 1180px;
 }
 
 .roomCreate,
 .roomJoin,
 .roomSummary,
-.roomMembers {
+.roomMembers,
+.predictionComposer,
+.predictionBoard {
   min-height: 230px;
   padding: 26px;
   border: 1px solid var(--f1-line-strong);
@@ -1618,6 +1620,11 @@
 .roomSummary > div { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .roomSummary button { display: inline-flex; align-items: center; gap: 7px; }
 .roomSummary button svg { width: 15px; }
+.roomSummary button[aria-pressed="true"] { color: var(--f1-amber); border-color: color-mix(in srgb, var(--f1-amber) 45%, transparent); }
+.roomReactions { display: flex; gap: 6px; }
+.roomReactions button { width: 44px; min-height: 44px; justify-content: center; padding: 0; font-size: 17px; }
+.reactionFeed { display: flex; flex-wrap: wrap; gap: 5px; }
+.reactionFeed button { min-height: 32px; padding: 0 9px; color: var(--f1-muted); border: 1px solid var(--f1-line); border-radius: 999px; background: transparent; font-size: 10px; cursor: pointer; }
 
 .roomMembers { display: grid; align-content: start; gap: 8px; }
 .roomMembers article { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--f1-line); border-radius: 15px; }
@@ -1627,14 +1634,49 @@
 .roomMembers article small { color: var(--f1-muted); font-size: 9px; text-transform: capitalize; }
 .roomError { max-width: 920px; margin: 12px 0 0; color: var(--f1-red); font-size: 12px; }
 
+.predictionComposer,
+.predictionBoard { display: grid; align-content: start; gap: 9px; }
+.predictionComposer > span,
+.predictionBoard > span { color: var(--f1-muted); font: 650 10px/1 var(--font-space-mono), monospace; letter-spacing: 0.04em; text-transform: uppercase; }
+.predictionComposer select,
+.predictionComposer input:not([type="range"]) { min-height: 40px; padding: 0 12px; color: var(--f1-white); border: 1px solid var(--f1-line); border-radius: 11px; background: color-mix(in srgb, var(--f1-bg) 62%, transparent); font-size: 11px; }
+.predictionComposer label { display: grid; grid-template-columns: 1fr auto; gap: 7px; color: var(--f1-muted); font-size: 10px; }
+.predictionComposer label input { grid-column: 1 / -1; width: 100%; accent-color: var(--f1-cyan); }
+.predictionComposer button,
+.predictionBoard button { justify-self: start; min-height: 44px; padding: 0 13px; color: var(--f1-white); border: 1px solid var(--f1-line); border-radius: 11px; background: color-mix(in srgb, var(--f1-cyan) 10%, transparent); font: 600 8px/1 var(--font-space-mono), monospace; text-transform: uppercase; cursor: pointer; }
+.predictionComposer button:disabled { opacity: 0.45; cursor: not-allowed; }
+.predictionBoard { max-height: 420px; overflow: auto; }
+.predictionBoard > p { color: var(--f1-muted); font-size: 11px; }
+.predictionBoard article { display: grid; gap: 7px; padding: 12px; border: 1px solid var(--f1-line); border-radius: 13px; }
+.predictionBoard article > div { display: flex; justify-content: space-between; gap: 8px; }
+.predictionBoard article strong { font-size: 11px; }
+.predictionBoard article small { color: var(--f1-faint); font-size: 8px; }
+.predictionBoard article p { margin: 0; font: 650 18px/1.2 var(--font-space-mono), monospace; }
+.predictionBoard article em { color: var(--f1-muted); font-size: 10px; line-height: 1.4; }
+.predictionBoard article b { color: var(--f1-lime); font-size: 9px; }
+.predictionBoard ol { display: grid; gap: 5px; margin: 4px 0 0; padding: 10px; border-top: 1px solid var(--f1-line); list-style-position: inside; }
+.predictionBoard li { display: flex; justify-content: space-between; gap: 10px; color: var(--f1-muted); font-size: 10px; }
+.predictionBoard li strong { color: var(--f1-lime); }
+
 .aiPrompt > svg { width: 30px; color: var(--f1-cyan); }
 .aiPrompt h2 { margin: 15px 0; }
+.aiPrompt select { width: 100%; min-height: 40px; margin-bottom: 8px; padding: 0 12px; color: var(--f1-white); border: 1px solid var(--f1-line); border-radius: 10px; background: var(--f1-bg); font: 600 9px/1 var(--font-space-mono), monospace; text-transform: uppercase; }
 .aiPrompt textarea { width: 100%; min-height: 110px; resize: vertical; padding: 14px; color: var(--f1-white); border: 1px solid var(--f1-line); border-radius: 12px; background: var(--f1-bg); font: 500 12px/1.5 var(--font-space-mono), monospace; }
 .aiPrompt button { margin-top: 10px; }
 .aiContract { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; align-content: start; }
 .aiContract > span { grid-column: 1 / -1; margin-bottom: 10px; }
 .aiContract p { display: flex; align-items: center; gap: 8px; margin: 0; padding: 12px; color: var(--f1-muted); border: 1px solid var(--f1-line); border-radius: 10px; font-size: 11px; }
 .aiContract i { width: 6px; height: 6px; border-radius: 50%; background: var(--f1-lime); box-shadow: 0 0 8px var(--f1-lime); }
+.aiResult { max-height: 62vh; overflow: auto; padding: 24px; border: 1px solid var(--f1-line); border-radius: 18px; background: color-mix(in srgb, var(--f1-panel-solid) 72%, transparent); }
+.aiResult > span { color: var(--f1-cyan); font: 600 8px/1 var(--font-space-mono), monospace; text-transform: uppercase; }
+.aiResult h2 { margin: 12px 0 8px; font-size: 24px; }
+.aiResult > p, .aiResult li { color: var(--f1-muted); font-size: 12px; line-height: 1.55; }
+.aiResult dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; margin: 18px 0; background: var(--f1-line); }
+.aiResult dl div { padding: 12px; background: var(--f1-panel-solid); }
+.aiResult dt { color: var(--f1-faint); font: 600 7px/1 var(--font-space-mono), monospace; text-transform: uppercase; }
+.aiResult dd { margin: 7px 0 0; font: 600 13px/1 var(--font-space-mono), monospace; }
+.aiResult h3 { margin: 18px 0 6px; font-size: 12px; }
+.aiResult ul { margin: 0; padding-left: 18px; }
 
 .settingsGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 .settingGroup { display: flex; flex-direction: column; gap: 7px; margin: 0; padding: 20px; border: 1px solid var(--f1-line); border-radius: 16px; }

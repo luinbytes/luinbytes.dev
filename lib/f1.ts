@@ -12,6 +12,8 @@ export interface GatewayHealth {
   upstream: string;
   realtimeCredentials: boolean;
   roomsConfigured: boolean;
+  aiProviders: string[];
+  mcpConfigured: boolean;
   checkedAt: string;
 }
 

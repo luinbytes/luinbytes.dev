@@ -1405,7 +1405,7 @@ export default function F1CommandCentre() {
           selectedDrivers={selectedDrivers}
           onRemoteState={applyRoomState}
         />
-        {view === "ai" && <AiView data={data} selectedDrivers={selectedDrivers} />}
+        {view === "ai" && <AiView data={data} sessionKey={session.session_key} selectedDrivers={selectedDrivers} selectedTime={selectedTime} gateway={gatewayHealth} />}
         {view === "settings" && (
           <SettingsView preferences={preferences} setPreference={setPreference} data={data} />
         )}
@@ -1612,10 +1612,52 @@ interface RoomConnection {
   inviteExpiresAt?: string;
 }
 
+interface RoomReaction {
+  id: string;
+  emoji: "🔥" | "👀" | "😮" | "🏁";
+  email: string;
+  selectedTime: number;
+  createdAt: string;
+}
+
+interface RoomPrediction {
+  id: string;
+  sessionKey?: number;
+  market: "race-winner" | "safety-car" | "fastest-lap" | "next-pit";
+  choice: string;
+  confidence: number;
+  assumption: string;
+  email: string;
+  createdAt: string;
+  lockAt: string;
+  result: string | null;
+  score: number | null;
+}
+
+interface RoomSocial {
+  readOnly: boolean;
+  reactions: RoomReaction[];
+  predictions: RoomPrediction[];
+  leaderboard: Array<{ email: string; score: number; resolved: number }>;
+}
+
+const EMPTY_ROOM_SOCIAL: RoomSocial = { readOnly: false, reactions: [], predictions: [], leaderboard: [] };
+const PREDICTION_MARKETS: Array<{ value: RoomPrediction["market"]; label: string }> = [
+  { value: "race-winner", label: "Race winner" },
+  { value: "safety-car", label: "Safety car" },
+  { value: "fastest-lap", label: "Fastest lap" },
+  { value: "next-pit", label: "Next driver to pit" },
+];
+
 function RoomsView({ visible, enabled, sessionKey, selectedTime, selectedDrivers, onRemoteState }: { visible: boolean; enabled: boolean; sessionKey: number; selectedTime: number; selectedDrivers: number[]; onRemoteState: (time: number, drivers: number[], sessionKey: number) => void }) {
   const [connection, setConnection] = useState<RoomConnection | null>(null);
   const [members, setMembers] = useState<RoomMember[]>([]);
+  const [social, setSocial] = useState<RoomSocial>(EMPTY_ROOM_SOCIAL);
   const [joinCode, setJoinCode] = useState("");
+  const [predictionMarket, setPredictionMarket] = useState<RoomPrediction["market"]>("race-winner");
+  const [predictionChoice, setPredictionChoice] = useState("");
+  const [predictionAssumption, setPredictionAssumption] = useState("");
+  const [predictionConfidence, setPredictionConfidence] = useState(60);
   const [roomStatus, setRoomStatus] = useState<"idle" | "connecting" | "connected" | "error">("idle");
   const [roomError, setRoomError] = useState<string | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
@@ -1625,6 +1667,7 @@ function RoomsView({ visible, enabled, sessionKey, selectedTime, selectedDrivers
   const intentionalClose = useRef(false);
   const lastSentAt = useRef(0);
   const pendingSend = useRef<number | null>(null);
+  const pendingPrediction = useRef<{ market: RoomPrediction["market"]; choice: string } | null>(null);
 
   const connect = useCallback(async (next: RoomConnection) => {
     intentionalClose.current = false;
@@ -1635,11 +1678,12 @@ function RoomsView({ visible, enabled, sessionKey, selectedTime, selectedDrivers
       const body = await response.json().catch(() => null) as { error?: string } | null;
       throw new Error(body?.error ?? `Room connection failed (${response.status})`);
     }
-    const snapshot = await response.json() as { role: RoomConnection["role"]; members: RoomMember[]; state: { sessionKey: number | null; selectedTime: number | null; selectedDrivers: number[] }; socketTicket: string; inviteExpiresAt?: string };
+    const snapshot = await response.json() as { role: RoomConnection["role"]; members: RoomMember[]; state: { sessionKey: number | null; selectedTime: number | null; selectedDrivers: number[] }; social?: RoomSocial; socketTicket: string; inviteExpiresAt?: string };
     if (!snapshot.socketTicket) throw new Error("Room socket authorization was not issued");
     const resolved = { ...next, role: snapshot.role, inviteExpiresAt: snapshot.inviteExpiresAt };
     setConnection(resolved);
     setMembers(snapshot.members);
+    setSocial(snapshot.social ?? EMPTY_ROOM_SOCIAL);
     if (snapshot.state.sessionKey && snapshot.state.selectedTime) onRemoteState(snapshot.state.selectedTime, snapshot.state.selectedDrivers, snapshot.state.sessionKey);
     sessionStorage.setItem("f1-room", JSON.stringify(resolved));
     if (window.location.hash.startsWith("#room=")) window.history.replaceState(null, "", window.location.pathname);
@@ -1649,15 +1693,26 @@ function RoomsView({ visible, enabled, sessionKey, selectedTime, selectedDrivers
     socketRef.current = socket;
     socket.addEventListener("open", () => setRoomStatus("connected"));
     socket.addEventListener("message", (event) => {
-      let message: { type?: string; members?: RoomMember[]; state?: { sessionKey: number | null; selectedTime: number | null; selectedDrivers: number[] } };
+      let message: { type?: string; error?: string; members?: RoomMember[]; state?: { sessionKey: number | null; selectedTime: number | null; selectedDrivers: number[] }; social?: RoomSocial };
       try {
         message = JSON.parse(String(event.data)) as typeof message;
       } catch {
         setRoomError("The room sent an unreadable update.");
         return;
       }
+      if (message.type === "room-error") {
+        setRoomError(message.error ?? "The room rejected that action.");
+        return;
+      }
       if (message.type !== "room-state") return;
       setMembers(message.members ?? []);
+      setSocial(message.social ?? EMPTY_ROOM_SOCIAL);
+      if (pendingPrediction.current && message.social?.predictions.some((prediction) => prediction.market === pendingPrediction.current?.market && prediction.choice === pendingPrediction.current?.choice)) {
+        pendingPrediction.current = null;
+        setPredictionChoice("");
+        setPredictionAssumption("");
+        setRoomError(null);
+      }
       if (message.state?.sessionKey && message.state.selectedTime) {
         remoteSignature.current = `${message.state.sessionKey}:${message.state.selectedTime}:${message.state.selectedDrivers.join(",")}`;
         onRemoteState(message.state.selectedTime, message.state.selectedDrivers, message.state.sessionKey);
@@ -1765,6 +1820,7 @@ function RoomsView({ visible, enabled, sessionKey, selectedTime, selectedDrivers
     sessionStorage.removeItem("f1-room");
     setConnection(null);
     setMembers([]);
+    setSocial(EMPTY_ROOM_SOCIAL);
     setRoomStatus("idle");
     setRoomError(null);
     window.history.replaceState(null, "", window.location.pathname);
@@ -1791,6 +1847,40 @@ function RoomsView({ visible, enabled, sessionKey, selectedTime, selectedDrivers
     await navigator.clipboard.writeText(url.toString());
   };
 
+  const sendRoomMessage = (message: Record<string, unknown>) => {
+    const socket = socketRef.current;
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+      setRoomError("The room is reconnecting. Try again in a moment.");
+      return false;
+    }
+    socket.send(JSON.stringify(message));
+    return true;
+  };
+
+  const react = (emoji: RoomReaction["emoji"]) => {
+    sendRoomMessage({ type: "reaction", emoji, selectedTime });
+  };
+
+  const submitPrediction = () => {
+    const choice = predictionChoice.trim();
+    const assumption = predictionAssumption.trim();
+    if (!choice || !assumption) {
+      setRoomError("Add both a prediction and the assumption behind it.");
+      return;
+    }
+    if (sendRoomMessage({
+      type: "prediction",
+      sessionKey,
+      market: predictionMarket,
+      choice,
+      confidence: predictionConfidence / 100,
+      assumption,
+    })) {
+      pendingPrediction.current = { market: predictionMarket, choice };
+      setRoomError(null);
+    }
+  };
+
   if (!visible) return null;
 
   return (
@@ -1800,8 +1890,10 @@ function RoomsView({ visible, enabled, sessionKey, selectedTime, selectedDrivers
         <div className={styles.lockedFeature}><ShieldCheck aria-hidden="true" /><h2>Room service locked</h2><p>The room worker is ready, but it stays closed until Cloudflare Access is configured for this route.</p><button type="button" disabled>Create private room</button></div>
       ) : connection ? (
         <div className={styles.roomActive}>
-          <div className={styles.roomSummary}><span>Connected room</span><strong>{connection.roomId}</strong><p>{roomStatus === "connected" ? "Replay and driver selection are synchronized." : roomStatus === "connecting" ? "Reconnecting shared race state..." : "Room connection needs attention."}</p><div><button type="button" onClick={copyInvite}><Copy aria-hidden="true" />Copy invite link</button>{connection.role === "owner" && <button type="button" onClick={rotateInvite}><ShieldCheck aria-hidden="true" />Rotate invite</button>}<button type="button" onClick={leaveRoom}><LogOut aria-hidden="true" />Leave room</button></div></div>
+          <div className={styles.roomSummary}><span>Connected room</span><strong>{connection.roomId}</strong><p>{roomStatus === "connected" ? `Replay, selections, reactions, and predictions are synchronized${social.readOnly ? " in read-only mode" : ""}.` : roomStatus === "connecting" ? "Reconnecting shared race state..." : "Room connection needs attention."}</p><div><button type="button" onClick={copyInvite}><Copy aria-hidden="true" />Copy invite link</button>{connection.role === "owner" && <><button type="button" onClick={rotateInvite}><ShieldCheck aria-hidden="true" />Rotate invite</button><button type="button" aria-pressed={social.readOnly} onClick={() => sendRoomMessage({ type: "room-mode", readOnly: !social.readOnly })}>{social.readOnly ? "Enable participation" : "Make read-only"}</button></>}<button type="button" onClick={leaveRoom}><LogOut aria-hidden="true" />Leave room</button></div><div className={styles.roomReactions} aria-label="Room reactions">{(["🔥", "👀", "😮", "🏁"] as const).map((emoji) => <button type="button" key={emoji} aria-label={`React ${emoji}`} disabled={social.readOnly && connection.role !== "owner"} onClick={() => react(emoji)}>{emoji}</button>)}</div>{social.reactions.length > 0 && <div className={styles.reactionFeed}>{social.reactions.slice(-4).reverse().map((reaction) => <button type="button" key={reaction.id} title="Jump to this reaction" onClick={() => onRemoteState(reaction.selectedTime, selectedDrivers, sessionKey)}>{reaction.emoji} {reaction.email.split("@")[0]}</button>)}</div>}</div>
           <div className={styles.roomMembers}><span>People here / {members.length}</span>{members.map((member) => <article key={member.email}><Users aria-hidden="true" /><div><strong>{member.email}</strong><small>{member.role}</small></div></article>)}</div>
+          <div className={styles.predictionComposer}><span>Shared prediction / server locks in 5 minutes</span><select aria-label="Prediction market" value={predictionMarket} onChange={(event) => setPredictionMarket(event.target.value as RoomPrediction["market"])}>{PREDICTION_MARKETS.map((market) => <option key={market.value} value={market.value}>{market.label}</option>)}</select><input aria-label="Prediction choice" value={predictionChoice} onChange={(event) => setPredictionChoice(event.target.value)} placeholder="VER, yes, Ferrari..." maxLength={60} /><input aria-label="Prediction assumption" value={predictionAssumption} onChange={(event) => setPredictionAssumption(event.target.value)} placeholder="Because the tyre offset is..." maxLength={240} /><label>Confidence <strong>{predictionConfidence}%</strong><input aria-label="Prediction confidence" type="range" min={0} max={100} value={predictionConfidence} onChange={(event) => setPredictionConfidence(Number(event.target.value))} /></label><button type="button" disabled={(social.readOnly && connection.role !== "owner") || roomStatus !== "connected"} onClick={submitPrediction}>Lock prediction</button></div>
+          <div className={styles.predictionBoard}><span>Predictions / {social.predictions.length}</span>{social.predictions.slice().reverse().map((prediction) => <article key={prediction.id}><div><strong>{PREDICTION_MARKETS.find((market) => market.value === prediction.market)?.label}</strong><small>{prediction.email} / {Math.round(prediction.confidence * 100)}%</small></div><p>{prediction.choice}</p><em>{prediction.assumption}</em>{prediction.result != null && <b>{prediction.score ? `+${prediction.score} points` : `Result: ${prediction.result}`}</b>}{connection.role === "owner" && prediction.result == null && <button type="button" disabled={Date.parse(prediction.lockAt) > Date.now()} onClick={() => sendRoomMessage({ type: "resolve-prediction", market: prediction.market, result: prediction.choice })}>{Date.parse(prediction.lockAt) > Date.now() ? "Waiting for lock" : "Resolve as correct"}</button>}</article>)}{!social.predictions.length && <p>No predictions locked yet.</p>}{social.leaderboard.length > 0 && <ol aria-label="Room prediction leaderboard">{social.leaderboard.map((entry) => <li key={entry.email}><span>{entry.email}</span><strong>{entry.score} season pts</strong></li>)}</ol>}</div>
         </div>
       ) : (
         <div className={styles.roomLobby}>
@@ -1814,9 +1906,68 @@ function RoomsView({ visible, enabled, sessionKey, selectedTime, selectedDrivers
   );
 }
 
-function AiView({ data, selectedDrivers }: { data: SessionData; selectedDrivers: number[] }) {
+interface AiAnalysisResponse {
+  provider: string;
+  model: string;
+  analysis: {
+    answer: string;
+    facts: string[];
+    inferences: string[];
+    evidenceReferences: string[];
+    confidence: number;
+    assumptions: string[];
+  };
+  context: {
+    sessionTimestamp: string;
+    currentLap: number;
+    freshnessSeconds: number;
+    driversConsidered: string[];
+  };
+  verification: {
+    checked: boolean;
+    evidenceMatched: number;
+    unsupportedClaims: string[];
+  };
+}
+
+function AiView({ data, sessionKey, selectedDrivers, selectedTime, gateway }: { data: SessionData; sessionKey: number; selectedDrivers: number[]; selectedTime: number; gateway: GatewayHealth | null }) {
   const drivers = selectedDrivers.map((number) => data.drivers.find((driver) => driver.driver_number === number)?.name_acronym).filter(Boolean);
-  return <section className={cn(styles.panel, styles.fullView)}><div className={styles.viewIntro}><span>Optional provider</span><h1>Pit-wall copilot</h1><p>AI remains off until a secure server-side provider is configured. Race data never sends itself to a model.</p></div><div className={styles.aiGrid}><div className={styles.aiPrompt}><Bot aria-hidden="true" /><h2>Ask the race</h2><textarea disabled value={`Compare ${drivers.join(" and ") || "the selected drivers"} while accounting for tyre age.`} readOnly /><button type="button" disabled>Run with evidence</button></div><div className={styles.aiContract}><span>Every answer must include</span>{["Session timestamp", "Current lap", "Source freshness", "Drivers considered", "Evidence references", "Confidence", "Assumptions", "Facts vs inference"].map((item) => <p key={item}><i />{item}</p>)}</div></div></section>;
+  const providers = gateway?.aiProviders ?? [];
+  const [provider, setProvider] = useState("");
+  const [question, setQuestion] = useState("");
+  const [analysis, setAnalysis] = useState<AiAnalysisResponse | null>(null);
+  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [aiError, setAiError] = useState<string | null>(null);
+  const activeProvider = providers.includes(provider) ? provider : providers[0] ?? "";
+  const defaultQuestion = `Compare ${drivers.join(" and ") || "the selected drivers"} while accounting for tyre age.`;
+
+  const askRace = async () => {
+    if (!activeProvider) return;
+    setStatus("loading");
+    setAiError(null);
+    try {
+      const response = await fetch("/f1/api/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          provider: activeProvider,
+          question: question.trim() || defaultQuestion,
+          sessionKey,
+          selectedTime: new Date(selectedTime).toISOString(),
+          selectedDrivers,
+        }),
+      });
+      const body = await response.json() as AiAnalysisResponse & { error?: string };
+      if (!response.ok) throw new Error(body.error ?? `AI analysis failed (${response.status})`);
+      setAnalysis(body);
+      setStatus("idle");
+    } catch (reason) {
+      setStatus("error");
+      setAiError(reason instanceof Error ? reason.message : "AI analysis failed");
+    }
+  };
+
+  return <section className={cn(styles.panel, styles.fullView)}><div className={styles.viewIntro}><span>Evidence-backed analysis</span><h1>Pit-wall copilot</h1><p>{providers.length ? "Choose a server-side provider and ask against a race snapshot rebuilt and verified by the gateway. Provider keys never reach the browser." : "No server-side AI provider is configured. The authenticated MCP tools remain available without AI."}</p></div><div className={styles.aiGrid}><div className={styles.aiPrompt}><Bot aria-hidden="true" /><h2>Ask the race</h2>{providers.length > 1 && <select aria-label="AI provider" value={activeProvider} onChange={(event) => setProvider(event.target.value)}>{providers.map((item) => <option key={item} value={item}>{item}</option>)}</select>}<textarea aria-label="Race analysis question" disabled={!providers.length || status === "loading"} value={question} onChange={(event) => setQuestion(event.target.value)} placeholder={defaultQuestion} /><button type="button" disabled={!providers.length || status === "loading"} onClick={askRace}>{status === "loading" ? "Analysing..." : "Run with evidence"}</button>{aiError && <p className={styles.roomError} role="alert">{aiError}</p>}</div>{analysis ? <article className={styles.aiResult}><span>{analysis.provider} / {analysis.model} / {analysis.verification.checked ? "verified" : "unverified"}</span><h2>Race answer</h2><p>{analysis.analysis.answer}</p><dl><div><dt>Confidence</dt><dd>{Math.round(analysis.analysis.confidence * 100)}%</dd></div><div><dt>Lap</dt><dd>{analysis.context.currentLap}</dd></div><div><dt>Freshness</dt><dd>{analysis.context.freshnessSeconds}s</dd></div></dl><h3>Facts</h3><ul>{analysis.analysis.facts.map((item) => <li key={item}>{item}</li>)}</ul><h3>Inferences</h3><ul>{analysis.analysis.inferences.map((item) => <li key={item}>{item}</li>)}</ul><h3>Evidence</h3><ul>{analysis.analysis.evidenceReferences.map((item) => <li key={item}>{item}</li>)}</ul>{analysis.analysis.assumptions.length > 0 && <><h3>Assumptions</h3><ul>{analysis.analysis.assumptions.map((item) => <li key={item}>{item}</li>)}</ul></>}</article> : <div className={styles.aiContract}><span>Every answer must include</span>{["Session timestamp", "Current lap", "Source freshness", "Drivers considered", "Evidence references", "Confidence", "Assumptions", "Facts vs inference"].map((item) => <p key={item}><i />{item}</p>)}</div>}</div></section>;
 }
 
 function SettingsView({ preferences, setPreference, data }: { preferences: Preferences; setPreference: <K extends keyof Preferences>(key: K, value: Preferences[K]) => void; data: SessionData }) {
@@ -1904,7 +2055,8 @@ function DiagnosticsView({ data, frame, error, gateway, session, trackPoints, no
     ["Replay frame", frame ? `${replayDelay ?? "--"}s source delay` : "waiting", frame ? "ok" : "warn"],
     ["Pit archive", `${data.pits.length} stops`, data.pits.length ? "ok" : "warn"],
     ["Edge cache", gateway ? "available" : "not in local mode", gateway ? "ok" : "warn"],
-    ["AI provider", "disabled", "warn"],
+    ["AI providers", gateway?.aiProviders.length ? gateway.aiProviders.join(", ") : "not configured", gateway?.aiProviders.length ? "ok" : "warn"],
+    ["ChatGPT MCP", gateway?.mcpConfigured ? "authenticated tools ready" : "awaiting Access", gateway?.mcpConfigured ? "ok" : "warn"],
     ["Room storage", gateway?.roomsConfigured ? "private rooms ready" : "awaiting Access", gateway?.roomsConfigured ? "ok" : "warn"],
     ["Degraded feeds", data.degradedFeeds.length ? data.degradedFeeds.join(", ") : "none", data.degradedFeeds.length ? "warn" : "ok"],
   ];
