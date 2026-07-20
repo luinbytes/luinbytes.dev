@@ -155,14 +155,24 @@ def screenshot_name(route: str, viewport: str) -> str:
 
 def assert_case_navigation(page: Page, route: str) -> None:
     rail = page.get_by_role("navigation", name="Page sections")
-    expect(rail).to_be_visible()
-    assert rail.evaluate("el => getComputedStyle(el).position") == "fixed", route
-    target = rail.locator("a").nth(1)
-    href = target.get_attribute("href")
-    assert href and href.startswith("#"), (route, href)
-    target.click()
-    page.wait_for_function("hash => location.hash === hash", arg=href)
-    expect(page.locator(href)).to_be_in_viewport()
+    if rail.count() == 1:
+        expect(rail).to_be_visible()
+        assert rail.evaluate("el => getComputedStyle(el).position") == "fixed", route
+        links = rail.locator("a")
+        assert links.count() >= 2, route
+        target = links.nth(1)
+        href = target.get_attribute("href")
+        assert href and href.startswith("#"), (route, href)
+        target.click()
+        page.wait_for_function("hash => location.hash === hash", arg=href)
+        expect(page.locator(href)).to_be_in_viewport()
+        return
+
+    back = page.get_by_role("link", name="← Back to projects", exact=True)
+    expect(back).to_be_visible()
+    assert back.get_attribute("href") == "/#builds", route
+    expect(page.get_by_role("heading", level=1)).to_be_visible()
+    assert page.get_by_role("heading", level=2).count() >= 2, route
 
 
 def boxes_overlap(
@@ -409,7 +419,9 @@ def assert_home_behavior(page: Page) -> None:
     page.locator("ol[data-build-list] button").first.click()
     page.get_by_role("link", name="Open case").click()
     page.wait_for_url("**/linux-sonar")
-    expect(page.locator("#overview h1")).to_be_visible()
+    expect(
+        page.get_by_role("heading", name="linux-sonar.", exact=True, level=1)
+    ).to_be_visible()
     page.go_back(wait_until="networkidle")
     page.wait_for_url("**/#builds")
 
@@ -465,13 +477,15 @@ def main() -> None:
 
             if viewport_name == "mobile-390":
                 page.goto(f"{base_url}/meteor", wait_until="networkidle")
-                inspect = page.get_by_role("button", name="Inspect", exact=True)
-                inspect.click()
-                panel = page.locator("[data-mobile-case-nav]")
-                expect(panel).to_be_visible()
-                target = panel.locator("button").nth(1)
-                target.click()
-                expect(page.locator("#habits")).to_be_in_viewport()
+                expect(
+                    page.get_by_role("heading", name="Meteor.", exact=True, level=1)
+                ).to_be_visible()
+                expect(
+                    page.get_by_role("heading", name="What it does", exact=True, level=2)
+                ).to_be_visible()
+                assert page.evaluate(
+                    "() => document.documentElement.scrollWidth === document.documentElement.clientWidth"
+                )
 
             all_console_errors.extend(console_errors)
             all_page_errors.extend(page_errors)

@@ -49,6 +49,8 @@
 
 .heroCopy {
   display: flex;
+  container-type: inline-size;
+  min-height: 0;
   flex-direction: column;
   justify-content: center;
   padding: clamp(3.5rem, 6vw, 6rem) clamp(2rem, 4.5vw, 4.75rem);
@@ -124,6 +126,7 @@
 .posterMark {
   position: relative;
   min-width: 0;
+  min-height: 0;
   overflow: hidden;
   border-left: 3px solid var(--color-paper);
   background:
@@ -412,7 +415,7 @@
 
   .hero h1 {
     margin-top: clamp(1rem, 2dvh, 2.5rem);
-    font-size: clamp(3.3rem, min(6.6vw, 10dvh, 6cqw), 7.35rem);
+    font-size: clamp(3.3rem, min(6.6vw, 10dvh, 10cqw), 7.35rem);
   }
 
   .intro {
