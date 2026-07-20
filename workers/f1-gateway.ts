@@ -98,6 +98,19 @@ let accessKeys: { expiresAt: number; keys: JsonWebKeyWithKid[] } | null = null;
 const requestLimits = new Map<string, { count: number; resetsAt: number }>();
 const activeAiUsers = new Set<string>();
 const MAX_SELECTED_TIME = 4_102_444_800_000;
+let openF1Queue: Promise<void> = Promise.resolve();
+let lastOpenF1RequestAt = 0;
+
+async function scheduleOpenF1<T>(operation: () => Promise<T>) {
+  const run = openF1Queue.then(async () => {
+    const delay = Math.max(0, 375 - (Date.now() - lastOpenF1RequestAt));
+    if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
+    lastOpenF1RequestAt = Date.now();
+    return operation();
+  });
+  openF1Queue = run.then(() => undefined, () => undefined);
+  return run;
+}
 
 function rateLimit(key: string, maximum: number, windowMs: number) {
   const now = Date.now();
@@ -234,7 +247,7 @@ async function openF1Json(env: WorkerEnv, endpoint: string, parameters: Record<s
   }
   const headers = new Headers({ Accept: "application/json" });
   if (env.OPENF1_AUTHORIZATION) headers.set("Authorization", env.OPENF1_AUTHORIZATION);
-  const response = await fetchWithTimeout(url, { headers });
+  const response = await scheduleOpenF1(() => fetchWithTimeout(url, { headers }));
   if (!response.ok) throw new Error(`OpenF1 ${endpoint} request failed (${response.status})`);
   return response.json<unknown[]>();
 }
