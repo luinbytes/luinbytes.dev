@@ -248,6 +248,7 @@ async function openF1Json(env: WorkerEnv, endpoint: string, parameters: Record<s
   const headers = new Headers({ Accept: "application/json" });
   if (env.OPENF1_AUTHORIZATION) headers.set("Authorization", env.OPENF1_AUTHORIZATION);
   const response = await scheduleOpenF1(() => fetchWithTimeout(url, { headers }));
+  if (response.status === 404) return [];
   if (!response.ok) throw new Error(`OpenF1 ${endpoint} request failed (${response.status})`);
   return response.json<unknown[]>();
 }
@@ -395,14 +396,15 @@ async function callMcpTool(name: string, args: Record<string, unknown>, env: Wor
     if (!timestamp) throw new Error("A valid ISO timestamp is required");
     const center = Date.parse(timestamp);
     const windowQuery = {
-      "date>": new Date(center - 3000).toISOString(),
-      "date<": new Date(center + 3000).toISOString(),
+      "date>": new Date(center - 5000).toISOString(),
+      "date<": new Date(center + 5000).toISOString(),
     };
+    const positionQuery = { "date<": new Date(center + 2000).toISOString() };
     const driverNumbers = Array.isArray(args.driver_numbers)
       ? args.driver_numbers.filter((value) => Number.isInteger(value)).slice(0, 2)
       : [];
     const [positions, locations, telemetry, control, radio] = await Promise.all([
-      openF1Json(env, "position", { session_key: sessionKey, ...windowQuery }),
+      openF1Json(env, "position", { session_key: sessionKey, ...positionQuery }),
       openF1Json(env, "location", { session_key: sessionKey, ...windowQuery }),
       openF1Json(env, "car_data", { session_key: sessionKey, ...windowQuery }),
       openF1Json(env, "race_control", { session_key: sessionKey, ...windowQuery }),
@@ -411,7 +413,14 @@ async function callMcpTool(name: string, args: Record<string, unknown>, env: Wor
     const filterDrivers = (items: unknown[]) => driverNumbers.length
       ? records(items).filter((item) => driverNumbers.includes(Number(item.driver_number)))
       : items;
-    return { timestamp, positions: filterDrivers(positions), locations: filterDrivers(locations), telemetry: filterDrivers(telemetry), raceControl: control, radio };
+    return {
+      timestamp,
+      positions: filterDrivers(latestRecords(records(positions), "driver_number")),
+      locations: filterDrivers(locations),
+      telemetry: filterDrivers(telemetry),
+      raceControl: control,
+      radio,
+    };
   }
   throw new Error(`Unknown tool: ${name}`);
 }
