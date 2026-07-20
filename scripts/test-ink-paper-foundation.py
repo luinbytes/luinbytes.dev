@@ -168,14 +168,14 @@ def assert_case_navigation(page: Page, route: str) -> None:
 def boxes_overlap(
     first: Mapping[str, Any], second: Mapping[str, Any]
 ) -> bool:
-    first_x = float(first["x"])
-    first_y = float(first["y"])
-    first_width = float(first["width"])
-    first_height = float(first["height"])
-    second_x = float(second["x"])
-    second_y = float(second["y"])
-    second_width = float(second["width"])
-    second_height = float(second["height"])
+    first_x = float(first["x"] if "x" in first else first["left"])
+    first_y = float(first["y"] if "y" in first else first["top"])
+    first_width = float(first["width"] if "width" in first else first["right"] - first_x)
+    first_height = float(first["height"] if "height" in first else first["bottom"] - first_y)
+    second_x = float(second["x"] if "x" in second else second["left"])
+    second_y = float(second["y"] if "y" in second else second["top"])
+    second_width = float(second["width"] if "width" in second else second["right"] - second_x)
+    second_height = float(second["height"] if "height" in second else second["bottom"] - second_y)
     return not (
         first_x + first_width <= second_x
         or second_x + second_width <= first_x
@@ -270,37 +270,37 @@ def assert_reduced_motion_product_menu(browser: Browser, base_url: str) -> None:
     context.close()
 
 
-def assert_short_desktop_hero(browser: Browser, base_url: str) -> None:
-    context = browser.new_context(
-        viewport={"width": 1280, "height": 720},
-        reduced_motion="reduce",
+def assert_hero_viewport_matrix(browser: Browser, base_url: str) -> None:
+    viewports: tuple[tuple[int, int], ...] = (
+        (3440, 1440),
+        (2560, 1440),
+        (1920, 1080),
+        (1440, 900),
+        (1280, 800),
+        (1024, 768),
+        (390, 844),
     )
-    page = context.new_page()
-    page.goto(base_url, wait_until="networkidle")
+    for width, height in viewports:
+        context = browser.new_context(
+            viewport={"width": width, "height": height},
+            reduced_motion="reduce",
+        )
+        page = context.new_page()
+        page.goto(base_url, wait_until="networkidle")
 
-    header = page.locator("header").first
-    registration_frame = page.locator("#home [class*=registrationFrame]")
-    heading = page.locator("#home h1")
-    intro = page.locator("#home [class*=intro]")
-    primary_action = page.get_by_role("link", name="Inspect builds")
-    secondary_action = page.get_by_role("button", name="Surprise me")
-    signal_plate = page.locator("#home [class*=heroSignalPlate]")
-    proof_strip = page.get_by_role("list", name="Proof loop")
-    hero = page.locator("#home")
+        for element in (
+            page.locator("#home [class*=registrationFrame]"),
+            page.locator("#home h1"),
+            page.locator("#home [class*=intro]"),
+            page.get_by_role("link", name="Inspect builds"),
+            page.get_by_role("button", name="Surprise me"),
+            page.locator("#home [class*=heroSignalPlate]"),
+            page.get_by_role("list", name="Proof loop"),
+        ):
+            expect(element).to_be_visible()
 
-    for element in (
-        registration_frame,
-        heading,
-        intro,
-        primary_action,
-        secondary_action,
-        signal_plate,
-        proof_strip,
-    ):
-        expect(element).to_be_visible()
-
-    bounds = page.evaluate(
-        """() => {
+        bounds = page.evaluate(
+            """() => {
             const box = (selector) => {
                 const rect = document.querySelector(selector).getBoundingClientRect();
                 return {top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right};
@@ -316,6 +316,7 @@ def assert_short_desktop_hero(browser: Browser, base_url: str) -> None:
                 header: box('header'),
                 hero: box('#home'),
                 frame: box('#home [class*=registrationFrame]'),
+                copy: box('#home [class*=heroCopy]'),
                 heading: box('#home h1'),
                 intro: box('#home [class*=intro]'),
                 primary: actionBox('#home a', 'Inspect builds'),
@@ -323,26 +324,35 @@ def assert_short_desktop_hero(browser: Browser, base_url: str) -> None:
                 signal: box('#home [class*=heroSignalPlate]'),
                 proof: box('#home [class*=proofStrip]'),
             };
-        }"""
-    )
-    print("Short desktop hero bounds:", bounds)
+            }"""
+        )
+        print(f"Hero bounds at {width}x{height}:", bounds)
 
-    viewport_height = bounds["viewport"]["height"]
-    header_bottom = bounds["header"]["bottom"]
-    assert bounds["frame"]["top"] >= header_bottom, bounds
-    for name in ("frame", "heading", "intro", "primary", "secondary", "signal", "proof"):
-        box = bounds[name]
-        assert box["top"] >= header_bottom, (name, bounds)
-        assert box["bottom"] <= viewport_height, (name, bounds)
-    assert bounds["hero"]["bottom"] <= viewport_height, bounds
-    assert page.evaluate(
-        "() => document.documentElement.scrollWidth === document.documentElement.clientWidth"
-    ), bounds
+        header_bottom = bounds["header"]["bottom"]
+        assert bounds["frame"]["top"] >= header_bottom, bounds
+        assert bounds["heading"]["bottom"] <= bounds["intro"]["top"], bounds
+        assert bounds["intro"]["bottom"] <= bounds["primary"]["top"], bounds
+        assert not boxes_overlap(bounds["primary"], bounds["secondary"]), bounds
+        assert bounds["proof"]["top"] >= bounds["frame"]["bottom"], bounds
+        assert page.evaluate(
+            "() => document.documentElement.scrollWidth === document.documentElement.clientWidth"
+        ), bounds
 
-    page.screenshot(
-        path=str(ARTIFACT_DIR / "home-desktop-1280x720-first-fold.png")
-    )
-    context.close()
+        if width > 900:
+            for name in ("heading", "intro", "primary", "secondary"):
+                box = bounds[name]
+                assert box["top"] >= bounds["copy"]["top"], (name, bounds)
+                assert box["bottom"] <= bounds["copy"]["bottom"], (name, bounds)
+            for edge in ("top", "left"):
+                assert bounds["signal"][edge] >= bounds["frame"][edge], bounds
+            for edge in ("bottom", "right"):
+                assert bounds["signal"][edge] <= bounds["frame"][edge], bounds
+            assert bounds["hero"]["bottom"] <= bounds["viewport"]["height"], bounds
+
+        page.screenshot(
+            path=str(ARTIFACT_DIR / f"home-{width}x{height}-first-fold.png")
+        )
+        context.close()
 
 
 def assert_home_behavior(page: Page) -> None:
@@ -467,7 +477,7 @@ def main() -> None:
             all_page_errors.extend(page_errors)
             context.close()
 
-        assert_short_desktop_hero(browser, base_url)
+        assert_hero_viewport_matrix(browser, base_url)
         assert_desktop_product_menu(browser, base_url)
         assert_reduced_motion_product_menu(browser, base_url)
 
