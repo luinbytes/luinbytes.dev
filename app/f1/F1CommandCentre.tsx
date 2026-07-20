@@ -81,7 +81,7 @@ type EventFilter = "all" | "race-control" | "radio";
 type TimingSort = "position" | "last" | "gap" | "tyre" | "team";
 type TelemetryMetric = "speed" | "throttle" | "brake" | "rpm" | "n_gear";
 type MapView = "whole" | "leader" | "selected";
-type MapLayer = "none" | "events" | "weather" | "battles";
+type MapLayer = "none" | "events" | "weather" | "battles" | "speed" | "braking";
 type DashboardLayout = "balanced" | "timing" | "map" | "broadcast";
 type HideablePanel = "telemetry" | "events";
 type Timezone = "local" | "utc";
@@ -989,6 +989,20 @@ export default function F1CommandCentre() {
   const frameAge = frame ? Math.max(0, Math.round((now - frame.fetchedAt) / 1000)) : null;
   const focusLocation = currentLocations.get(selectedDrivers.at(-1) ?? selectedDrivers[0]);
   const focusPoint = geometry && focusLocation ? geometry.project(focusLocation) : null;
+  const heatmapSegments = (() => {
+    if (!geometry || (mapLayer !== "speed" && mapLayer !== "braking")) return [];
+    const driverNumber = selectedDrivers[0];
+    const locations = (frame?.locations ?? []).filter((point) => point.driver_number === driverNumber).sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
+    const telemetry = (frame?.telemetry ?? []).filter((point) => point.driver_number === driverNumber);
+    // ponytail: the replay window is only 12 seconds; use a direct nearest-point scan until profiling says otherwise.
+    return locations.slice(1).map((point, index) => {
+      const from = geometry.project(locations[index]);
+      const to = geometry.project(point);
+      const sample = telemetry.reduce<CarDataPoint | undefined>((nearest, candidate) => !nearest || Math.abs(Date.parse(candidate.date) - Date.parse(point.date)) < Math.abs(Date.parse(nearest.date) - Date.parse(point.date)) ? candidate : nearest, undefined);
+      const intensity = mapLayer === "speed" ? Math.min(1, Math.max(0, (sample?.speed ?? 0) / 350)) : Math.min(1, Math.max(0, (sample?.brake ?? 0) / 100));
+      return { from, to, colour: mapLayer === "speed" ? `hsl(${190 - intensity * 110} 92% 62%)` : `hsl(${44 - intensity * 40} 95% 60%)` };
+    });
+  })();
   const timelinePosition = timelineEnd > timelineStart
     ? ((selectedTime - timelineStart) / (timelineEnd - timelineStart)) * 100
     : 0;
@@ -1075,6 +1089,8 @@ export default function F1CommandCentre() {
                     <option value="events">Event markers</option>
                     <option value="weather">Weather</option>
                     <option value="battles">Battles</option>
+                    <option value="speed">Speed heatmap</option>
+                    <option value="braking">Braking heatmap</option>
                   </select>
                   <span className={cn(styles.dataFreshness, frameAge != null && frameAge > 15 && styles.dataStale)}><Wifi aria-hidden="true" /> {frameAge == null ? "waiting" : `${frameAge}s old`}</span>
                   {frameLoading && <span className={styles.syncing}>syncing</span>}
@@ -1105,6 +1121,7 @@ export default function F1CommandCentre() {
                     </defs>
                     <path className={styles.trackShadow} d={`${geometry.path} Z`} />
                     <path className={styles.trackLine} d={`${geometry.path} Z`} />
+                    {heatmapSegments.map((segment, index) => <line className={styles.mapHeatSegment} key={index} x1={segment.from.x} y1={segment.from.y} x2={segment.to.x} y2={segment.to.y} stroke={segment.colour} />)}
                     {Array.from(currentLocations.values()).map((point) => {
                       const driver = driverByNumber.get(point.driver_number);
                       if (!driver) return null;

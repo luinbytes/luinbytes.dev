@@ -485,6 +485,7 @@ class F1CommandCentreTests(BrowserTestCase):
                     ]
                 else:
                     payload = [
+                        {"date": "2026-07-01T12:02:50Z", "driver_number": 12, "x": 20, "y": 40, "z": 0},
                         {"date": "2026-07-01T12:02:57Z", "driver_number": 12, "x": 40, "y": 80, "z": 0},
                         {"date": "2026-07-01T12:02:57Z", "driver_number": 16, "x": 90, "y": 120, "z": 0},
                     ]
@@ -604,6 +605,8 @@ class F1CommandCentreTests(BrowserTestCase):
         self.assertGreaterEqual(
             page.locator('[class*="timingPanel"]').bounding_box()["height"], 440
         )
+        page.get_by_role("combobox", name="Track overlay").select_option("speed")
+        self.assertGreater(page.locator('[class*="mapHeatSegment"]').count(), 0)
         page.screenshot(path=SCREENSHOTS / "f1-command-centre-mobile.png")
 
         page.set_viewport_size({"width": 1440, "height": 900})

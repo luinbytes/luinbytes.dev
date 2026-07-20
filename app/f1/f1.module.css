@@ -715,6 +715,7 @@
 
 .mapEventMarker { pointer-events: none; }
 .mapEventMarker circle { fill: color-mix(in srgb, var(--f1-amber) 20%, var(--f1-panel-solid)); stroke: var(--f1-amber); stroke-width: 2; filter: drop-shadow(0 0 10px color-mix(in srgb, var(--f1-amber) 56%, transparent)); }
+.mapHeatSegment { stroke-width: 12; stroke-linecap: round; opacity: 0.88; filter: drop-shadow(0 0 7px currentColor); }
 .mapEventMarker text { fill: var(--f1-white); text-anchor: middle; font: 700 7px/1 var(--font-space-mono), monospace; }
 
 .trackTelemetry {
