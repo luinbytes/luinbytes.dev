@@ -15,6 +15,7 @@
 .registrationFrame {
   position: relative;
   display: grid;
+  container-type: inline-size;
   min-height: min(690px, calc(100svh - 7.5rem));
   max-width: 92rem;
   grid-template-columns: minmax(0, 1.08fr) minmax(340px, 0.92fr);
@@ -411,7 +412,7 @@
 
   .hero h1 {
     margin-top: clamp(1rem, 2dvh, 2.5rem);
-    font-size: clamp(3.3rem, min(6.6vw, 10dvh), 7.35rem);
+    font-size: clamp(3.3rem, min(6.6vw, 10dvh, 6cqw), 7.35rem);
   }
 
   .intro {
