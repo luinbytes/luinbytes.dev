@@ -409,6 +409,23 @@
   overflow: auto;
 }
 
+.shell[data-display] .nav,
+.shell[data-display] .sessionBar,
+.shell[data-display] .timeline {
+  display: none;
+}
+
+.shell[data-display] .workspace {
+  inset: 14px;
+  display: grid;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+  padding: 0;
+}
+
+.shell[data-display] .workspace > .panel {
+  grid-area: 1 / 1;
+}
+
 .panel {
   position: relative;
   min-width: 0;

@@ -615,6 +615,13 @@ class F1CommandCentreTests(BrowserTestCase):
         future_race.click()
         page.get_by_role("heading", name="Hungarian Grand Prix", level=1).wait_for()
         self.assertTrue(page.get_by_text("Session countdown", exact=True).is_visible())
+
+        page.goto(f"{self.base_url}/f1?display=track")
+        page.get_by_role("heading", name="Monza", level=1).wait_for()
+        self.assertEqual(page.get_by_role("region", name="Monza").count(), 1)
+        self.assertEqual(page.get_by_role("region", name="Timing tower").count(), 0)
+        self.assertFalse(page.get_by_role("navigation", name="F1 Command Centre").is_visible())
+        self.assertLessEqual(page.evaluate("document.documentElement.scrollWidth"), 1440)
         browser.close()
 
 

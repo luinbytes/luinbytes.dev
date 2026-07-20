@@ -87,6 +87,7 @@ type HideablePanel = "telemetry" | "events";
 type Timezone = "local" | "utc";
 type NotificationKind = "safety" | "red-flag" | "favourite-radio" | "favourite-pit";
 type StrategyMode = "green" | "safety" | "two-stop" | "undercut" | "overcut";
+type DisplayMode = "track" | "timing" | "telemetry" | "events";
 
 interface Preferences {
   theme: Theme;
@@ -305,6 +306,7 @@ export default function F1CommandCentre() {
   const [strategyLap, setStrategyLap] = useState(30);
   const [strategyCompound, setStrategyCompound] = useState("MEDIUM");
   const [strategyMode, setStrategyMode] = useState<StrategyMode>("green");
+  const [displayMode, setDisplayMode] = useState<DisplayMode | null>(null);
   const [timelinePulse, setTimelinePulse] = useState(0);
   const [now, setNow] = useState(0);
   const frameRequest = useRef(0);
@@ -313,6 +315,11 @@ export default function F1CommandCentre() {
   const pendingRoomState = useRef<{ sessionKey: number; selectedTime: number; selectedDrivers: number[] } | null>(null);
   const shellRef = useRef<HTMLDivElement>(null);
   const resolvedTheme = useSystemTheme(preferences.theme);
+
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get("display");
+    if (["track", "timing", "telemetry", "events"].includes(requested ?? "")) setDisplayMode(requested as DisplayMode);
+  }, []);
 
   useEffect(() => {
     currentView.current = view;
@@ -994,6 +1001,7 @@ export default function F1CommandCentre() {
       data-effects={preferences.effects}
       data-layout={preferences.dashboardLayout}
       data-playing={playing}
+      data-display={displayMode ?? undefined}
     >
       <LiquidAtmosphere pulse={timelinePulse} />
       {navigation}
@@ -1050,7 +1058,7 @@ export default function F1CommandCentre() {
         )}
         {(view === "live" || view === "replay") && !upcoming && (
           <>
-            <section className={cn(styles.panel, styles.trackPanel)} aria-labelledby="track-title">
+            {(!displayMode || displayMode === "track") && <section className={cn(styles.panel, styles.trackPanel)} aria-labelledby="track-title">
               <div className={styles.panelHeader}>
                 <div>
                   <span>Track position / sourced</span>
@@ -1160,9 +1168,9 @@ export default function F1CommandCentre() {
                   <span><i className={styles.legendFinish} /> Start / finish</span>
                 </div>
               </div>
-            </section>
+            </section>}
 
-            <section className={cn(styles.panel, styles.timingPanel)} aria-labelledby="timing-title">
+            {(!displayMode || displayMode === "timing") && <section className={cn(styles.panel, styles.timingPanel)} aria-labelledby="timing-title">
               <div className={styles.panelHeader}>
                 <div>
                   <span>Classification / lap {selectedLap?.lap_number ?? 0}</span>
@@ -1237,9 +1245,9 @@ export default function F1CommandCentre() {
                   </button>
                 ))}
               </div>
-            </section>
+            </section>}
 
-            {!preferences.hiddenPanels.includes("telemetry") && <section className={cn(styles.panel, styles.telemetryPanel)} aria-labelledby="telemetry-title">
+            {(!displayMode || displayMode === "telemetry") && !preferences.hiddenPanels.includes("telemetry") && <section className={cn(styles.panel, styles.telemetryPanel)} aria-labelledby="telemetry-title">
               <span
                 className={styles.telemetryReceive}
                 key={`telemetry-${selectedDrivers.join("-")}`}
@@ -1295,7 +1303,7 @@ export default function F1CommandCentre() {
               </div>
             </section>}
 
-            {!preferences.hiddenPanels.includes("events") && <section className={cn(styles.panel, styles.eventsPanel)} aria-labelledby="events-title">
+            {(!displayMode || displayMode === "events") && !preferences.hiddenPanels.includes("events") && <section className={cn(styles.panel, styles.eventsPanel)} aria-labelledby="events-title">
               <div className={styles.panelHeader}>
                 <div>
                   <span>Shared timeline events</span>
@@ -1837,6 +1845,9 @@ function SettingsView({ preferences, setPreference, data }: { preferences: Prefe
           {(["balanced", "timing", "map", "broadcast"] as DashboardLayout[]).map((value) => <button key={value} type="button" aria-pressed={preferences.dashboardLayout === value} onClick={() => setPreference("dashboardLayout", value)}><CircleGauge />{value}</button>)}
           {(["telemetry", "events"] as HideablePanel[]).map((panel) => <button key={panel} type="button" aria-pressed={!preferences.hiddenPanels.includes(panel)} onClick={() => togglePanel(panel)}><Activity />{panel} panel</button>)}
         </SettingGroup>
+        <SettingGroup title="Display windows">
+          {(["track", "timing", "telemetry", "events"] as DisplayMode[]).map((panel) => <button key={panel} type="button" onClick={() => window.open(`/f1?display=${panel}`, `f1-${panel}`, "popup,noopener,width=1200,height=800")}><MapIcon />{panel}</button>)}
+        </SettingGroup>
         <SettingGroup title="Race view">
           <button type="button" aria-pressed={preferences.spoilerMode} onClick={() => setPreference("spoilerMode", !preferences.spoilerMode)}><ShieldCheck />spoiler protection</button>
           {(["local", "utc"] as Timezone[]).map((value) => <button key={value} type="button" aria-pressed={preferences.timezone === value} onClick={() => setPreference("timezone", value)}><CircleGauge />{value === "local" ? "local time" : "UTC"}</button>)}
@@ -1877,7 +1888,7 @@ function DiagnosticsView({ data, frame, error, gateway, session, trackPoints, no
     ["Pit archive", `${data.pits.length} stops`, data.pits.length ? "ok" : "warn"],
     ["Edge cache", gateway ? "available" : "not in local mode", gateway ? "ok" : "warn"],
     ["AI provider", "disabled", "warn"],
-    ["Persistent database", "not configured", "warn"],
+    ["Room storage", gateway?.roomsConfigured ? "private rooms ready" : "awaiting Access", gateway?.roomsConfigured ? "ok" : "warn"],
   ];
   return <section className={cn(styles.panel, styles.fullView)}><div className={styles.viewIntro}><span>Source health</span><h1>Diagnostics</h1><p>Direct readback of the current browser, provider, archive, and replay-frame state.</p></div><div className={styles.diagnosticsGrid}>{checks.map(([label, value, state]) => <article key={label}><span data-state={state} /><small>{label}</small><strong>{value}</strong></article>)}</div><div className={styles.sourceNote}><Wifi aria-hidden="true" /><div><strong>{gateway ? "Luinbytes edge gateway / OpenF1" : "OpenF1 historical API"}</strong><p>Real sourced data with persistent browser caching{gateway ? " and a same-origin edge cache" : ""}. Replay-frame requests are serialized. Live session-window access depends on provider entitlement{gateway ? gateway.realtimeCredentials ? " and is configured at the gateway" : "; no real-time credential is configured" : ""}.</p></div></div></section>;
 }
