@@ -1906,6 +1906,7 @@ function DiagnosticsView({ data, frame, error, gateway, session, trackPoints, no
     ["Edge cache", gateway ? "available" : "not in local mode", gateway ? "ok" : "warn"],
     ["AI provider", "disabled", "warn"],
     ["Room storage", gateway?.roomsConfigured ? "private rooms ready" : "awaiting Access", gateway?.roomsConfigured ? "ok" : "warn"],
+    ["Degraded feeds", data.degradedFeeds.length ? data.degradedFeeds.join(", ") : "none", data.degradedFeeds.length ? "warn" : "ok"],
   ];
   return <section className={cn(styles.panel, styles.fullView)}><div className={styles.viewIntro}><span>Source health</span><h1>Diagnostics</h1><p>Direct readback of the current browser, provider, archive, and replay-frame state.</p></div><div className={styles.diagnosticsGrid}>{checks.map(([label, value, state]) => <article key={label}><span data-state={state} /><small>{label}</small><strong>{value}</strong></article>)}</div><div className={styles.sourceNote}><Wifi aria-hidden="true" /><div><strong>{gateway ? "Luinbytes edge gateway / OpenF1" : "OpenF1 historical API"}</strong><p>Real sourced data with persistent browser caching{gateway ? " and a same-origin edge cache" : ""}. Replay-frame requests are serialized. Live session-window access depends on provider entitlement{gateway ? gateway.realtimeCredentials ? " and is configured at the gateway" : "; no real-time credential is configured" : ""}.</p></div></div></section>;
 }

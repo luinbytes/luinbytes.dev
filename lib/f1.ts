@@ -201,6 +201,7 @@ export interface SessionData {
   raceControl: RaceControlEvent[];
   radio: RadioMessage[];
   weather: Weather[];
+  degradedFeeds: string[];
   fetchedAt: number;
 }
 
@@ -311,20 +312,30 @@ export async function loadSeason(year: number, signal?: AbortSignal) {
 }
 
 export async function loadSessionData(sessionKey: number, signal?: AbortSignal, fresh = false) {
+  const degradedFeeds: string[] = [];
   const read = <T,>(endpoint: string) =>
     openF1<T>(endpoint, { session_key: sessionKey }, signal, !fresh, fresh);
+  const readOptional = async <T,>(endpoint: string) => {
+    try {
+      return await read<T>(endpoint);
+    } catch (reason) {
+      if ((reason as Error).name === "AbortError") throw reason;
+      degradedFeeds.push(endpoint);
+      return [];
+    }
+  };
 
   const drivers = await read<Driver>("drivers");
-  const results = await read<SessionResult>("session_result");
-  const laps = await read<Lap>("laps");
-  const stints = await read<Stint>("stints");
-  const pits = await read<PitStop>("pit");
-  const grid = await read<StartingGridEntry>("starting_grid");
-  const championship = await read<ChampionshipDriver>("championship_drivers");
-  const overtakes = await read<Overtake>("overtakes");
-  const raceControl = await read<RaceControlEvent>("race_control");
-  const radio = await read<RadioMessage>("team_radio");
-  const weather = await read<Weather>("weather");
+  const results = await readOptional<SessionResult>("session_result");
+  const laps = await readOptional<Lap>("laps");
+  const stints = await readOptional<Stint>("stints");
+  const pits = await readOptional<PitStop>("pit");
+  const grid = await readOptional<StartingGridEntry>("starting_grid");
+  const championship = await readOptional<ChampionshipDriver>("championship_drivers");
+  const overtakes = await readOptional<Overtake>("overtakes");
+  const raceControl = await readOptional<RaceControlEvent>("race_control");
+  const radio = await readOptional<RadioMessage>("team_radio");
+  const weather = await readOptional<Weather>("weather");
 
   return {
     drivers,
@@ -338,6 +349,7 @@ export async function loadSessionData(sessionKey: number, signal?: AbortSignal, 
     raceControl,
     radio,
     weather,
+    degradedFeeds,
     fetchedAt: Date.now(),
   };
 }

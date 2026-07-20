@@ -45,6 +45,7 @@ yarn-error.log*
 
 # cloudflare worker local state
 .wrangler/
+.f1-worker-assets/
 
 # claude
 CLAUDE.md

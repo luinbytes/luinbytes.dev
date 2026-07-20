@@ -1,11 +1,11 @@
 # F1 Command Centre
 
-`/f1` is a private race dashboard backed by OpenF1 data and a Cloudflare Worker. The static application deploys with the rest of luinbytes.dev. The Worker owns provider credentials, response caching, Access identity validation, and shared rooms.
+`/f1` is a private race dashboard backed by OpenF1 data and a Cloudflare Worker. The F1 page and its versioned assets deploy with the Worker, independently of the public site's GitHub Pages build queue. The Worker also owns provider credentials, response caching, Access identity validation, and shared rooms.
 
 ## Runtime map
 
-- GitHub Pages serves `/f1`, its manifest, and the service worker.
-- `luinbytes-f1-gateway` serves `/f1/api/*` on Cloudflare.
+- `luinbytes-f1-gateway` serves `/f1`, `/f1-assets/*`, the manifest, the service worker, and `/f1/api/*` on Cloudflare.
+- GitHub Pages continues to serve the public portfolio and can contain the same static export as a fallback.
 - OpenF1 supplies timing, positions, telemetry, radio, race control, results, grids, pit stops, overtakes, and championship data.
 - `F1Room` is a SQLite-backed Durable Object. It stores room ownership, the shared session, selected drivers, and replay cursor. WebSocket Hibernation carries presence and updates.
 - Cloudflare Access must protect `luinbytes.dev/f1*`. The Worker also verifies the `Cf-Access-Jwt-Assertion` signature, issuer, validity window, and audience before it accepts a room request.
@@ -39,8 +39,8 @@ The Worker smoke test proves that room routes reject missing and malformed Acces
 1. Create the Access application for `luinbytes.dev/f1*` and its allow policy.
 2. Set `ACCESS_TEAM_DOMAIN` and `ACCESS_AUD`.
 3. Add `OPENF1_AUTHORIZATION` if real-time provider access is available.
-4. Run `npm run f1:gateway:check`, then deploy the Worker.
-5. Merge the feature branch to `master` and watch the Pages workflow.
+4. Run `npm run f1:gateway:check`, then deploy the Worker with `npm run f1:gateway:deploy`. The build packages only the F1 export into the ignored `.f1-worker-assets` directory.
+5. Merge the feature branch to `master`; the Pages workflow deploys the public portfolio independently.
 6. Verify Access, `/f1/api/health`, a room invite, historical replay, desktop layout, and mobile layout on the live domain.
 
 The service worker does not cache race data or authenticated HTML. It only supplies the install and notification lifecycle, so private responses cannot leak through a shared cache.
