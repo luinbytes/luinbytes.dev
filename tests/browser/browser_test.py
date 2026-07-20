@@ -588,6 +588,14 @@ class F1CommandCentreTests(BrowserTestCase):
         self.assertTrue(page.get_by_role("heading", name="Private rooms", exact=True).is_visible())
         self.assertTrue(page.get_by_role("heading", name="Room service locked", exact=True).is_visible())
 
+        page.get_by_role("button", name="Strategy", exact=True).click()
+        self.assertTrue(page.get_by_role("heading", name="Strategy desk", exact=True).is_visible())
+        self.assertTrue(page.get_by_text("Pit lane transit", exact=True).is_visible())
+        page.get_by_role("button", name="safety", exact=True).click()
+        self.assertEqual(page.get_by_role("button", name="safety", exact=True).get_attribute("aria-pressed"), "true")
+        self.assertTrue(page.get_by_text("Safety-car-adjusted projection / not official", exact=True).is_visible())
+        page.screenshot(path=SCREENSHOTS / "f1-strategy.png")
+
         page.get_by_role("button", name="Live", exact=True).click()
         page.screenshot(path=SCREENSHOTS / "f1-command-centre-desktop.png")
 

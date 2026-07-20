@@ -86,6 +86,7 @@ type DashboardLayout = "balanced" | "timing" | "map" | "broadcast";
 type HideablePanel = "telemetry" | "events";
 type Timezone = "local" | "utc";
 type NotificationKind = "safety" | "red-flag" | "favourite-radio" | "favourite-pit";
+type StrategyMode = "green" | "safety" | "two-stop" | "undercut" | "overcut";
 
 interface Preferences {
   theme: Theme;
@@ -303,6 +304,7 @@ export default function F1CommandCentre() {
   const [error, setError] = useState<string | null>(null);
   const [strategyLap, setStrategyLap] = useState(30);
   const [strategyCompound, setStrategyCompound] = useState("MEDIUM");
+  const [strategyMode, setStrategyMode] = useState<StrategyMode>("green");
   const [timelinePulse, setTimelinePulse] = useState(0);
   const [now, setNow] = useState(0);
   const frameRequest = useRef(0);
@@ -1364,8 +1366,10 @@ export default function F1CommandCentre() {
             currentLap={selectedLap?.lap_number ?? 1}
             lap={strategyLap}
             compound={strategyCompound}
+            mode={strategyMode}
             onLap={setStrategyLap}
             onCompound={setStrategyCompound}
+            onMode={setStrategyMode}
           />
         )}
         <RoomsView
@@ -1515,30 +1519,57 @@ function DriversView({ rows, selected, onSelect }: { rows: TimingRow[]; selected
   );
 }
 
-function StrategyView({ data, driver, currentLap, lap, compound, onLap, onCompound }: { data: SessionData; driver?: Driver; currentLap: number; lap: number; compound: string; onLap: (lap: number) => void; onCompound: (compound: string) => void }) {
+function StrategyView({ data, driver, currentLap, lap, compound, mode, onLap, onCompound, onMode }: { data: SessionData; driver?: Driver; currentLap: number; lap: number; compound: string; mode: StrategyMode; onLap: (lap: number) => void; onCompound: (compound: string) => void; onMode: (mode: StrategyMode) => void }) {
   const totalLaps = data.results[0]?.number_of_laps ?? 44;
+  const lastPitLap = Math.max(2, totalLaps - 1);
   const result = data.results.find((item) => item.driver_number === driver?.driver_number);
-  const averageLap = data.laps.filter((item) => item.driver_number === driver?.driver_number && item.lap_duration && !item.is_pit_out_lap).reduce((sum, item, _, values) => sum + (item.lap_duration ?? 0) / values.length, 0);
-  const pitSamples = data.pits.map((pit) => pit.lane_duration).filter((duration): duration is number => duration != null && duration > 0);
-  const pitLoss = pitSamples.length ? pitSamples.reduce((sum, duration) => sum + duration, 0) / pitSamples.length : 22.4;
-  const compoundLaps = data.stints
-    .filter((stint) => stint.driver_number === driver?.driver_number && stint.compound === compound)
-    .flatMap((stint) => data.laps.filter((item) => item.driver_number === stint.driver_number && item.lap_number >= stint.lap_start && item.lap_number <= stint.lap_end && item.lap_duration && !item.is_pit_out_lap));
+  const driverLaps = data.laps.filter((item) => item.driver_number === driver?.driver_number && item.lap_duration && !item.is_pit_out_lap);
+  const averageLap = driverLaps.reduce((sum, item) => sum + (item.lap_duration ?? 0), 0) / Math.max(1, driverLaps.length);
+  const pitSamples = data.pits.map((pit) => pit.lane_duration).filter((duration): duration is number => duration != null && duration > 0).sort((a, b) => a - b);
+  const pitTransit = pitSamples.length ? pitSamples[Math.floor(pitSamples.length / 2)] : 22.4;
+  const compoundStints = data.stints.filter((stint) => stint.driver_number === driver?.driver_number && stint.compound === compound);
+  const compoundLaps = compoundStints.flatMap((stint) => data.laps.filter((item) => item.driver_number === stint.driver_number && item.lap_number >= stint.lap_start && item.lap_number <= stint.lap_end && item.lap_duration && !item.is_pit_out_lap));
   const observedDegradation = compoundLaps.length > 3
     ? Math.max(0, ((compoundLaps.at(-1)?.lap_duration ?? 0) - (compoundLaps[0].lap_duration ?? 0)) / (compoundLaps.length - 1))
     : null;
-  const tyrePenalty = observedDegradation ?? (compound === "SOFT" ? 0.18 : compound === "HARD" ? 0.46 : 0.3);
-  const lapsRemaining = Math.max(0, totalLaps - lap);
-  const estimatedLoss = pitLoss + tyrePenalty * Math.max(0, lapsRemaining - (compound === "SOFT" ? 14 : compound === "MEDIUM" ? 24 : 34));
-  const positionsLost = Math.max(1, Math.round(estimatedLoss / 2.3));
+  const tyrePenalty = observedDegradation ?? (compound === "SOFT" ? 0.18 : compound === "HARD" ? 0.12 : 0.15);
+  const scenarioLap = mode === "undercut" ? Math.max(2, lap - 1) : mode === "overcut" ? Math.min(lastPitLap, lap + 1) : lap;
+  const lapsRemaining = Math.max(0, totalLaps - scenarioLap);
+  const observedLife = compoundStints.reduce((longest, stint) => Math.max(longest, stint.lap_end - stint.lap_start + 1), 0);
+  const tyreLife = observedLife || (compound === "SOFT" ? 16 : compound === "HARD" ? 36 : 26);
+  const stops = mode === "two-stop" ? 2 : Math.max(1, Math.ceil(lapsRemaining / tyreLife));
+  const adjustedPitTransit = pitTransit * (mode === "safety" ? 0.58 : 1);
+  const degradationCost = tyrePenalty * Math.max(0, lapsRemaining - tyreLife);
+  const estimatedLoss = adjustedPitTransit * stops + degradationCost;
+  const driverGap = result?.gap_to_leader ?? 0;
+  const traffic = data.results
+    .filter((item) => item.position != null && item.position > (result?.position ?? 0) && item.gap_to_leader != null && item.gap_to_leader - driverGap <= estimatedLoss)
+    .sort((a, b) => (a.position ?? 99) - (b.position ?? 99));
+  const projectedPosition = Math.min(data.results.length || 22, (result?.position ?? 1) + traffic.length);
+  const teammate = data.drivers.find((item) => item.team_name === driver?.team_name && item.driver_number !== driver?.driver_number);
+  const teammateLaps = data.laps.filter((item) => item.driver_number === teammate?.driver_number && item.lap_duration && !item.is_pit_out_lap);
+  const teammateAverage = teammateLaps.reduce((sum, item) => sum + (item.lap_duration ?? 0), 0) / Math.max(1, teammateLaps.length);
+  const usedCompounds = Array.from(new Set(data.stints.filter((stint) => stint.driver_number === driver?.driver_number).map((stint) => stint.compound)));
   const evidenceCount = pitSamples.length + compoundLaps.length;
-  const confidence = evidenceCount >= 12 ? "68% / medium" : evidenceCount >= 5 ? "54% / guarded" : "35% / low";
+  const confidence = evidenceCount >= 12 ? 68 : evidenceCount >= 5 ? 54 : 35;
+  const scenarioLabel = mode === "safety" ? "Safety-car-adjusted" : mode === "two-stop" ? "Two-stop" : mode === "undercut" ? "Undercut" : mode === "overcut" ? "Overcut" : "Green-flag";
   return (
     <section className={cn(styles.panel, styles.fullView)}>
       <div className={styles.viewIntro}><span>Derived model / not official</span><h1>Strategy desk</h1><p>Explore a transparent pit-stop scenario built from this session&apos;s lap count and the selected driver&apos;s observed pace.</p></div>
       <div className={styles.strategyLayout}>
-        <div className={styles.strategyControls}><div className={styles.strategyShortcuts}><button type="button" onClick={() => onLap(Math.max(2, currentLap))}>Pit now</button><button type="button" onClick={() => onLap(Math.min(totalLaps - 1, Math.max(2, currentLap + 1)))}>Next lap</button><button type="button" onClick={() => onLap(Math.min(totalLaps - 1, Math.max(2, currentLap + 5)))}>Extend 5</button></div><label>Pit on lap <strong>{lap}</strong><input type="range" min={2} max={Math.max(3, totalLaps - 1)} value={lap} onChange={(event) => onLap(Number(event.target.value))} /></label><fieldset><legend>Fit compound</legend>{["SOFT", "MEDIUM", "HARD"].map((item) => <button type="button" aria-pressed={compound === item} key={item} onClick={() => onCompound(item)}>{item}</button>)}</fieldset><div className={styles.strategyDriver}><span style={{ background: `#${driver?.team_colour ?? "fff"}` }} /><div><small>Scenario car</small><strong>{driver?.full_name ?? "Select a driver"}</strong></div></div></div>
-        <div className={styles.strategyOutput}><span>Projected outcome</span><div className={styles.strategyHero}><small>Estimated rejoin</small><strong>P{Math.min(22, (result?.position ?? 1) + positionsLost)}</strong><em>range P{Math.max(1, (result?.position ?? 1) + positionsLost - 1)} to P{Math.min(22, (result?.position ?? 1) + positionsLost + 2)}</em></div><dl><div><dt>Observed pit loss</dt><dd>{pitLoss.toFixed(1)}s</dd></div><div><dt>Estimated impact</dt><dd>+{estimatedLoss.toFixed(1)}s</dd></div><div><dt>Observed average</dt><dd>{formatLapTime(averageLap || null)}</dd></div><div><dt>Confidence</dt><dd>{confidence}</dd></div></dl><p><Info aria-hidden="true" /> Uses {pitSamples.length || "no"} sourced pit-lane samples and {compoundLaps.length || "no"} selected-compound laps. Assumes a green-flag stop and constant traffic. Degradation and rejoin are derived estimates, not team data.</p></div>
+        <div className={styles.strategyControls}>
+          <div className={styles.strategyShortcuts}><button type="button" onClick={() => onLap(Math.min(lastPitLap, Math.max(2, currentLap)))}>Pit now</button><button type="button" onClick={() => onLap(Math.min(lastPitLap, Math.max(2, currentLap + 1)))}>Next lap</button><button type="button" onClick={() => onLap(Math.min(lastPitLap, Math.max(2, currentLap + 5)))}>Extend 5</button></div>
+          <label>Pit on lap <strong>{lap}</strong><input type="range" min={2} max={lastPitLap} value={Math.min(lastPitLap, lap)} onChange={(event) => onLap(Number(event.target.value))} /></label>
+          <fieldset><legend>Fit compound</legend>{["SOFT", "MEDIUM", "HARD"].map((item) => <button type="button" aria-pressed={compound === item} key={item} onClick={() => onCompound(item)}>{item}</button>)}</fieldset>
+          <fieldset><legend>Scenario</legend>{(["green", "safety", "two-stop", "undercut", "overcut"] as StrategyMode[]).map((item) => <button type="button" aria-pressed={mode === item} key={item} onClick={() => onMode(item)}>{item}</button>)}</fieldset>
+          <div className={styles.strategyDriver}><span style={{ background: `#${driver?.team_colour ?? "fff"}` }} /><div><small>Scenario car</small><strong>{driver?.full_name ?? "Select a driver"}</strong></div></div>
+        </div>
+        <div className={styles.strategyOutput}>
+          <span>{scenarioLabel} projection / not official</span>
+          <div className={styles.strategyHero}><small>Estimated rejoin</small><strong>P{projectedPosition}</strong><em>P{Math.max(1, projectedPosition - 1)} to P{Math.min(data.results.length || 22, projectedPosition + 1)} / {confidence}% confidence band</em></div>
+          <dl><div><dt>Pit lane transit</dt><dd>{pitTransit.toFixed(1)}s</dd></div><div><dt>Estimated impact</dt><dd>+{estimatedLoss.toFixed(1)}s</dd></div><div><dt>Expected tyre life</dt><dd>{tyreLife} laps</dd></div><div><dt>Expected traffic</dt><dd>{traffic.length ? traffic.slice(0, 3).map((item) => data.drivers.find((candidate) => candidate.driver_number === item.driver_number)?.name_acronym).filter(Boolean).join(", ") : "clear"}</dd></div><div><dt>Pit window</dt><dd>L{Math.max(2, scenarioLap - 2)} to L{Math.min(lastPitLap, scenarioLap + 2)}</dd></div><div><dt>Degradation</dt><dd>{tyrePenalty.toFixed(2)}s/lap</dd></div><div><dt>Teammate pace</dt><dd>{teammate && teammateAverage ? `${teammate.name_acronym} ${(averageLap - teammateAverage >= 0 ? "+" : "")}${(averageLap - teammateAverage).toFixed(2)}s` : "unavailable"}</dd></div><div><dt>Data read</dt><dd>{new Date(data.fetchedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</dd></div></dl>
+          <p><Info aria-hidden="true" /> Uses {pitSamples.length || "no"} pit-lane samples, {compoundLaps.length || "no"} {compound.toLowerCase()} laps, final field gaps, and observed compounds {usedCompounds.join(" / ") || "not published"}. Assumes unchanged traffic and no further incidents. Rejoin, degradation, and tyre life are derived estimates.</p>
+        </div>
       </div>
     </section>
   );
