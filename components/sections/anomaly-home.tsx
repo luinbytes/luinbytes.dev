@@ -11,6 +11,7 @@ import {
   proofLoopSteps,
   workbenchItems,
 } from "@/lib/homepage";
+import { DotCutCanvas } from "@/components/dotcut/dotcut-canvas";
 import styles from "./anomaly-home.module.css";
 
 function HeroSignalPlate() {
@@ -20,19 +21,9 @@ function HeroSignalPlate() {
         <span>BUILD / VERIFY / SHIP</span>
         <span className={styles.hexStamp}>6c75</span>
       </div>
-      <svg className={styles.luGlyph} viewBox="0 0 520 390" role="presentation">
-        <g className={styles.glyphGhost} transform="translate(15 14)">
-          <path d="M34 36h82v226h116v82H34z" />
-          <path d="M272 36h82v218h84V36h82v226l-82 82h-84l-82-82z" />
-        </g>
-        <g className={styles.glyphFace}>
-          <path d="M34 36h82v226h116v82H34z" />
-          <path d="M272 36h82v218h84V36h82v226l-82 82h-84l-82-82z" />
-        </g>
-        <g className={styles.glyphCuts}>
-          <path d="M34 36h26v28H34zM90 116h26v32H90zM116 262h36v28h-36zM272 36h30v28h-30zM408 254h30v28h-30zM490 36h30v28h-30z" />
-        </g>
-      </svg>
+      <div className={styles.dotCut}>
+        <DotCutCanvas />
+      </div>
       <div className={styles.signalRail}>
         <span>APK</span>
         <svg viewBox="0 0 360 54" preserveAspectRatio="none" role="presentation">
