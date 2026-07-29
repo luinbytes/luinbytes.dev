@@ -221,4 +221,5 @@ export const contactLinks: HomepageLink[] = [
   { label: "Email", href: "mailto:0x6c75@protonmail.com" },
   { label: "GitHub", href: "https://github.com/luinbytes", external: true },
   { label: "X / Twitter", href: "https://x.com/x6c75", external: true },
+  { label: "Cal.com", href: "https://cal.com/luinbytes", external: true },
 ];

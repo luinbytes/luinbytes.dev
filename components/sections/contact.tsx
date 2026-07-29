@@ -1,4 +1,4 @@
-import { ArrowRight, Coffee, Github, Mail, Twitter } from "lucide-react";
+import { ArrowRight, Calendar, Coffee, Github, Mail, Twitter } from "lucide-react";
 import { contactLinks } from "@/lib/homepage";
 import { ScrollReveal } from "@/components/animations/scroll-reveal";
 
@@ -10,6 +10,8 @@ function getContactIcon(label: string) {
       return Github;
     case "X / Twitter":
       return Twitter;
+    case "Cal.com":
+      return Calendar;
     default:
       return Mail;
   }

@@ -33,6 +33,63 @@ final result: passed
 
 ## Issue
 
+#30 Verify and deploy the full-site redesign
+
+## Implementation Screenshots
+
+- Local homepage desktop: `/tmp/luinbytes-issue30-home-desktop.png`
+- Local homepage mobile: `/tmp/luinbytes-issue30-home-mobile.png`
+- Local case desktop: `/tmp/luinbytes-issue30-case-linux-desktop.png`
+- Local case mobile: `/tmp/luinbytes-issue30-case-meteor-mobile.png`
+- Local reduced-motion mobile: `/tmp/luinbytes-issue30-home-mobile-reduced-motion.png`
+- Local link dock desktop: `/tmp/luinbytes-issue30-linkdock-desktop.png`
+- Local link dock mobile: `/tmp/luinbytes-issue30-linkdock-mobile.png`
+- Live luinbytes.dev homepage: `/tmp/luinbytes-issue30-live-versioned-home.png`
+- Live luinbytes.dev case route: `/tmp/luinbytes-issue30-live-versioned-case.png`
+- Live luinbytes.github.io link dock: `/tmp/luinbytes-issue30-live-versioned-linkdock.png`
+
+## State
+
+- Local full-site export served at `http://127.0.0.1:4178`.
+- Local link dock served at `http://127.0.0.1:4176`.
+- Live `luinbytes.dev` deploy source is `gh-pages`.
+- Live `luinbytes.github.io` deploy source is `master`.
+- `gh-pages` was patched with `.nojekyll` and a versioned asset path so GitHub Pages serves Next.js `_next` assets despite stale edge 404s for the original asset URLs.
+
+## Findings
+
+- Passed: lint, typecheck, and static export build complete successfully.
+- Passed: local homepage renders on desktop and mobile with no Playwright console/page errors.
+- Passed: local case routes render the case Proof Loop on desktop and mobile.
+- Passed: local link dock renders on desktop and mobile.
+- Passed: reduced-motion emulation matches `(prefers-reduced-motion: reduce)` and leaves the homepage visible with no CSS animation names on sampled command/proof elements.
+- Passed: keyboard search focuses through the hero command surface, filters `meteor`, and updates the active case to `Meteor`.
+- Passed: keyboard command shortcut opens the command menu with focus on `Type a command or search`.
+- Passed: mobile proof inspection switches the Proof Tab to `Verify` and shows `Source linked`.
+- Passed: link dock keyboard shortcut `3` triggers the Discord copied state.
+- Passed: live `https://luinbytes.dev/` renders the styled redesign.
+- Passed: live `https://luinbytes.dev/linux-sonar` renders the styled case page with the case Proof Loop and no Playwright console/page errors.
+- Passed: live `https://luinbytes.github.io/` renders the styled Obsidian Pink link dock.
+
+## Verification
+
+- `git status --short --branch`
+- `gh issue view 30 --repo luinbytes/luinbytes.dev --json number,title,state,body,comments,labels,url`
+- `npm run lint`
+- `npx tsc --noEmit`
+- `npm run build`
+- In-app browser attempt timed out during setup; fallback used isolated Playwright in `/tmp/luinbytes-issue30-qa`.
+- Local Playwright QA across desktop/mobile homepage, case routes, reduced motion, command/search keyboard flow, proof tab inspection, and link dock shortcut.
+- `gh run watch 28631828214 --repo luinbytes/luinbytes.dev --exit-status`
+- `gh run watch 28631890269 --repo luinbytes/luinbytes.dev --exit-status`
+- Live Playwright QA for `https://luinbytes.dev/`, `https://luinbytes.dev/linux-sonar`, and `https://luinbytes.github.io/`.
+
+final result: passed
+
+---
+
+## Issue
+
 #28 Align case routes with the Proof Loop
 
 ## Implementation Screenshots
