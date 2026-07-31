@@ -30,6 +30,7 @@ __pycache__/
 # misc
 .DS_Store
 *.pem
+/CONTRIBUTING.md
 
 # debug
 npm-debug.log*
