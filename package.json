@@ -4,16 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/generate-sitemap.js && npm run build:f1-sw",
+    "prebuild": "node scripts/generate-sitemap.js",
     "build": "next build",
-    "postbuild": "node scripts/package-f1-worker-assets.mjs",
-    "build:f1-sw": "tsc workers/f1-sw.ts --outFile public/f1-sw.js --target ES2020 --module none --lib ES2020,WebWorker --skipLibCheck",
     "start": "next start",
     "lint": "eslint",
-    "f1:gateway:dev": "wrangler dev --local",
-    "f1:gateway:check": "node scripts/package-f1-worker-assets.mjs && wrangler types workers/f1-gateway-env.d.ts --check && tsc -p workers/tsconfig.json && wrangler deploy --dry-run",
-    "test:f1-gateway": "node --test tests/f1-gateway.test.mts",
-    "f1:gateway:deploy": "npm run build && wrangler deploy",
     "test:e2e:setup": "python3 -m pip install -r requirements-test.txt && python3 -m playwright install chromium",
     "test:e2e": "python3 -m unittest discover -s tests/browser -p '*_test.py' -v"
   },
@@ -39,7 +33,6 @@
     "eslint": "^9",
     "eslint-config-next": "^16.2.10",
     "tailwindcss": "^4",
-    "typescript": "^5",
-    "wrangler": "^4.112.0"
+    "typescript": "^5"
   }
 }

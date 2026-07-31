@@ -18,16 +18,6 @@ export interface Project {
     lumiApproved?: boolean; // Projects Lumi helped build/polish
 }
 
-export interface ActivityItem {
-    id: string;
-    type: "contribution" | "release" | "experiment";
-    title: string;
-    description: string;
-    date: string; // ISO string or loose date "Dec 2025"
-}
-
-// BuildLogItem interface removed - Build Log section replaced with Quick Dev Stats
-
 export const projects: Project[] = [
     {
         id: "meteor",
@@ -262,5 +252,3 @@ export const projects: Project[] = [
         featured: false,
     },
 ];
-
-// buildLog export removed - Build Log section replaced with Quick Dev Stats in activity.tsx

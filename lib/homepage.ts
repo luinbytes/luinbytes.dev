@@ -201,8 +201,6 @@ export const problemBuilds: ProblemBuild[] = [
   },
 ];
 
-export const selectedBuilds = problemBuilds;
-
 export const originLines = [
   "Started on a PS3: jailbreaks, modding, firmware rabbit holes, and too many late nights taking things apart.",
   "That curiosity never really left. Now it shows up as Android apps, Linux tools, automation, and runtime systems work.",

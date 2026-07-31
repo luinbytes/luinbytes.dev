@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { selectedBuilds } from "@/lib/homepage";
+import { problemBuilds } from "@/lib/homepage";
 import { ScrollReveal } from "@/components/animations/scroll-reveal";
 
 export function SelectedBuilds() {
@@ -32,7 +32,7 @@ export function SelectedBuilds() {
         </ScrollReveal>
 
         <div className="grid gap-4">
-          {selectedBuilds.map((build) => {
+          {problemBuilds.map((build) => {
             const Icon = build.icon;
             const isExternal = build.href.startsWith("http");
             const rowClassName =
