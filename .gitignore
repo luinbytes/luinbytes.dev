@@ -30,6 +30,9 @@ __pycache__/
 # misc
 .DS_Store
 *.pem
+/CONTRIBUTING.md
+/CONTEXT.md
+/AGENTS.md
 
 # debug
 npm-debug.log*
@@ -42,10 +45,6 @@ yarn-error.log*
 
 # vercel
 .vercel
-
-# cloudflare worker local state
-.wrangler/
-.f1-worker-assets/
 
 # claude
 CLAUDE.md
