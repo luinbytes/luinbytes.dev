@@ -31,6 +31,8 @@ __pycache__/
 .DS_Store
 *.pem
 /CONTRIBUTING.md
+/CONTEXT.md
+/AGENTS.md
 
 # debug
 npm-debug.log*
