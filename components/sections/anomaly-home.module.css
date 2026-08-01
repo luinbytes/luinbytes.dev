@@ -343,7 +343,7 @@
 .searchRow input::placeholder { color: color-mix(in srgb, var(--color-dark-brown) 62%, transparent); }
 
 .filters { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 1rem; list-style: none; }
-.filters button { min-height: 38px; border: 1px solid var(--color-dark-brown); padding: 0.45rem 0.7rem; font-family: var(--font-mono); font-size: 0.62rem; font-weight: 700; text-transform: uppercase; }
+.filters button { min-width: 44px; min-height: 44px; border: 1px solid var(--color-dark-brown); padding: 0.45rem 0.7rem; font-family: var(--font-mono); font-size: 0.62rem; font-weight: 700; text-transform: uppercase; }
 .filters button[aria-pressed="true"] { background: var(--color-dark-brown); color: var(--color-paper); }
 
 .projectIndex ol { border: 2px solid var(--color-dark-brown); list-style: none; }

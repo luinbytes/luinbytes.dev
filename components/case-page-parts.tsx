@@ -91,7 +91,7 @@ export function SectionRail({
           <a
             key={item.id}
             href={`#${item.id}`}
-            className="group flex items-center gap-3 nd-transition"
+            className="group flex min-h-11 items-center gap-3 nd-transition"
             aria-current={isActive ? "true" : undefined}
           >
             <span

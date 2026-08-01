@@ -291,7 +291,12 @@ export function Header() {
       const offsetPosition =
         elementPosition + window.pageYOffset - headerOffset;
 
-      window.scrollTo({ top: offsetPosition, behavior: "smooth" });
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
+      });
       setActiveSection(targetId);
       setMobileMenuOpen(false);
     }
@@ -329,7 +334,7 @@ export function Header() {
               aria-expanded={productMenuOpen}
               aria-controls="products-menu"
               className={cn(
-                "inline-flex items-center gap-1 px-3 py-2 font-mono text-[11px] uppercase tracking-label nd-focus nd-transition",
+                "inline-flex min-h-11 items-center gap-1 px-3 py-2 font-mono text-[11px] uppercase tracking-label nd-focus nd-transition",
                 productIsActive
                   ? "text-nd-text-display"
                   : "text-nd-text-disabled hover:text-nd-text-secondary"
@@ -418,7 +423,7 @@ export function Header() {
                 href={linkHref(link.href)}
                 onClick={(event) => handleSectionClick(event, link.href)}
                 className={cn(
-                  "px-3 py-2 font-mono text-[11px] uppercase tracking-label nd-focus nd-transition",
+                  "inline-flex min-h-11 items-center px-3 py-2 font-mono text-[11px] uppercase tracking-label nd-focus nd-transition",
                   activeSection === sectionId
                     ? "text-nd-text-display"
                     : "text-nd-text-disabled hover:text-nd-text-secondary"
@@ -431,7 +436,7 @@ export function Header() {
           <button
             type="button"
             onClick={openCommandMenu}
-            className="print-shadow-xs ml-3 inline-flex items-center gap-2 border border-nd-border-visible bg-nd-surface px-3 py-1.5 font-mono text-[11px] uppercase tracking-label-tight text-nd-text-secondary nd-focus nd-transition hover:-translate-y-0.5 hover:border-nd-text-display hover:text-nd-text-display"
+            className="print-shadow-xs ml-3 inline-flex min-h-11 items-center gap-2 border border-nd-border-visible bg-nd-surface px-3 py-1.5 font-mono text-[11px] uppercase tracking-label-tight text-nd-text-secondary nd-focus nd-transition hover:-translate-y-0.5 hover:border-nd-text-display hover:text-nd-text-display"
           >
             <Command className="h-3.5 w-3.5" />
             <CommandShortcut />
@@ -445,7 +450,7 @@ export function Header() {
           aria-expanded={mobileMenuOpen}
           aria-controls="mobile-menu"
           aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
-          className="p-2 text-nd-text-secondary nd-focus nd-transition hover:text-nd-text-display md:hidden"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center p-2 text-nd-text-secondary nd-focus nd-transition hover:text-nd-text-display md:hidden"
         >
           {mobileMenuOpen ? (
             <X className="h-5 w-5" />
@@ -481,7 +486,7 @@ export function Header() {
                           target={external ? "_blank" : undefined}
                           rel={external ? "noopener noreferrer" : undefined}
                           onClick={() => setMobileMenuOpen(false)}
-                          className="py-2 font-mono text-[12px] uppercase tracking-label text-nd-text-primary nd-focus"
+                          className="flex min-h-11 items-center py-2 font-mono text-[12px] uppercase tracking-label text-nd-text-primary nd-focus"
                         >
                           {external ? item.name : item.href}
                           {external && (
