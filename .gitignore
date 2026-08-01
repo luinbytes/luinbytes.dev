@@ -33,6 +33,7 @@ __pycache__/
 /CONTRIBUTING.md
 /CONTEXT.md
 /AGENTS.md
+/.agent/CONTINUITY.md
 
 # debug
 npm-debug.log*
