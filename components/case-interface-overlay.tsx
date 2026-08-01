@@ -148,7 +148,7 @@ export function CaseInterfaceOverlay() {
               </h2>
             </div>
             <span className="grid h-9 w-9 place-items-center border border-nd-accent/60 bg-nd-accent/12 text-nd-accent">
-              <Crosshair className="h-4 w-4" />
+              <Crosshair aria-hidden="true" className="h-4 w-4" />
             </span>
           </div>
 
@@ -188,7 +188,7 @@ export function CaseInterfaceOverlay() {
               type="button"
               onClick={() => jumpTo(section.id)}
               className={cn(
-                "group grid min-h-[42px] grid-cols-[2rem_1fr] items-center border px-2 text-left font-mono text-[10px] uppercase tracking-label-tight nd-focus nd-transition",
+                "group grid min-h-11 grid-cols-[2rem_1fr] items-center border px-2 text-left font-mono text-[10px] uppercase tracking-label-tight nd-focus nd-transition",
                 activeId === section.id
                   ? "border-nd-accent/60 bg-nd-accent/13 text-nd-text-display"
                   : "border-transparent text-nd-text-secondary hover:border-nd-border hover:bg-nd-surface-raised/70 hover:text-nd-text-primary"
@@ -205,6 +205,7 @@ export function CaseInterfaceOverlay() {
             type="button"
             onClick={() => setFocusMode((value) => !value)}
             aria-pressed={focusMode}
+            aria-label="Toggle focus mode"
             className={cn(
               "grid min-h-[48px] place-items-center border nd-focus nd-transition",
               focusMode
@@ -213,15 +214,16 @@ export function CaseInterfaceOverlay() {
             )}
             title="Toggle focus mode"
           >
-            <Focus className="h-4 w-4" />
+            <Focus aria-hidden="true" className="h-4 w-4" />
           </button>
           <button
             type="button"
             onClick={openCommandMenu}
+            aria-label="Open command menu"
             className="grid min-h-[48px] place-items-center border border-nd-border bg-nd-black/35 text-nd-text-secondary nd-focus nd-transition hover:text-nd-text-display"
             title="Open command menu"
           >
-            <Command className="h-4 w-4" />
+            <Command aria-hidden="true" className="h-4 w-4" />
           </button>
         </div>
 
@@ -241,6 +243,7 @@ export function CaseInterfaceOverlay() {
         type="button"
         onClick={() => setPanelOpen((open) => !open)}
         aria-expanded={panelOpen}
+        aria-controls="mobile-case-nav"
         className="print-shadow-strong fixed bottom-4 left-4 z-[80] inline-flex min-h-[48px] items-center gap-2 border-2 border-paper bg-dark-brown px-4 font-mono text-[11px] uppercase tracking-label text-nd-text-display nd-focus xl:hidden"
       >
         <MousePointer2 className="h-4 w-4 text-nd-accent" />
@@ -249,8 +252,9 @@ export function CaseInterfaceOverlay() {
 
       {panelOpen && (
         <div
+          id="mobile-case-nav"
           data-mobile-case-nav
-          className="registration-plate print-dither print-shadow-md fixed inset-x-3 bottom-20 z-[80] border-2 border-paper bg-dark-brown p-4 xl:hidden"
+          className="registration-plate print-dither print-shadow-md fixed inset-x-3 bottom-20 z-[80] overscroll-contain border-2 border-paper bg-dark-brown p-4 xl:hidden"
         >
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
@@ -259,7 +263,7 @@ export function CaseInterfaceOverlay() {
               </p>
               <h2 className="text-xl font-bold text-nd-text-display">{study.title}</h2>
             </div>
-            <Layers3 className="h-5 w-5 text-nd-text-secondary" />
+            <Layers3 aria-hidden="true" className="h-5 w-5 text-nd-text-secondary" />
           </div>
           <div className="grid max-h-[38vh] gap-2 overflow-y-auto pr-1">
             {sections.map((section) => (

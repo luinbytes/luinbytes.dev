@@ -206,9 +206,12 @@ export function AnomalyHome() {
             <label htmlFor="project-search">Search the print index</label>
             <input
               id="project-search"
+              name="project-search"
+              autoComplete="off"
+              spellCheck={false}
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Project, stack, or problem"
+              placeholder="Project, stack, or problem…"
             />
           </div>
           <ul className={styles.filters} aria-label="Filter projects">

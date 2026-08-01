@@ -79,7 +79,11 @@ export function CommandMenu() {
         return;
       }
 
-      document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+      document.getElementById(id)?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
+      });
     },
     [pathname, router]
   );
@@ -243,7 +247,7 @@ function Item({
     <Command.Item
       keywords={keywords}
       onSelect={onSelect}
-      className="group mt-1 flex min-h-[42px] cursor-pointer items-center gap-3 border border-transparent px-3 py-2 font-mono text-[13px] text-nd-text-secondary outline-none nd-transition aria-selected:border-nd-border-visible aria-selected:bg-nd-text-display aria-selected:text-nd-black"
+      className="group mt-1 flex min-h-11 cursor-pointer items-center gap-3 border border-transparent px-3 py-2 font-mono text-[13px] text-nd-text-secondary outline-none nd-transition aria-selected:border-nd-border-visible aria-selected:bg-nd-text-display aria-selected:text-nd-black"
     >
       <Icon className="h-4 w-4 text-nd-text-disabled nd-transition group-aria-selected:text-nd-accent" strokeWidth={1.5} />
       {children}
