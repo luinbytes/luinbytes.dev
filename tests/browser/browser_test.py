@@ -238,6 +238,7 @@ PRODUCTS = (
 )
 
 EXTERNAL_PRODUCTS = (
+    ("Hermes Android", "https://github.com/luinbytes/hermes-android"),
     ("Minecrooft", "https://github.com/luinbytes/minecrooft"),
     ("Cursor Barrier", "https://github.com/luinbytes/cursor-barrier"),
     ("Raycast automation", "https://github.com/luinbytes/extensions"),
@@ -567,12 +568,55 @@ class ProductNavigationTests(BrowserTestCase):
         self.assertNotIn("Poke Android", visible_build_names)
         self.assertEqual(
             [name.split(" / ", 1)[0] for name in build_names],
-            ["Linux Sonar", "Meteor", "Hermes Android", "Sleepr", "Game Systems"],
+            ["Hermes Android", "Linux Sonar", "Meteor", "Sleepr", "Game Systems"],
         )
         for removed_name in ("Minecrooft", "Cursor Barrier", "Raycast automation"):
             self.assertNotIn(removed_name, "\n".join(build_names))
 
         browser.close()
+
+    def test_homepage_leads_with_hermes_android_at_desktop_and_mobile(self) -> None:
+        for viewport in ({"width": 1440, "height": 900}, {"width": 412, "height": 915}):
+            with self.subTest(viewport=viewport):
+                browser = self.playwright.chromium.launch()
+                page = browser.new_page(viewport=viewport)
+                page.goto(self.base_url, wait_until="networkidle")
+
+                self.assertTrue(
+                    page.get_by_role("heading", level=1, name="I get annoyed, then I build the missing thing.").is_visible()
+                )
+                hero_link = page.get_by_role("link", name="Explore Hermes Android")
+                self.assertEqual(hero_link.get_attribute("href"), "#hermes")
+                hero_link.click()
+                page.wait_for_url("**/#hermes")
+                feature = page.get_by_role("region", name="The agent that grows with you, away from the desk.")
+                self.assertTrue(feature.is_visible())
+                self.assertEqual(
+                    feature.get_by_role("link", name="Download latest").get_attribute("href"),
+                    "https://github.com/luinbytes/hermes-android/releases/latest",
+                )
+                for image_name in (
+                    "Hermes for Android — the agent that grows with you",
+                    "Hermes Android backend onboarding",
+                    "Hermes Android Command Center",
+                    "Hermes Android Nous billing screen",
+                ):
+                    image = feature.get_by_role("img", name=image_name)
+                    self.assertTrue(image.evaluate("element => element.complete && element.naturalWidth > 0"))
+                self.assertEqual(
+                    feature.get_by_role(
+                        "img", name="Hermes for Android — the agent that grows with you"
+                    ).get_attribute("loading"),
+                    "lazy",
+                )
+                self.assertLessEqual(
+                    page.evaluate("document.documentElement.scrollWidth"), viewport["width"]
+                )
+                page.screenshot(
+                    path=SCREENSHOTS / f"hermes-home-{viewport['width']}.png",
+                    full_page=True,
+                )
+                browser.close()
 
     def test_dedicated_product_routes_render_at_desktop_and_mobile(self) -> None:
         viewports = (

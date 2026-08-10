@@ -32,8 +32,8 @@ export type ProblemBuild = {
 };
 
 export const workbenchItems = [
-  { label: "Focus", value: "Building & shipping" },
-  { label: "Currently", value: "Meteor, linux-sonar, Raycast extensions" },
+  { label: "Focus", value: "Hermes for Android" },
+  { label: "Currently", value: "Shipping the native Hermes client" },
   { label: "Always", value: "Learning, breaking, rebuilding" },
   { label: "Jump", value: "/linux /android /reverse /raycast" },
 ] as const;
@@ -119,8 +119,25 @@ export const journeyChapters: JourneyChapter[] = [
 
 export const problemBuilds: ProblemBuild[] = [
   {
-    id: "linux-sonar",
+    id: "hermes-android",
     index: "01",
+    problem: "Hermes needs its real sessions and controls away from the desk.",
+    buildName: "Hermes Android",
+    shortName: "Native Hermes client",
+    summary:
+      "A released native Android client for Nous Research Hermes Agent, with real sessions, profiles, skills, tools, models, providers, automations, voice, files, and agent controls.",
+    outcome:
+      "Turns the existing Hermes Dashboard into a secure Kotlin and Compose mobile experience instead of a WebView or chat-only wrapper.",
+    proof: "Public source, signed v1.0.1 APK and AAB release, Android CI, and physical Samsung debug-build QA.",
+    tech: ["Kotlin", "Compose", "REST", "WebSocket"],
+    href: "https://github.com/luinbytes/hermes-android/releases/latest",
+    sourceHref: "https://github.com/luinbytes/hermes-android",
+    filters: ["android", "kotlin", "hermes", "ai"],
+    icon: Smartphone,
+  },
+  {
+    id: "linux-sonar",
+    index: "02",
     problem: "Linux audio tools are stuck in 2005.",
     buildName: "Linux Sonar",
     shortName: "Linux audio",
@@ -137,7 +154,7 @@ export const problemBuilds: ProblemBuild[] = [
   },
   {
     id: "meteor",
-    index: "02",
+    index: "03",
     problem: "Task and habit apps are either bloated or inflexible.",
     buildName: "Meteor",
     shortName: "Android daily view",
@@ -150,22 +167,6 @@ export const problemBuilds: ProblemBuild[] = [
     href: "/meteor",
     filters: ["android", "kotlin", "habits", "tasks"],
     icon: CheckSquare,
-  },
-  {
-    id: "hermes-android",
-    index: "03",
-    problem: "Hermes needs a native Android client for its real sessions and controls.",
-    buildName: "Hermes Android",
-    shortName: "Native Hermes client",
-    summary:
-      "Native Android client for Nous Research Hermes Agent, using the Dashboard backend for sessions, profiles, skills, tools, models, providers, and automations.",
-    outcome:
-      "Brings real Hermes Dashboard sessions and controls into a Kotlin and Compose Android client, with REST and WebSocket validation.",
-    proof: "Private Kotlin and Compose repo with Dashboard authentication, encrypted session storage, and green Android CI.",
-    tech: ["Kotlin", "Compose", "REST", "WebSocket"],
-    href: "https://github.com/luinbytes/hermes-android",
-    filters: ["android", "kotlin", "hermes", "ai"],
-    icon: Smartphone,
   },
   {
     id: "sleepr",
@@ -185,7 +186,7 @@ export const problemBuilds: ProblemBuild[] = [
   },
   {
     id: "reverse-engineering",
-    index: "06",
+    index: "05",
     problem: "Game systems are opaque black boxes.",
     buildName: "Game Systems",
     shortName: "Systems craft",

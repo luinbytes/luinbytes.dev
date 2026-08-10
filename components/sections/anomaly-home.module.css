@@ -314,11 +314,48 @@
 .proofStrip p { margin-top: 1rem; font-size: 0.9rem; font-weight: 700; }
 
 .builds,
+.hermesFeature,
 .about,
 .status,
 .contact {
   padding: clamp(4.5rem, 9vw, 9rem) var(--poster-pad);
 }
+
+.hermesFeature {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.8fr) minmax(460px, 1.2fr);
+  gap: clamp(2rem, 5vw, 5rem);
+  border-top: 3px solid var(--color-dark-brown);
+  background: var(--color-dark-brown);
+  color: var(--color-paper);
+}
+
+.hermesLead { align-self: center; }
+.hermesLead .kicker { color: var(--color-mustard); }
+.hermesLead h2 {
+  max-width: 14ch;
+  margin-top: 0.8rem;
+  font-family: var(--font-pixelify), "Space Grotesk", system-ui, sans-serif;
+  font-size: clamp(3.2rem, 6vw, 6.5rem);
+  font-weight: 700;
+  line-height: 0.84;
+}
+.hermesLead > p:not(.kicker) { max-width: 650px; margin-top: 1.5rem; font-size: 1.05rem; line-height: 1.65; }
+.hermesFacts { display: grid; grid-template-columns: repeat(2, 1fr); margin-top: 2rem; border: 2px solid currentColor; list-style: none; }
+.hermesFacts li { min-height: 92px; padding: 0.9rem; border-right: 1px solid currentColor; border-bottom: 1px solid currentColor; }
+.hermesFacts li:nth-child(2n) { border-right: 0; }
+.hermesFacts li:nth-last-child(-n + 2) { border-bottom: 0; }
+.hermesFacts strong,
+.hermesFacts span { display: block; }
+.hermesFacts strong { color: var(--color-mustard); font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.hermesFacts span { margin-top: 0.7rem; font-size: 0.9rem; font-weight: 700; }
+
+.hermesGallery { min-width: 0; border: 3px solid var(--color-paper); padding: 0.65rem; background: var(--color-paper); box-shadow: 10px 10px 0 var(--color-mustard); }
+.hermesBanner { display: block; width: 100%; height: auto; border: 2px solid var(--color-dark-brown); }
+.phoneRail { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.65rem; margin-top: 0.65rem; background: var(--color-paper); }
+.phoneRail figure { min-width: 0; border: 2px solid var(--color-dark-brown); background: var(--color-dark-brown); }
+.phoneRail img { display: block; width: 100%; height: auto; }
+.phoneRail figcaption { border-top: 2px solid var(--color-paper); padding: 0.65rem; color: var(--color-mustard); font-family: var(--font-mono); font-size: 0.58rem; font-weight: 700; letter-spacing: 0.08em; text-align: center; text-transform: uppercase; }
 
 .builds {
   display: grid;
@@ -459,11 +496,13 @@
 
 @media (max-width: 900px) {
   .registrationFrame,
+  .hermesFeature,
   .builds,
   .about,
   .contact { grid-template-columns: 1fr; }
   .registrationFrame { min-height: auto; }
   .posterMark { min-height: 440px; border-top: 3px solid var(--color-paper); border-left: 0; }
+  .hermesLead h2 { max-width: 16ch; }
   .proofStrip { grid-template-columns: repeat(2, 1fr); }
   .proofStrip li:nth-child(2) { border-right: 0; }
   .proofStrip li:nth-child(-n + 2) { border-bottom: 2px solid var(--color-dark-brown); }
@@ -490,6 +529,9 @@
   .journeyLegend { gap: 0.45rem; font-size: 0.48rem; }
   .proofStrip { margin-top: 1rem; }
   .projectIndex button { grid-template-columns: 2.2rem 1fr auto; gap: 0.6rem; padding: 1rem 0.75rem; }
+  .hermesFacts { grid-template-columns: 1fr; }
+  .hermesFacts li { border-right: 0; border-bottom: 1px solid currentColor; }
+  .hermesFacts li:nth-last-child(2) { border-bottom: 1px solid currentColor; }
   .selectedCase dl,
   .status dl { grid-template-columns: 1fr; }
   .selectedCase dl div,

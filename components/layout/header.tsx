@@ -28,6 +28,12 @@ const productGroups = [
     icon: Smartphone,
     items: [
       {
+        name: "Hermes Android",
+        href: "https://github.com/luinbytes/hermes-android",
+        description: "Native Android client for real Hermes sessions and controls.",
+        external: true,
+      },
+      {
         name: "Meteor",
         href: "/meteor",
         description: "Tasks and habits in one local-first daily view.",
