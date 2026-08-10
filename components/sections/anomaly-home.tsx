@@ -226,7 +226,7 @@ export function AnomalyHome() {
         </div>
 
         <div className={styles.hermesGallery}>
-          <Image className={styles.hermesBanner} src="/images/hermes-android/banner.png" alt="Hermes for Android — the agent that grows with you" width={1800} height={720} unoptimized priority />
+          <Image className={styles.hermesBanner} src="/images/hermes-android/banner.png" alt="Hermes for Android — the agent that grows with you" width={1800} height={720} unoptimized />
           <div className={styles.phoneRail} aria-label="Hermes Android app screens">
             <figure><Image src="/images/hermes-android/onboarding.png" alt="Hermes Android backend onboarding" width={720} height={1500} unoptimized /><figcaption>Backend link</figcaption></figure>
             <figure><Image src="/images/hermes-android/command-center.png" alt="Hermes Android Command Center" width={720} height={1500} unoptimized /><figcaption>Command Center</figcaption></figure>

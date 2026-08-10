@@ -603,6 +603,12 @@ class ProductNavigationTests(BrowserTestCase):
                 ):
                     image = feature.get_by_role("img", name=image_name)
                     self.assertTrue(image.evaluate("element => element.complete && element.naturalWidth > 0"))
+                self.assertEqual(
+                    feature.get_by_role(
+                        "img", name="Hermes for Android — the agent that grows with you"
+                    ).get_attribute("loading"),
+                    "lazy",
+                )
                 self.assertLessEqual(
                     page.evaluate("document.documentElement.scrollWidth"), viewport["width"]
                 )
