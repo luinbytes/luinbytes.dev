@@ -128,7 +128,7 @@ export const problemBuilds: ProblemBuild[] = [
       "A released native Android client for Nous Research Hermes Agent, with real sessions, profiles, skills, tools, models, providers, automations, voice, files, and agent controls.",
     outcome:
       "Turns the existing Hermes Dashboard into a secure Kotlin and Compose mobile experience instead of a WebView or chat-only wrapper.",
-    proof: "Public source, signed v1.0.1 APK and AAB release, Android CI, and physical Samsung debug-build QA.",
+    proof: "Public source, signed v1.1.0 APK and AAB release, Android CI, and physical Samsung debug-build QA.",
     tech: ["Kotlin", "Compose", "REST", "WebSocket"],
     href: "https://github.com/luinbytes/hermes-android/releases/latest",
     sourceHref: "https://github.com/luinbytes/hermes-android",

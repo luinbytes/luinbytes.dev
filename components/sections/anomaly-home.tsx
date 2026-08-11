@@ -201,7 +201,7 @@ export function AnomalyHome() {
 
       <section id="hermes" className={styles.hermesFeature} aria-labelledby="hermes-title">
         <div className={styles.hermesLead}>
-          <p className={styles.kicker}>Main release / Hermes for Android / v1.0.1</p>
+          <p className={styles.kicker}>Main release / Hermes for Android / v1.1.0</p>
           <h2 id="hermes-title">The agent that grows with you, away from the desk.</h2>
           <p>
             An independent Android client built toward first-party quality for
