@@ -12,7 +12,7 @@ Hermes Android is an independent native Kotlin and Jetpack Compose client for th
 
 - [Source repository](https://github.com/luinbytes/hermes-android)
 - [Latest release](https://github.com/luinbytes/hermes-android/releases/latest)
-- Current featured release: `v1.0.1`
+- Current featured release: `v1.1.0`
 
 The homepage's retained build index also covers:
 
