@@ -175,8 +175,8 @@ export function AnomalyHome() {
               messy technical work into verified shipped outcomes.
             </p>
             <div className={styles.actions}>
-              <a href="#hermes" className={styles.primaryAction}>
-                Explore Hermes Android <ArrowRight aria-hidden="true" />
+              <a href="#homebot" className={styles.primaryAction}>
+                Explore HomeBot <ArrowRight aria-hidden="true" />
               </a>
               <button type="button" onClick={chooseNext} className={styles.secondaryAction}>
                 Surprise me <Shuffle aria-hidden="true" />
@@ -197,42 +197,6 @@ export function AnomalyHome() {
             </li>
           ))}
         </ol>
-      </section>
-
-      <section id="hermes" className={styles.hermesFeature} aria-labelledby="hermes-title">
-        <div className={styles.hermesLead}>
-          <p className={styles.kicker}>Main release / Hermes for Android / v1.1.0</p>
-          <h2 id="hermes-title">The agent that grows with you, away from the desk.</h2>
-          <p>
-            An independent Android client built toward first-party quality for
-            the Hermes Dashboard. It connects to your existing backend and brings the real session,
-            provider, skill, tool, automation, billing, and Command Center
-            workflows into a native mobile interface.
-          </p>
-          <ul className={styles.hermesFacts} aria-label="Hermes Android highlights">
-            <li><strong>Native</strong><span>Kotlin + Jetpack Compose</span></li>
-            <li><strong>Real-time</strong><span>REST + JSON-RPC/WebSocket</span></li>
-            <li><strong>Secure</strong><span>Keystore-encrypted sessions</span></li>
-            <li><strong>Released</strong><span>Signed APK + AAB</span></li>
-          </ul>
-          <div className={styles.actions}>
-            <a href="https://github.com/luinbytes/hermes-android/releases/latest" target="_blank" rel="noopener noreferrer" className={styles.primaryAction}>
-              Download latest <Download aria-hidden="true" />
-            </a>
-            <a href="https://github.com/luinbytes/hermes-android" target="_blank" rel="noopener noreferrer" className={styles.secondaryAction}>
-              View source <ExternalLink aria-hidden="true" />
-            </a>
-          </div>
-        </div>
-
-        <div className={styles.hermesGallery}>
-          <Image className={styles.hermesBanner} src="/images/hermes-android/banner.png" alt="Hermes for Android — the agent that grows with you" width={1800} height={720} unoptimized />
-          <div className={styles.phoneRail} aria-label="Hermes Android app screens">
-            <figure><Image src="/images/hermes-android/onboarding.png" alt="Hermes Android backend onboarding" width={720} height={1500} unoptimized /><figcaption>Backend link</figcaption></figure>
-            <figure><Image src="/images/hermes-android/command-center.png" alt="Hermes Android Command Center" width={720} height={1500} unoptimized /><figcaption>Command Center</figcaption></figure>
-            <figure><Image src="/images/hermes-android/billing.png" alt="Hermes Android Nous billing screen" width={720} height={1500} unoptimized /><figcaption>Nous billing</figcaption></figure>
-          </div>
-        </div>
       </section>
 
       <section id="homebot" className={styles.homebotFeature} aria-labelledby="homebot-title">
