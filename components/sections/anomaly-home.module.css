@@ -315,6 +315,7 @@
 
 .builds,
 .hermesFeature,
+.homebotFeature,
 .about,
 .status,
 .contact {
@@ -356,6 +357,21 @@
 .phoneRail figure { min-width: 0; border: 2px solid var(--color-dark-brown); background: var(--color-dark-brown); }
 .phoneRail img { display: block; width: 100%; height: auto; }
 .phoneRail figcaption { border-top: 2px solid var(--color-paper); padding: 0.65rem; color: var(--color-mustard); font-family: var(--font-mono); font-size: 0.58rem; font-weight: 700; letter-spacing: 0.08em; text-align: center; text-transform: uppercase; }
+
+.homebotFeature { display: grid; grid-template-columns: minmax(280px, 0.8fr) minmax(420px, 1.2fr); gap: clamp(2rem, 5vw, 5rem); border-top: 3px solid var(--color-dark-brown); background: var(--color-mustard); }
+.homebotFeature .sectionHeading { align-self: center; }
+.homebotFeature .sectionHeading > p:first-child { color: var(--color-dark-brown); }
+.homebotFeature .primaryAction { background: var(--color-dark-brown); color: var(--color-paper); }
+.homebotIntro { max-width: 650px; margin-top: 1.5rem; font-size: 1.05rem; line-height: 1.65; }
+.homebotCase { border: 3px solid var(--color-dark-brown); background: var(--color-paper); box-shadow: 10px 10px 0 var(--color-dark-brown); }
+.homebotStatus { border-bottom: 2px solid var(--color-dark-brown); padding: 0.9rem 1rem; font-family: var(--font-mono); font-size: 0.65rem; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; }
+.homebotCase dl { display: grid; grid-template-columns: repeat(2, 1fr); }
+.homebotCase dl div { min-height: 150px; padding: 1.2rem; border-right: 1px solid var(--color-dark-brown); border-bottom: 1px solid var(--color-dark-brown); }
+.homebotCase dl div:nth-child(2n) { border-right: 0; }
+.homebotCase dt { font-family: var(--font-mono); font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.homebotCase dd { margin-top: 0.8rem; line-height: 1.55; }
+.homebotTech { display: flex; flex-wrap: wrap; gap: 0.45rem; padding: 1rem; list-style: none; }
+.homebotTech li { border: 1px solid var(--color-dark-brown); padding: 0.4rem 0.65rem; font-family: var(--font-mono); font-size: 0.62rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
 
 .builds {
   display: grid;
@@ -497,6 +513,7 @@
 @media (max-width: 900px) {
   .registrationFrame,
   .hermesFeature,
+  .homebotFeature,
   .builds,
   .about,
   .contact { grid-template-columns: 1fr; }
@@ -532,6 +549,8 @@
   .hermesFacts { grid-template-columns: 1fr; }
   .hermesFacts li { border-right: 0; border-bottom: 1px solid currentColor; }
   .hermesFacts li:nth-last-child(2) { border-bottom: 1px solid currentColor; }
+  .homebotCase dl { grid-template-columns: 1fr; }
+  .homebotCase dl div { min-height: auto; border-right: 0; }
   .selectedCase dl,
   .status dl { grid-template-columns: 1fr; }
   .selectedCase dl div,

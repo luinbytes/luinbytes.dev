@@ -565,15 +565,67 @@ class ProductNavigationTests(BrowserTestCase):
         build_names = builds.locator("ol[data-build-list] small").all_text_contents()
         visible_build_names = "\n".join(build_names)
         self.assertIn("Hermes Android", visible_build_names)
+        self.assertIn("HomeBot", visible_build_names)
         self.assertNotIn("Poke Android", visible_build_names)
         self.assertEqual(
             [name.split(" / ", 1)[0] for name in build_names],
-            ["Hermes Android", "Linux Sonar", "Meteor", "Sleepr", "Game Systems"],
+            [
+                "Hermes Android",
+                "HomeBot",
+                "Linux Sonar",
+                "Meteor",
+                "Sleepr",
+                "Game Systems",
+            ],
         )
+
+        homebot_button = builds.get_by_role("button", name=re.compile(r"HomeBot"))
+        homebot_button.click()
+        selected_case = builds.get_by_role("article", name="Selected build: HomeBot")
+        self.assertTrue(selected_case.is_visible())
+        self.assertTrue(
+            selected_case.get_by_text(
+                "An open-source Rust desktop, server, and Android home for persistent AI teammates, with Codex, Claude Code, and OpenAI-compatible provider integrations.",
+                exact=True,
+            ).is_visible()
+        )
+        self.assertTrue(
+            selected_case.get_by_text(
+                "Public pre-v1 source in M6 Packaging, Hardening & v1 Parity Gate; no supported release packages yet.",
+                exact=True,
+            ).is_visible()
+        )
+        homebot_link = selected_case.get_by_role("link", name="Open project")
+        self.assertEqual(
+            homebot_link.get_attribute("href"),
+            "https://github.com/luinbytes/HomeBot",
+        )
+        self.assertEqual(homebot_link.get_attribute("target"), "_blank")
+        self.assertEqual(homebot_link.get_attribute("rel"), "noopener noreferrer")
         for removed_name in ("Minecrooft", "Cursor Barrier", "Raycast automation"):
             self.assertNotIn(removed_name, "\n".join(build_names))
 
         browser.close()
+
+    def test_homepage_has_standalone_homebot_section_at_desktop_and_mobile(self) -> None:
+        for viewport in ({"width": 1440, "height": 900}, {"width": 412, "height": 915}):
+            with self.subTest(viewport=viewport):
+                browser = self.playwright.chromium.launch()
+                page = browser.new_page(viewport=viewport)
+                page.goto(f"{self.base_url}/#homebot", wait_until="networkidle")
+
+                homebot = page.get_by_role("region", name="A home for persistent AI teammates.")
+                self.assertTrue(homebot.is_visible())
+                self.assertEqual(homebot.get_attribute("id"), "homebot")
+                self.assertTrue(homebot.get_by_text("M6 / Packaging, Hardening & v1 Parity Gate", exact=True).is_visible())
+                self.assertTrue(homebot.get_by_text("There are no supported release packages yet.", exact=False).is_visible())
+                source = homebot.get_by_role("link", name="View HomeBot on GitHub")
+                self.assertEqual(source.get_attribute("href"), "https://github.com/luinbytes/HomeBot")
+                self.assertEqual(source.get_attribute("target"), "_blank")
+                self.assertEqual(source.get_attribute("rel"), "noopener noreferrer")
+                self.assertLessEqual(page.evaluate("document.documentElement.scrollWidth"), viewport["width"])
+
+                browser.close()
 
     def test_homepage_leads_with_hermes_android_at_desktop_and_mobile(self) -> None:
         for viewport in ({"width": 1440, "height": 900}, {"width": 412, "height": 915}):

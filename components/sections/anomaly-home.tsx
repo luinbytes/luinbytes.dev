@@ -235,6 +235,36 @@ export function AnomalyHome() {
         </div>
       </section>
 
+      <section id="homebot" className={styles.homebotFeature} aria-labelledby="homebot-title">
+        <div className={styles.sectionHeading}>
+          <p>Open source / HomeBot / pre-v1</p>
+          <h2 id="homebot-title">A home for persistent AI teammates.</h2>
+          <p className={styles.homebotIntro}>
+            Desktop, server, and Android clients for AI teammates that keep
+            their conversations, routines, tools, and repository context under
+            your control.
+          </p>
+          <div className={styles.actions}>
+            <a href="https://github.com/luinbytes/HomeBot" target="_blank" rel="noopener noreferrer" className={styles.primaryAction}>
+              View HomeBot on GitHub <ExternalLink aria-hidden="true" />
+            </a>
+          </div>
+        </div>
+
+        <div className={styles.homebotCase}>
+          <p className={styles.homebotStatus}>M6 / Packaging, Hardening &amp; v1 Parity Gate</p>
+          <dl>
+            <div><dt>Problem</dt><dd>Persistent AI teammates need a home that stays under your control.</dd></div>
+            <div><dt>Build</dt><dd>An authenticated Rust HTTP/WebSocket server, native egui desktop, and Android client with Codex CLI, Claude Code, and OpenAI-compatible provider support.</dd></div>
+            <div><dt>Outcome</dt><dd>Server-owned state keeps chats, tools, routines, and repository workspaces consistent across clients.</dd></div>
+            <div><dt>Proof</dt><dd>Public source is in pre-v1 hardening. There are no supported release packages yet.</dd></div>
+          </dl>
+          <ul className={styles.homebotTech} aria-label="HomeBot technology">
+            <li>Rust</li><li>egui</li><li>Android</li><li>HTTP</li><li>WebSocket</li>
+          </ul>
+        </div>
+      </section>
+
       <section id="builds" className={styles.builds} aria-labelledby="builds-title">
         <div className={styles.sectionHeading}>
           <p>Project chapters / retained work</p>

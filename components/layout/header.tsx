@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { CommandShortcut } from "@/components/os-shortcut";
 
 const navLinks = [
+  { name: "HomeBot", href: "#homebot" },
   { name: "Builds", href: "#builds" },
   { name: "About", href: "#about" },
   { name: "Status", href: "#status" },
@@ -168,7 +169,7 @@ export function Header() {
 
       if (!isMainPage) return;
 
-      const sections = ["home", "builds", "about", "status", "contact"];
+      const sections = ["home", "homebot", "builds", "about", "status", "contact"];
       const current = sections.find((section) => {
         const element = document.getElementById(section);
         if (!element) return false;

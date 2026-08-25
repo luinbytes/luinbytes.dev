@@ -136,8 +136,25 @@ export const problemBuilds: ProblemBuild[] = [
     icon: Smartphone,
   },
   {
-    id: "linux-sonar",
+    id: "homebot",
     index: "02",
+    problem: "Persistent AI teammates need a home that stays under your control.",
+    buildName: "HomeBot",
+    shortName: "Persistent AI teammates",
+    summary:
+      "An open-source Rust desktop, server, and Android home for persistent AI teammates, with Codex, Claude Code, and OpenAI-compatible provider integrations.",
+    outcome:
+      "Keeps authenticated chats, tools, routines, and repository workspaces server-owned while native desktop and Android clients share the same state.",
+    proof:
+      "Public pre-v1 source in M6 Packaging, Hardening & v1 Parity Gate; no supported release packages yet.",
+    tech: ["Rust", "Android", "HTTP", "WebSocket"],
+    href: "https://github.com/luinbytes/HomeBot",
+    filters: ["rust", "android", "ai", "systems"],
+    icon: Bot,
+  },
+  {
+    id: "linux-sonar",
+    index: "03",
     problem: "Linux audio tools are stuck in 2005.",
     buildName: "Linux Sonar",
     shortName: "Linux audio",
@@ -154,7 +171,7 @@ export const problemBuilds: ProblemBuild[] = [
   },
   {
     id: "meteor",
-    index: "03",
+    index: "04",
     problem: "Task and habit apps are either bloated or inflexible.",
     buildName: "Meteor",
     shortName: "Android daily view",
@@ -170,7 +187,7 @@ export const problemBuilds: ProblemBuild[] = [
   },
   {
     id: "sleepr",
-    index: "04",
+    index: "05",
     problem: "Sleep apps turn bedtime into another dashboard.",
     buildName: "Sleepr",
     shortName: "Sleep guidance",
@@ -186,7 +203,7 @@ export const problemBuilds: ProblemBuild[] = [
   },
   {
     id: "reverse-engineering",
-    index: "05",
+    index: "06",
     problem: "Game systems are opaque black boxes.",
     buildName: "Game Systems",
     shortName: "Systems craft",
