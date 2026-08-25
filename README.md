@@ -2,17 +2,14 @@
 
 Lu's personal portfolio: software built from annoying gaps, shipped as useful tools.
 
-The homepage keeps the personal intro up front, then puts the current main release—[Hermes Android](https://github.com/luinbytes/hermes-android)—on its own feature plate. The rest of the work stays in the build index and dedicated case pages.
-
-![Hermes Android](public/images/hermes-android/banner.png)
+The homepage keeps the personal intro up front, then gives [HomeBot](https://github.com/luinbytes/HomeBot) its own feature section. The rest of the work stays in the build index and dedicated case pages.
 
 ## What is featured
 
-Hermes Android is an independent native Kotlin and Jetpack Compose client for the Hermes Dashboard. It brings real sessions, profiles, skills, tools, models, providers, automations, voice, files, and Command Center workflows to Android. It is built toward first-party quality, but is not an official Nous Research release.
+HomeBot is an open-source Rust desktop, server, and Android home for persistent AI teammates. It keeps authenticated chats, tools, routines, and repository workspaces server-owned while native desktop and Android clients share the same state.
 
-- [Source repository](https://github.com/luinbytes/hermes-android)
-- [Latest release](https://github.com/luinbytes/hermes-android/releases/latest)
-- Current featured release: `v1.1.0`
+- [Source repository](https://github.com/luinbytes/HomeBot)
+- Current status: pre-v1 development
 
 The homepage's retained build index also covers:
 
