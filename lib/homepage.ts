@@ -32,8 +32,8 @@ export type ProblemBuild = {
 };
 
 export const workbenchItems = [
-  { label: "Focus", value: "Hermes for Android" },
-  { label: "Currently", value: "Shipping the native Hermes client" },
+  { label: "Focus", value: "HomeBot" },
+  { label: "Currently", value: "Building persistent AI teammates" },
   { label: "Always", value: "Learning, breaking, rebuilding" },
   { label: "Jump", value: "/linux /android /reverse /raycast" },
 ] as const;
@@ -119,25 +119,8 @@ export const journeyChapters: JourneyChapter[] = [
 
 export const problemBuilds: ProblemBuild[] = [
   {
-    id: "hermes-android",
-    index: "01",
-    problem: "Hermes needs its real sessions and controls away from the desk.",
-    buildName: "Hermes Android",
-    shortName: "Native Hermes client",
-    summary:
-      "A released native Android client for Nous Research Hermes Agent, with real sessions, profiles, skills, tools, models, providers, automations, voice, files, and agent controls.",
-    outcome:
-      "Turns the existing Hermes Dashboard into a secure Kotlin and Compose mobile experience instead of a WebView or chat-only wrapper.",
-    proof: "Public source, signed v1.1.0 APK and AAB release, Android CI, and physical Samsung debug-build QA.",
-    tech: ["Kotlin", "Compose", "REST", "WebSocket"],
-    href: "https://github.com/luinbytes/hermes-android/releases/latest",
-    sourceHref: "https://github.com/luinbytes/hermes-android",
-    filters: ["android", "kotlin", "hermes", "ai"],
-    icon: Smartphone,
-  },
-  {
     id: "homebot",
-    index: "02",
+    index: "01",
     problem: "Persistent AI teammates need a home that stays under your control.",
     buildName: "HomeBot",
     shortName: "Persistent AI teammates",
@@ -154,7 +137,7 @@ export const problemBuilds: ProblemBuild[] = [
   },
   {
     id: "linux-sonar",
-    index: "03",
+    index: "02",
     problem: "Linux audio tools are stuck in 2005.",
     buildName: "Linux Sonar",
     shortName: "Linux audio",
@@ -171,7 +154,7 @@ export const problemBuilds: ProblemBuild[] = [
   },
   {
     id: "meteor",
-    index: "04",
+    index: "03",
     problem: "Task and habit apps are either bloated or inflexible.",
     buildName: "Meteor",
     shortName: "Android daily view",
@@ -187,7 +170,7 @@ export const problemBuilds: ProblemBuild[] = [
   },
   {
     id: "sleepr",
-    index: "05",
+    index: "04",
     problem: "Sleep apps turn bedtime into another dashboard.",
     buildName: "Sleepr",
     shortName: "Sleep guidance",
@@ -203,7 +186,7 @@ export const problemBuilds: ProblemBuild[] = [
   },
   {
     id: "reverse-engineering",
-    index: "06",
+    index: "05",
     problem: "Game systems are opaque black boxes.",
     buildName: "Game Systems",
     shortName: "Systems craft",
