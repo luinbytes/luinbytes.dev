@@ -1,0 +1,179 @@
+.page {
+  color-scheme: light;
+  min-height: 100vh;
+  overflow: hidden;
+  background: #e8e7e3;
+  color: #17171b;
+}
+
+.nav,
+.intro,
+.concepts,
+.footer {
+  width: min(100% - 2rem, 92rem);
+  margin-inline: auto;
+}
+
+.nav {
+  min-height: 4.5rem;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  border-bottom: 1px solid #17171b;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+}
+
+.nav > span:nth-child(2) { text-align: center; color: #67666c; }
+.nav a { justify-self: end; display: flex; align-items: center; gap: 0.5rem; }
+.nav svg { width: 0.9rem; height: 0.9rem; }
+
+.intro {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  padding-block: clamp(5rem, 10vw, 10rem) 4rem;
+}
+
+.intro > p {
+  grid-column: 1 / -1;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #67666c;
+}
+
+.intro h1 {
+  max-width: 9ch;
+  font-size: clamp(4rem, 9vw, 9rem);
+  font-weight: 650;
+  line-height: 0.84;
+  letter-spacing: -0.075em;
+}
+
+.intro > div {
+  align-self: end;
+  max-width: 34rem;
+  padding-bottom: 0.6rem;
+  color: #55545a;
+  font-size: 1.05rem;
+  line-height: 1.65;
+}
+
+.intro > div span {
+  display: block;
+  margin-top: 1.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #17171b;
+}
+
+.concepts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border: 1px solid #17171b;
+}
+
+.card {
+  --accent: #e56f59;
+  --surface: #f3ebdd;
+  --ink: #282235;
+  min-height: 42rem;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #17171b;
+  padding: 1.25rem;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.card:last-child { border-right: 0; }
+.trace { --accent: #ff6b4a; --surface: #0b1f33; --ink: #e8f0f4; }
+.field { --accent: #d8ff57; --surface: #09111f; --ink: #f2f1e8; }
+
+.cardTopline {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.cardTopline span:first-child { color: var(--accent); }
+
+.motif {
+  min-height: 17rem;
+  display: grid;
+  place-items: center;
+}
+
+.motif svg { width: 100%; overflow: visible; }
+.motif path, .motif circle { fill: none; stroke: currentColor; stroke-width: 2; vector-effect: non-scaling-stroke; }
+.motif circle { fill: var(--surface); stroke: var(--accent); }
+
+.cardCopy { margin-top: auto; }
+.card h2 { font-size: clamp(2.5rem, 4vw, 4.75rem); font-weight: 650; line-height: 0.95; letter-spacing: -0.06em; }
+.cardCopy p { min-height: 7.5rem; margin-top: 1rem; color: color-mix(in srgb, var(--ink) 70%, transparent); line-height: 1.55; }
+
+.card > a {
+  min-height: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid color-mix(in srgb, var(--ink) 35%, transparent);
+  padding-top: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.card > a svg { width: 1rem; height: 1rem; transition: transform 180ms ease; }
+.card > a:hover svg, .card > a:focus-visible svg { transform: translate(3px, -3px); }
+
+.footer {
+  min-height: 8rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 980px) {
+  .concepts { grid-template-columns: 1fr; }
+  .card { min-height: 34rem; border-right: 0; border-bottom: 1px solid #17171b; }
+  .card:last-child { border-bottom: 0; }
+  .motif { min-height: 12rem; }
+  .cardCopy p { min-height: auto; margin-bottom: 2rem; }
+}
+
+@media (max-width: 680px) {
+  .nav, .intro, .concepts, .footer { width: min(100% - 1.25rem, 92rem); }
+  .nav { grid-template-columns: 1fr auto; }
+  .nav > span:nth-child(2) { display: none; }
+  .intro { grid-template-columns: 1fr; padding-block: 4.5rem 3rem; }
+  .intro h1 { font-size: clamp(3.6rem, 18vw, 6rem); }
+  .intro > div { margin-top: 1rem; }
+  .card { min-height: 32rem; }
+  .footer { align-items: flex-start; flex-direction: column; justify-content: center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card > a svg { transition: none; }
+}

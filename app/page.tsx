@@ -1,5 +1,5 @@
-import { AnomalyHome } from "@/components/sections/anomaly-home";
+import { ConceptGallery } from "@/components/concepts/concept-gallery";
 
 export default function Home() {
-  return <AnomalyHome />;
+  return <ConceptGallery />;
 }

@@ -1,10 +1,7 @@
 import type { Metadata } from "next";
 import { Pixelify_Sans, Space_Grotesk, Space_Mono } from "next/font/google";
 import "./globals.css";
-import { Header } from "@/components/layout/header";
-import { Footer } from "@/components/layout/footer";
-import { CommandMenu } from "@/components/command-menu";
-import { CaseInterfaceOverlay } from "@/components/case-interface-overlay";
+import { SiteFrame } from "@/components/layout/site-frame";
 import { siteUrl } from "@/site.config";
 
 const spaceGrotesk = Space_Grotesk({
@@ -34,13 +31,13 @@ export const metadata: Metadata = {
     template: "%s | Lu",
   },
   description:
-    "Self-taught software engineer building Android apps, Linux tools, game mods, Raycast extensions, and open-source utilities.",
+    "Lu is a software engineer at Orchid.ai building agents, native Android experiences, Linux tools, and open-source utilities.",
   metadataBase: new URL(siteUrl),
   twitter: {
     card: "summary_large_image",
     title: "Lu | Software Engineer",
     description:
-      "Self-taught software engineer building Android apps, Linux tools, game mods, Raycast extensions, and open-source utilities.",
+      "Software engineer at Orchid.ai building agents, Android experiences, Linux tools, and open-source utilities.",
     creator: "@luinbytes",
     images: `${siteUrl}/share-cards/luinbytes-dev-pink-print.png`,
   },
@@ -50,7 +47,7 @@ export const metadata: Metadata = {
     url: siteUrl,
     title: "Lu | Software Engineer",
     description:
-      "Self-taught software engineer building Android apps, Linux tools, game mods, Raycast extensions, and open-source utilities.",
+      "Software engineer at Orchid.ai building agents, Android experiences, Linux tools, and open-source utilities.",
     siteName: "Luinbytes",
     images: [
       {
@@ -105,8 +102,8 @@ export default function RootLayout({
         ║   b) Lu debugging something I broke (sorry)               ║
         ║   c) A recruiter snooping for code quality (it's good!)   ║
         ║                                                           ║
-        ║   Ink-and-paper system. Proof loop interface.               ║
-        ║   Hard frames, print marks, preserved details.              ║
+        ║   Three portfolio directions. Pick your favourite.          ║
+        ║   The old case-study routes are still tucked underneath.    ║
         ║                                                           ║
         ╚═══════════════════════════════════════════════════════════╝
       */}
@@ -128,19 +125,13 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <ConsoleEgg />
-        <CommandMenu />
-        <CaseInterfaceOverlay />
         <a
           href="#main"
           className="registration-plate sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[200] focus:border-2 focus:border-dark-brown focus:bg-paper focus:px-4 focus:py-3 focus:font-mono focus:text-[12px] focus:font-bold focus:uppercase focus:tracking-[0.08em] focus:text-dark-brown focus:outline focus:outline-3 focus:outline-paper focus:outline-offset-3"
         >
           Skip to content
         </a>
-        <Header />
-        <main id="main" className="min-h-screen pt-16">
-          {children}
-        </main>
-        <Footer />
+        <SiteFrame>{children}</SiteFrame>
       </body>
     </html>
   );

@@ -1,24 +1,16 @@
 # luinbytes.dev
 
-Lu's personal portfolio: software built from annoying gaps, shipped as useful tools.
+Lu's personal portfolio, currently presented as three fully built interactive directions for review.
 
-The homepage keeps the personal intro up front, then gives [HomeBot](https://github.com/luinbytes/HomeBot) its own feature section. The rest of the work stays in the build index and dedicated case pages.
+The homepage is a comparison gallery. Each concept reframes the site around Lu, his current work at [Orchid.ai](https://orchid.ai), and a curated group of public repositories rather than a catalogue of product pages.
 
 ## What is featured
 
-HomeBot is an open-source Rust desktop, server, and Android home for persistent AI teammates. It keeps authenticated chats, tools, routines, and repository workspaces server-owned while native desktop and Android clients share the same state.
+- `/concepts/signal-desk` — a warm, tactile studio patchbay with animated repository channels.
+- `/concepts/trace` — a bold editorial identity with a native range-driven project scrubber.
+- `/concepts/signal-field` — a spatial topographic map with plotted repository routes and a list-view fallback.
 
-- [Source repository](https://github.com/luinbytes/HomeBot)
-- Current status: pre-v1 development
-
-The homepage's retained build index also covers:
-
-- [Linux Sonar](https://github.com/luinbytes/linux-sonar) — per-app PipeWire routing, ChatMix, and mic effects for Linux.
-- Meteor — local-first Android tasks and habits.
-- Sleepr — cycle-aware wake guidance and on-device sleep rhythm learning.
-- Game Systems — overlays, hooks, trainers, and runtime instrumentation.
-
-Dedicated case pages cover BallHammer, Risk of Anticheat, BrcTrainer, DaggerFall, and SuperHackerGolf.
+All three feature [HomeBot](https://github.com/luinbytes/HomeBot), [rakazo-android](https://github.com/luinbytes/rakazo-android), [Linux Sonar](https://github.com/luinbytes/linux-sonar), [bongocat](https://github.com/luinbytes/bongocat), [cursor-barrier](https://github.com/luinbytes/cursor-barrier), and [BallHammer](https://github.com/luinbytes/BallHammer). Existing case-study routes remain available as an archive while a final direction is selected.
 
 ## Stack
 

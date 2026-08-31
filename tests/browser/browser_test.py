@@ -92,8 +92,15 @@ class GeneratedArtifactTests(unittest.TestCase):
             )
         ]
 
-        self.assertEqual(len(locations), 10)
+        self.assertEqual(len(locations), 13)
         self.assertEqual(locations.count("https://luinbytes.dev/ballhammer"), 1)
+        self.assertEqual(
+            locations.count("https://luinbytes.dev/concepts/signal-desk"), 1
+        )
+        self.assertEqual(
+            locations.count("https://luinbytes.dev/concepts/signal-field"), 1
+        )
+        self.assertEqual(locations.count("https://luinbytes.dev/concepts/trace"), 1)
 
 
 class MetadataParser(HTMLParser):
@@ -227,6 +234,94 @@ class BrowserTestCase(unittest.TestCase):
         cls.stop_server()
 
 
+class PortfolioMvpTests(BrowserTestCase):
+    concepts = (
+        ("Signal Desk", "/concepts/signal-desk"),
+        ("TRACE", "/concepts/trace"),
+        ("Signal Field", "/concepts/signal-field"),
+    )
+
+    def test_comparison_gallery_links_to_three_distinct_mvp_routes(self) -> None:
+        for viewport_name, viewport in (
+            ("desktop", {"width": 1440, "height": 900}),
+            ("mobile", {"width": 390, "height": 844}),
+        ):
+            with self.subTest(viewport=viewport_name):
+                browser = self.playwright.chromium.launch()
+                page = browser.new_page(viewport=viewport)
+                page.goto(self.base_url, wait_until="networkidle")
+
+                self.assertTrue(
+                    page.get_by_role(
+                        "heading", name="Three completely different ways in."
+                    ).is_visible()
+                )
+                self.assertEqual(
+                    [link.get_attribute("href") for link in page.get_by_role("link", name="Enter concept").all()],
+                    [path for _, path in self.concepts],
+                )
+                self.assertLessEqual(
+                    page.evaluate("document.documentElement.scrollWidth"),
+                    viewport["width"],
+                )
+                page.screenshot(
+                    path=SCREENSHOTS / f"review-gallery-{viewport_name}.png"
+                )
+                page.screenshot(
+                    path=SCREENSHOTS / f"portfolio-concepts-{viewport_name}.png",
+                    full_page=True,
+                )
+                browser.close()
+
+    def test_each_mvp_is_responsive_and_interactive(self) -> None:
+        for concept_name, path in self.concepts:
+            for viewport_name, viewport in (
+                ("desktop", {"width": 1440, "height": 900}),
+                ("mobile", {"width": 390, "height": 844}),
+            ):
+                with self.subTest(concept=concept_name, viewport=viewport_name):
+                    browser = self.playwright.chromium.launch()
+                    page = browser.new_page(viewport=viewport)
+                    page.goto(f"{self.base_url}{path}", wait_until="networkidle")
+
+                    self.assertTrue(
+                        page.get_by_role(
+                            "heading", name=re.compile(r"Orchid\.ai", re.I)
+                        ).first.is_visible()
+                    )
+                    for project in (
+                        "HomeBot",
+                        "rakazo-android",
+                        "linux-sonar",
+                        "bongocat",
+                        "cursor-barrier",
+                        "BallHammer",
+                    ):
+                        self.assertGreater(page.get_by_text(project, exact=True).count(), 0)
+
+                    page.screenshot(
+                        path=SCREENSHOTS
+                        / f"review-{path.rsplit('/', 1)[-1]}-{viewport_name}.png"
+                    )
+
+                    linux_control = page.get_by_role("button").filter(has_text="linux-sonar")
+                    if linux_control.count():
+                        linux_control.first.click()
+                        page.get_by_text("PipeWire", exact=True).first.wait_for(
+                            state="visible"
+                        )
+
+                    self.assertLessEqual(
+                        page.evaluate("document.documentElement.scrollWidth"),
+                        viewport["width"],
+                    )
+                    page.screenshot(
+                        path=SCREENSHOTS / f"{path.rsplit('/', 1)[-1]}-{viewport_name}.png",
+                        full_page=True,
+                    )
+                    browser.close()
+
+
 PRODUCTS = (
     ("Meteor", "/meteor"),
     ("Sleepr", "/sleepr"),
@@ -293,6 +388,7 @@ def product_link(page: Page, name: str, path: str, mobile: bool):
 
 
 class MotionTests(BrowserTestCase):
+    @unittest.skip("Superseded by the three portfolio MVP motion systems")
     def test_homepage_motion_uses_smooth_static_print_treatment(self) -> None:
         browser = self.playwright.chromium.launch()
         page = browser.new_page(viewport={"width": 1440, "height": 900})
@@ -352,6 +448,7 @@ class MotionTests(BrowserTestCase):
 
 
 class ProductNavigationTests(BrowserTestCase):
+    @unittest.skip("Product catalogue navigation is intentionally absent from the portfolio MVPs")
     def test_ballhammer_product_at_desktop_and_mobile(self) -> None:
         viewports = (
             {"width": 1440, "height": 900},
@@ -502,6 +599,7 @@ class ProductNavigationTests(BrowserTestCase):
 
                 browser.close()
 
+    @unittest.skip("Product catalogue navigation is intentionally absent from the portfolio MVPs")
     def test_products_navigation_at_desktop_and_mobile(self) -> None:
         viewports = {
             "desktop": {"width": 1440, "height": 900},
@@ -545,6 +643,7 @@ class ProductNavigationTests(BrowserTestCase):
 
                 browser.close()
 
+    @unittest.skip("Superseded by the curated repository interactions")
     def test_homepage_shows_current_builds(self) -> None:
         browser = self.playwright.chromium.launch()
         page = browser.new_page(viewport={"width": 1440, "height": 900})
@@ -604,6 +703,7 @@ class ProductNavigationTests(BrowserTestCase):
 
         browser.close()
 
+    @unittest.skip("Superseded by the three portfolio MVPs")
     def test_homepage_has_standalone_homebot_section_at_desktop_and_mobile(self) -> None:
         for viewport in ({"width": 1440, "height": 900}, {"width": 412, "height": 915}):
             with self.subTest(viewport=viewport):
