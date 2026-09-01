@@ -234,14 +234,8 @@ class BrowserTestCase(unittest.TestCase):
         cls.stop_server()
 
 
-class PortfolioMvpTests(BrowserTestCase):
-    concepts = (
-        ("Signal Desk", "/concepts/signal-desk"),
-        ("TRACE", "/concepts/trace"),
-        ("Signal Field", "/concepts/signal-field"),
-    )
-
-    def test_comparison_gallery_links_to_three_distinct_mvp_routes(self) -> None:
+class PortfolioTests(BrowserTestCase):
+    def test_homepage_is_responsive_and_routes_featured_work(self) -> None:
         for viewport_name, viewport in (
             ("desktop", {"width": 1440, "height": 900}),
             ("mobile", {"width": 390, "height": 844}),
@@ -253,73 +247,53 @@ class PortfolioMvpTests(BrowserTestCase):
 
                 self.assertTrue(
                     page.get_by_role(
-                        "heading", name="Three completely different ways in."
+                        "heading", name="I make computers do the useful part."
                     ).is_visible()
                 )
-                self.assertEqual(
-                    [link.get_attribute("href") for link in page.get_by_role("link", name="Enter concept").all()],
-                    [path for _, path in self.concepts],
+                for project in ("Orchid.ai", "Rakazo", "linux-sonar", "HomeBot"):
+                    self.assertTrue(
+                        page.get_by_role("button", name=re.compile(project, re.I)).is_visible()
+                    )
+
+                page.get_by_role("button", name=re.compile("Rakazo", re.I)).click()
+                proof = page.get_by_text("4 highlighted merged PRs", exact=True)
+                proof.wait_for(state="visible")
+                self.assertTrue(proof.is_visible())
+                self.assertTrue(
+                    page.get_by_role("link", name="Merged work").is_visible()
                 )
                 self.assertLessEqual(
                     page.evaluate("document.documentElement.scrollWidth"),
                     viewport["width"],
                 )
                 page.screenshot(
-                    path=SCREENSHOTS / f"review-gallery-{viewport_name}.png"
-                )
-                page.screenshot(
-                    path=SCREENSHOTS / f"portfolio-concepts-{viewport_name}.png",
+                    path=SCREENSHOTS / f"portfolio-final-{viewport_name}.png",
                     full_page=True,
                 )
                 browser.close()
 
-    def test_each_mvp_is_responsive_and_interactive(self) -> None:
-        for concept_name, path in self.concepts:
-            for viewport_name, viewport in (
-                ("desktop", {"width": 1440, "height": 900}),
-                ("mobile", {"width": 390, "height": 844}),
-            ):
-                with self.subTest(concept=concept_name, viewport=viewport_name):
-                    browser = self.playwright.chromium.launch()
-                    page = browser.new_page(viewport=viewport)
-                    page.goto(f"{self.base_url}{path}", wait_until="networkidle")
+    def test_sound_is_opt_in(self) -> None:
+        browser = self.playwright.chromium.launch()
+        page = browser.new_page(viewport={"width": 1440, "height": 900})
+        page.goto(self.base_url, wait_until="networkidle")
 
-                    self.assertTrue(
-                        page.get_by_role(
-                            "heading", name=re.compile(r"Orchid\.ai", re.I)
-                        ).first.is_visible()
-                    )
-                    for project in (
-                        "HomeBot",
-                        "rakazo-android",
-                        "linux-sonar",
-                        "bongocat",
-                        "cursor-barrier",
-                        "BallHammer",
-                    ):
-                        self.assertGreater(page.get_by_text(project, exact=True).count(), 0)
+        sound = page.get_by_role("button", name="sound off")
+        self.assertEqual(sound.get_attribute("aria-pressed"), "false")
+        sound.click()
+        self.assertEqual(
+            page.get_by_role("button", name="sound on").get_attribute("aria-pressed"),
+            "true",
+        )
+        browser.close()
 
-                    page.screenshot(
-                        path=SCREENSHOTS
-                        / f"review-{path.rsplit('/', 1)[-1]}-{viewport_name}.png"
-                    )
-
-                    linux_control = page.get_by_role("button").filter(has_text="linux-sonar")
-                    if linux_control.count():
-                        linux_control.first.click()
-                        page.get_by_text("PipeWire", exact=True).first.wait_for(
-                            state="visible"
-                        )
-
-                    self.assertLessEqual(
-                        page.evaluate("document.documentElement.scrollWidth"),
-                        viewport["width"],
-                    )
-                    page.screenshot(
-                        path=SCREENSHOTS / f"{path.rsplit('/', 1)[-1]}-{viewport_name}.png",
-                        full_page=True,
-                    )
-                    browser.close()
+    def test_legacy_concept_routes_still_render(self) -> None:
+        browser = self.playwright.chromium.launch()
+        page = browser.new_page(viewport={"width": 1280, "height": 800})
+        for path in ("/concepts/signal-desk", "/concepts/trace", "/concepts/signal-field"):
+            with self.subTest(path=path):
+                page.goto(f"{self.base_url}{path}", wait_until="networkidle")
+                self.assertGreater(page.get_by_role("heading").count(), 0)
+        browser.close()
 
 
 PRODUCTS = (

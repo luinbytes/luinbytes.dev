@@ -1,5 +1,5 @@
-import { ConceptGallery } from "@/components/concepts/concept-gallery";
+import { SignalDesk } from "@/components/concepts/signal-desk/signal-desk";
 
 export default function Home() {
-  return <ConceptGallery />;
+  return <SignalDesk />;
 }

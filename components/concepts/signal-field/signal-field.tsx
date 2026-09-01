@@ -12,6 +12,7 @@ type NodePosition = {
 };
 
 const nodePositions: Record<string, NodePosition> = {
+  "orchid-android": { left: 13, top: 52 },
   homebot: { left: 22, top: 23 },
   "rakazo-android": { left: 73, top: 19 },
   "linux-sonar": { left: 87, top: 51 },
@@ -212,7 +213,7 @@ export function SignalField() {
             >
               <div className={styles.fieldTopline}>
                 <span>Move to scout / select to inspect</span>
-                <span>6 signals detected</span>
+                <span>{portfolioProjects.length} signals detected</span>
               </div>
               {!listView ? (
                 <motion.div className={styles.fieldMap} style={motionDisabled ? undefined : { x: fieldX, y: fieldY }}>
@@ -314,7 +315,7 @@ export function SignalField() {
           <div className={styles.sectionHeading}>
             <p className={styles.kicker}>The public trail</p>
             <h2 id="builds-title">Builds in orbit<span>.</span></h2>
-            <p>Six places where curiosity turned into something people can clone, run, or learn from.</p>
+            <p>Four places where curiosity turned into something people can clone, run, or learn from.</p>
           </div>
           <div className={styles.mobileLog}>
             <div className={styles.mobileLogHeader}><span>Field log</span><span>Tap a signal to inspect</span></div>

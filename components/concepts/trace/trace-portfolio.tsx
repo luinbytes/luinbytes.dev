@@ -265,7 +265,7 @@ export default function TracePortfolio() {
               <p className={styles.sectionLabel}>Selected repositories</p>
               <h2 id="work-title">A trail of useful things.</h2>
               <p>
-                Six public repositories, chosen for the shape of the problem
+                Four featured projects, chosen for the shape of the problem
                 as much as the code that came out of it.
               </p>
             </div>

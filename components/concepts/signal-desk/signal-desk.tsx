@@ -1,311 +1,416 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import Link from "next/link";
+import Image from "next/image";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
+  ArrowDown,
   ArrowUpRight,
   Cable,
-  CircleDot,
   Github,
   Mail,
+  Music2,
   Radio,
-  Shuffle,
-  TerminalSquare,
+  Sparkles,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { portfolioIdentity, portfolioProjects, type PortfolioProject } from "@/lib/portfolio-content";
 import styles from "./signal-desk.module.css";
 
-const channelColors = ["coral", "blue", "brass", "lilac", "slate", "rose"] as const;
-const conceptLinks = [
-  { label: "MVP 02 / Trace", href: "/concepts/trace" },
-  { label: "MVP 03 / Signal Field", href: "/concepts/signal-field" },
-];
+const bubbles = [
+  [6, 10, 0.55, 13], [12, 72, 0.8, 8], [19, 38, 0.65, 10], [25, 87, 0.9, 6],
+  [34, 19, 0.72, 11], [42, 64, 0.5, 15], [49, 92, 0.82, 9], [58, 31, 0.62, 12],
+  [64, 77, 0.94, 7], [71, 15, 0.7, 10], [78, 56, 0.58, 14], [84, 84, 0.88, 8],
+  [91, 27, 0.66, 12], [96, 68, 0.76, 9],
+] as const;
 
-function projectTone(index: number) {
-  return channelColors[index % channelColors.length];
-}
+const fish = [
+  { top: "13%", delay: "-4s", duration: "24s", scale: 0.78, tone: "sun" },
+  { top: "31%", delay: "-17s", duration: "31s", scale: 0.5, tone: "coral" },
+  { top: "56%", delay: "-10s", duration: "27s", scale: 0.64, tone: "mint" },
+  { top: "78%", delay: "-24s", duration: "35s", scale: 0.46, tone: "blue" },
+] as const;
 
-function CablePath({ index, active, reduced }: { index: number; active: boolean; reduced: boolean }) {
-  const y = 42 + index * 39;
-  const path = `M 40 ${y} C 126 ${y}, 125 ${active ? 172 : 158}, 222 ${active ? 171 : 154}`;
+const supportingWork = [
+  { name: "Bongo Cat", note: "Cross-platform desktop companion", href: "https://github.com/luinbytes/bongocat" },
+  { name: "file-deduplicator", note: "Safe parallel duplicate finder", href: "https://github.com/luinbytes/file-deduplicator" },
+  { name: "cursor-barrier", note: "Linux input daemon in C", href: "https://github.com/luinbytes/cursor-barrier" },
+  { name: "ByteBot", note: "Stateful Discord operations", href: "https://github.com/luinbytes/bytebot-definitive-edition" },
+] as const;
 
+function AmbientAquarium() {
   return (
-    <motion.path
-      d={path}
-      className={`${styles.cablePath} ${styles[`tone${projectTone(index)}`]} ${active ? styles.cablePathActive : ""}`}
-      initial={reduced ? false : { pathLength: 0, opacity: 0.22 }}
-      animate={{ pathLength: active || reduced ? 1 : 0.58, opacity: active ? 1 : 0.3 }}
-      transition={{ duration: reduced ? 0 : 0.65, ease: [0.22, 1, 0.36, 1] }}
-    />
-  );
-}
-
-function Patchbay({
-  projects,
-  selectedId,
-  onSelect,
-  reduced,
-}: {
-  projects: PortfolioProject[];
-  selectedId: string;
-  onSelect: (id: string) => void;
-  reduced: boolean;
-}) {
-  return (
-    <div className={styles.patchbayShell}>
-      <div className={styles.patchbayTopline}>
-        <span className={styles.microLabel}>PATCHBAY / 06 CHANNELS</span>
-        <span className={styles.signalReady}>
-          <span className={styles.readyDot} />
-          signal ready
-        </span>
+    <div className={styles.aquarium} aria-hidden="true">
+      <div className={styles.sunwash} />
+      <div className={styles.caustics} />
+      <div className={styles.horizon} />
+      <div className={styles.bubbles}>
+        {bubbles.map(([left, bottom, scale, duration], index) => (
+          <span
+            key={`${left}-${bottom}`}
+            style={{
+              "--bubble-left": `${left}%`,
+              "--bubble-bottom": `${bottom}%`,
+              "--bubble-scale": scale,
+              "--bubble-duration": `${duration}s`,
+              "--bubble-delay": `${index * -1.7}s`,
+            } as CSSProperties}
+          />
+        ))}
       </div>
-
-      <div className={styles.patchbay}>
-        <div className={styles.patchbayRail} aria-hidden="true">
-          <span>IN</span>
-          <span className={styles.railLine} />
-          <span>LU / 6C75</span>
+      {fish.map((item) => (
+        <div
+          className={`${styles.fish} ${styles[`fish${item.tone}`]}`}
+          key={`${item.top}-${item.delay}`}
+          style={{
+            "--fish-top": item.top,
+            "--fish-delay": item.delay,
+            "--fish-duration": item.duration,
+            "--fish-scale": item.scale,
+          } as CSSProperties}
+        >
+          <span className={styles.fishBody}><i /></span>
         </div>
-
-        <div className={styles.cableArtwork} aria-hidden="true">
-          <svg viewBox="0 0 248 264" preserveAspectRatio="none">
-            {projects.map((project, index) => (
-              <CablePath
-                key={project.id}
-                index={index}
-                active={selectedId === project.id}
-                reduced={reduced}
-              />
-            ))}
-          </svg>
-        </div>
-
-        <div className={styles.channelList} role="list" aria-label="Portfolio repository channels">
-          {projects.map((project, index) => {
-            const active = selectedId === project.id;
-            return (
-              <button
-                className={`${styles.channel} ${active ? styles.channelActive : ""}`}
-                data-tone={projectTone(index)}
-                key={project.id}
-                type="button"
-                aria-pressed={active}
-                onClick={() => onSelect(project.id)}
-              >
-                <span className={styles.jack} aria-hidden="true">
-                  <span />
-                </span>
-                <span className={styles.channelIndex}>{String(index + 1).padStart(2, "0")}</span>
-                <span className={styles.channelName}>{project.name}</span>
-                <span className={styles.channelCategory}>{project.category}</span>
-                <ArrowUpRight className={styles.channelArrow} aria-hidden="true" />
-              </button>
-            );
-          })}
-        </div>
-
-        <div className={styles.patchbayLegend} aria-hidden="true">
-          <span>FRICTION</span>
-          <span className={styles.legendTicks}>
-            <i /> <i /> <i /> <i /> <i />
-          </span>
-          <span>OUTPUT</span>
-        </div>
-      </div>
+      ))}
+      <div className={styles.seabed} />
+      <div className={styles.pointerGlow} />
+      <div className={styles.glitter} />
     </div>
   );
 }
 
-function SignalReadout({ project, index, reduced }: { project: PortfolioProject; index: number; reduced: boolean }) {
-  return (
-    <motion.article
-      className={`${styles.readout} ${styles[`tone${projectTone(index)}`]}`}
-      aria-live="polite"
-      layout
-      initial={reduced ? false : { opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: reduced ? 0 : 0.32, ease: [0.22, 1, 0.36, 1] }}
-    >
-      <div className={styles.readoutHeader}>
-        <span className={styles.microLabel}>LIVE READOUT / CH{String(index + 1).padStart(2, "0")}</span>
-        <span className={styles.readoutStatus}><CircleDot aria-hidden="true" /> routed</span>
-      </div>
-      <div className={styles.readoutTitleRow}>
-        <div>
-          <p className={styles.readoutCategory}>{project.category}</p>
-          <h3>{project.name}</h3>
-        </div>
-        <span className={styles.readoutGlyph} aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
-      </div>
-      <p className={styles.readoutSummary}>{project.summary}</p>
-      <div className={styles.readoutGrid}>
-        <div>
-          <span className={styles.readoutLabel}>BUILD NOTE</span>
-          <p>{project.detail}</p>
-        </div>
-        <div>
-          <span className={styles.readoutLabel}>STACK</span>
-          <div className={styles.stackList}>
-            {project.stack.map((item) => <span key={item}>{item}</span>)}
+function ProjectArtwork({ project }: { project: PortfolioProject }) {
+  if (project.id === "rakazo-android") {
+    return (
+      <div className={styles.rakazoArtwork} aria-label="Stylised native Android conversation flow">
+        <div className={styles.androidPhone}>
+          <div className={styles.androidStatus}><span>9:41</span><i /><i /><i /></div>
+          <div className={styles.androidTitle}>
+            <Image src="/images/portfolio/rakazo-icon.png" alt="" width={36} height={36} />
+            <span><strong>Rakazo</strong><small>agent online</small></span>
+            <i />
           </div>
+          <div className={styles.androidChat}>
+            <p>Keep the answer linked to the original request.</p>
+            <p>Done. The delegated reply is surfaced and the thread stays authoritative.</p>
+            <span><i /> mobile sync live</span>
+          </div>
+          <div className={styles.androidComposer}><span>Message Rakazo…</span><i>↑</i></div>
+        </div>
+        <div className={styles.androidAnnotations}>
+          <span>COMPOSE NATIVE</span><span>DURABLE REPLIES</span><span>FAST LONG CHATS</span>
         </div>
       </div>
-      <a className={styles.readoutLink} href={project.href} target="_blank" rel="noreferrer">
-        Inspect source <ArrowUpRight aria-hidden="true" />
-      </a>
-    </motion.article>
+    );
+  }
+
+  if (project.id === "linux-sonar") {
+    return (
+      <div className={styles.sonarArtwork} aria-label="Five Linux audio channels visualised as a signal mixer">
+        <div className={styles.sonarWave}><i /><i /><i /><i /><i /><i /><i /><i /><i /></div>
+        <div className={styles.mixerTracks}>
+          {['GAME', 'CHAT', 'MEDIA', 'AUX', 'MIC'].map((label, index) => (
+            <div key={label}>
+              <span className={styles.meter}><i style={{ height: `${42 + index * 11}%` }} /></span>
+              <strong>{label}</strong>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (!project.image) return null;
+
+  return (
+    <div className={`${styles.projectArtwork} ${styles[`artwork${project.id.replace('-', '')}`]}`}>
+      <Image src={project.image} alt={project.imageAlt ?? ""} fill sizes="(max-width: 760px) 92vw, 46vw" priority={project.id === "orchid-android"} />
+      {project.id === "orchid-android" && (
+        <>
+          <div className={styles.orchidFilmstrip} aria-hidden="true">
+            <span><Image src="/images/portfolio/orchid-coffee.jpg" alt="" fill sizes="120px" /></span>
+            <span><Image src="/images/portfolio/orchid-notes.jpg" alt="" fill sizes="120px" /></span>
+          </div>
+          <div className={styles.orchidBadge}>
+            <Image src="/images/portfolio/orchid-icon.png" alt="" width={54} height={54} />
+            <span><small>NOW BUILDING</small>ORCHID FOR ANDROID</span>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 
-function SectionMarker({ number, label, tone = "coral" }: { number: string; label: string; tone?: string }) {
+function PatchCable({ activeIndex, reduced }: { activeIndex: number; reduced: boolean }) {
+  const endY = 47 + activeIndex * 58;
+  const path = `M 17 42 C 98 42, 86 ${endY}, 196 ${endY}`;
+
   return (
-    <div className={styles.sectionMarker}>
-      <span className={`${styles.markerDot} ${styles[`tone${tone}`]}`} />
-      <span>{number}</span>
-      <span className={styles.markerRule} />
-      <span>{label}</span>
-    </div>
+    <svg className={styles.patchCable} viewBox="0 0 220 240" preserveAspectRatio="none" aria-hidden="true">
+      <motion.path
+        d={path}
+        initial={reduced ? false : { pathLength: 0 }}
+        animate={{ pathLength: 1 }}
+        transition={{ duration: reduced ? 0 : 0.55, ease: [0.23, 1, 0.32, 1] }}
+      />
+      <circle cx="17" cy="42" r="7" />
+      <motion.circle
+        cx="196"
+        animate={{ cy: endY }}
+        r="7"
+        transition={{ duration: reduced ? 0 : 0.45, ease: [0.645, 0.045, 0.355, 1] }}
+      />
+    </svg>
+  );
+}
+
+function ProjectDesk({ reduced }: { reduced: boolean }) {
+  const [activeId, setActiveId] = useState(portfolioProjects[0]?.id ?? "orchid-android");
+  const activeIndex = Math.max(0, portfolioProjects.findIndex((project) => project.id === activeId));
+  const activeProject = portfolioProjects[activeIndex] ?? portfolioProjects[0];
+
+  if (!activeProject) return null;
+
+  return (
+    <section className={styles.workSection} id="work" aria-labelledby="work-title">
+      <div className={styles.sectionHeading}>
+        <span className={styles.kicker}><Cable aria-hidden="true" /> Interactive patchbay</span>
+        <h2 id="work-title">Route the signal.<br /><em>Inspect the work.</em></h2>
+        <p>Four channels, ordered by what I’m doing now. Pick one to reroute the desk.</p>
+      </div>
+
+      <div className={styles.deskShell} data-channel={activeIndex + 1}>
+        <div className={styles.deskTopbar}>
+          <span>LUINBYTES PERSONAL SIGNAL DESK</span>
+          <span className={styles.online}><i /> ONLINE / {String(activeIndex + 1).padStart(2, "0")}</span>
+        </div>
+
+        <div className={styles.deskGrid}>
+          <div className={styles.patchPanel}>
+            <div className={styles.patchLegend}><span>INPUT</span><span>SELECT OUTPUT</span></div>
+            <PatchCable activeIndex={activeIndex} reduced={reduced} />
+            <div className={styles.channelButtons} role="list" aria-label="Featured work channels">
+              {portfolioProjects.map((project, index) => {
+                const active = project.id === activeProject.id;
+                return (
+                  <button
+                    type="button"
+                    key={project.id}
+                    onClick={() => setActiveId(project.id)}
+                    className={active ? styles.activeChannel : ""}
+                    aria-pressed={active}
+                  >
+                    <span className={styles.channelJack}><i /></span>
+                    <span className={styles.channelNumber}>0{index + 1}</span>
+                    <span><strong>{project.name}</strong><small>{project.category}</small></span>
+                    <Radio aria-hidden="true" />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <AnimatePresence mode="wait">
+            <motion.article
+              className={styles.projectReadout}
+              key={activeProject.id}
+              initial={reduced ? false : { opacity: 0, transform: "translateY(12px) scale(0.985)" }}
+              animate={{ opacity: 1, transform: "translateY(0) scale(1)" }}
+              exit={reduced ? undefined : { opacity: 0, transform: "translateY(-8px) scale(0.99)" }}
+              transition={{ duration: reduced ? 0 : 0.24, ease: [0.215, 0.61, 0.355, 1] }}
+            >
+              <ProjectArtwork project={activeProject} />
+              <div className={styles.projectCopy}>
+                <span className={styles.projectEyebrow}>{activeProject.eyebrow}</span>
+                <h3>{activeProject.name}</h3>
+                <p className={styles.projectSummary}>{activeProject.summary}</p>
+                <p className={styles.projectDetail}>{activeProject.detail}</p>
+                <div className={styles.proofRow}>
+                  {activeProject.proof?.map((item) => <span key={item}>{item}</span>)}
+                </div>
+                <div className={styles.projectActions}>
+                  <a href={activeProject.href} target="_blank" rel="noreferrer">Open channel <ArrowUpRight aria-hidden="true" /></a>
+                  {activeProject.secondaryHref && (
+                    <a className={styles.secondaryAction} href={activeProject.secondaryHref} target="_blank" rel="noreferrer">
+                      {activeProject.secondaryLabel} <ArrowUpRight aria-hidden="true" />
+                    </a>
+                  )}
+                </div>
+              </div>
+            </motion.article>
+          </AnimatePresence>
+        </div>
+      </div>
+    </section>
   );
 }
 
 export function SignalDesk() {
-  const [selectedId, setSelectedId] = useState(portfolioProjects[0]?.id ?? "homebot");
-  const reducedMotion = useReducedMotion();
-  const selectedIndex = Math.max(0, portfolioProjects.findIndex((project) => project.id === selectedId));
-  const selectedProject = portfolioProjects[selectedIndex] ?? portfolioProjects[0];
-  const nextProject = useMemo(() => {
-    if (!portfolioProjects.length) return null;
-    return portfolioProjects[(selectedIndex + 1) % portfolioProjects.length];
-  }, [selectedIndex]);
+  const pageRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<AudioContext | null>(null);
+  const [soundOn, setSoundOn] = useState(false);
+  const reducedMotion = Boolean(useReducedMotion());
 
-  if (!selectedProject) return null;
+  const workStatus = useMemo(() => [
+    "Native Android at Orchid.ai",
+    "Open source across Android, Rust, and Linux",
+    "Based in the United Kingdom",
+  ], []);
 
-  const routeNext = () => {
-    if (nextProject) setSelectedId(nextProject.id);
+  useEffect(() => () => {
+    void audioRef.current?.close();
+  }, []);
+
+  const updatePointer = (event: PointerEvent<HTMLDivElement>) => {
+    if (reducedMotion || !pageRef.current) return;
+    pageRef.current.style.setProperty("--pointer-x", `${event.clientX}px`);
+    pageRef.current.style.setProperty("--pointer-y", `${event.clientY}px`);
+  };
+
+  const toggleSound = async () => {
+    if (audioRef.current) {
+      await audioRef.current.close();
+      audioRef.current = null;
+      setSoundOn(false);
+      return;
+    }
+
+    const context = new AudioContext();
+    const master = context.createGain();
+    const low = context.createOscillator();
+    const shimmer = context.createOscillator();
+    const lowGain = context.createGain();
+    const shimmerGain = context.createGain();
+    low.type = "sine";
+    low.frequency.value = 54;
+    shimmer.type = "sine";
+    shimmer.frequency.value = 246;
+    lowGain.gain.value = 0.012;
+    shimmerGain.gain.value = 0.0025;
+    master.gain.value = 0.65;
+    low.connect(lowGain).connect(master);
+    shimmer.connect(shimmerGain).connect(master);
+    master.connect(context.destination);
+    low.start();
+    shimmer.start();
+    audioRef.current = context;
+    setSoundOn(true);
   };
 
   return (
-    <div className={styles.page}>
-      <div className={styles.paperNoise} aria-hidden="true" />
+    <div className={styles.page} ref={pageRef} onPointerMove={updatePointer}>
+      <AmbientAquarium />
+
       <header className={styles.header}>
-        <Link href="/" className={styles.wordmark} aria-label="Lu home">
-          <span className={styles.wordmarkMark}><span /></span>
-          <span>LU / 6C75</span>
-        </Link>
-        <nav className={styles.headerNav} aria-label="Concept navigation">
-          <Link href="/" className={styles.headerLink}>Portfolio home</Link>
-          {conceptLinks.map((link) => <Link key={link.href} href={link.href} className={styles.headerLink}>{link.label}</Link>)}
-        </nav>
-        <a href={portfolioIdentity.email} className={styles.headerContact}>
-          <Mail aria-hidden="true" /> say hello
+        <a className={styles.brand} href="#top" aria-label="Lu, back to top">
+          <span className={styles.brandOrb}><Image src="/images/portfolio/lu-avatar.jpg" alt="" width={38} height={38} priority /></span>
+          <span><strong>LU / 6C75</strong><small>PERSONAL SIGNAL</small></span>
         </a>
+        <nav aria-label="Portfolio navigation">
+          <a href="#work">Work</a>
+          <a href="#about">Operator</a>
+          <a href="#contact">Contact</a>
+        </nav>
+        <button type="button" className={styles.soundToggle} onClick={toggleSound} aria-pressed={soundOn}>
+          {soundOn ? <Volume2 aria-hidden="true" /> : <VolumeX aria-hidden="true" />}
+          <span>{soundOn ? "sound on" : "sound off"}</span>
+        </button>
       </header>
 
-      <main>
-        <section className={styles.hero} aria-labelledby="signal-title">
-          <div className={styles.heroCopy}>
-            <SectionMarker number="00" label="SIGNAL DESK / PERSONAL PORTFOLIO" />
-            <motion.h1
-              id="signal-title"
-              initial={reducedMotion ? false : { opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: reducedMotion ? 0 : 0.5, delay: reducedMotion ? 0 : 0.1 }}
-            >
-              I build the missing layer between <em>people</em> and systems.
-            </motion.h1>
-            <motion.p
-              className={styles.heroIntro}
-              initial={reducedMotion ? false : { opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: reducedMotion ? 0 : 0.45, delay: reducedMotion ? 0 : 0.24 }}
-            >
-              Software engineer at <a href={portfolioIdentity.orchid} target="_blank" rel="noreferrer">Orchid.ai</a>. I make useful things for Android, Linux, AI workflows, and the odd edges where software meets reality.
-            </motion.p>
-            <div className={styles.heroMeta}>
-              <span><Radio aria-hidden="true" /> currently shipping</span>
-              <span><span className={styles.liveDot} /> {portfolioIdentity.location}</span>
+      <main id="top">
+        <section className={styles.hero} aria-labelledby="hero-title">
+          <motion.div
+            className={styles.heroCopy}
+            initial={reducedMotion ? false : { opacity: 0, transform: "translateY(18px)" }}
+            animate={{ opacity: 1, transform: "translateY(0)" }}
+            transition={{ duration: reducedMotion ? 0 : 0.55, ease: [0.23, 1, 0.32, 1] }}
+          >
+            <span className={styles.kicker}><Sparkles aria-hidden="true" /> Portfolio habitat / 2026</span>
+            <h1 id="hero-title">I make computers do the <em>useful part.</em></h1>
+            <p>Building Orchid.ai’s native Android app, agent systems, and stubbornly practical tools for everything underneath.</p>
+            <div className={styles.heroActions}>
+              <a href="#work">Explore my work <ArrowDown aria-hidden="true" /></a>
+              <a className={styles.glassAction} href={portfolioIdentity.email}>Start a conversation <Mail aria-hidden="true" /></a>
             </div>
-          </div>
-          <div className={styles.heroStamp} aria-label="Signal desk status">
-            <div className={styles.stampTop}><span>INSTRUMENT / 01</span><span>2026</span></div>
-            <div className={styles.stampMark}><span>LU</span><span>↘</span></div>
-            <div className={styles.stampBottom}><span>BUILD / ROUTE / VERIFY</span><span>READY</span></div>
+          </motion.div>
+
+          <motion.aside
+            className={styles.operatorCard}
+            initial={reducedMotion ? false : { opacity: 0, transform: "translateY(12px) rotate(1deg)" }}
+            animate={{ opacity: 1, transform: "translateY(0) rotate(-1.2deg)" }}
+            transition={{ duration: reducedMotion ? 0 : 0.6, delay: reducedMotion ? 0 : 0.16, ease: [0.23, 1, 0.32, 1] }}
+          >
+            <div className={styles.operatorPortrait}>
+              <Image src="/images/portfolio/lu-avatar.jpg" alt="Lu's illustrated avatar wearing a pink cap and holding a Red Bull" fill priority sizes="(max-width: 700px) 62vw, 320px" />
+              <span className={styles.avatarSparkle}>✦</span>
+            </div>
+            <div className={styles.operatorMeta}>
+              <span><i /> OPERATOR ONLINE</span>
+              <strong>Lu</strong>
+              <small>@x6c75</small>
+            </div>
+          </motion.aside>
+
+          <div className={styles.statusRibbon}>
+            {workStatus.map((item) => <span key={item}><i />{item}</span>)}
           </div>
         </section>
 
-        <section className={styles.consoleSection} id="channels" aria-labelledby="channels-title">
-          <div className={styles.sectionIntro}>
-            <SectionMarker number="01" label="OPEN CHANNELS" tone="blue" />
-            <h2 id="channels-title">Pick a signal.<br /><span>See what it moves.</span></h2>
-            <p>Route a repository into the readout. Each channel starts with a small annoyance and ends with something you can actually use.</p>
-            <button type="button" className={styles.routeButton} onClick={routeNext}>
-              <Shuffle aria-hidden="true" /> route another
-            </button>
+        <ProjectDesk reduced={reducedMotion} />
+
+        <section className={styles.aboutSection} id="about" aria-labelledby="about-title">
+          <div className={styles.aboutCopy}>
+            <span className={styles.kicker}><Music2 aria-hidden="true" /> Operator notes</span>
+            <h2 id="about-title">Useful software.<br /><em>No ornamental misery.</em></h2>
+            <p>I work across native apps, agent infrastructure, Linux, and the awkward seams between them. The recurring job is simple: find what is missing, understand the real constraints, and make the whole thing dependable.</p>
           </div>
 
-          <div className={styles.consoleGrid}>
-            <Patchbay projects={portfolioProjects} selectedId={selectedId} onSelect={setSelectedId} reduced={Boolean(reducedMotion)} />
-            <AnimatePresence mode="wait">
-              <SignalReadout key={selectedProject.id} project={selectedProject} index={selectedIndex} reduced={Boolean(reducedMotion)} />
-            </AnimatePresence>
-          </div>
+          <article className={styles.iniuriaCard}>
+            <span className={styles.windowBar}><i /><i /><i /><strong>INDEPENDENT WORK</strong></span>
+            <div>
+              <span className={styles.projectEyebrow}>Iniuria.us / side work</span>
+              <h3>Automation with an actual job to do.</h3>
+              <p>Discord automation, internal admin panels, and AI-assisted support triage built for an active community and its day-to-day operations.</p>
+              <div className={styles.proofRow}><span>Discord systems</span><span>Admin tooling</span><span>AI triage</span></div>
+            </div>
+          </article>
         </section>
 
-        <section className={styles.orchidSection} id="now" aria-labelledby="now-title">
-          <div className={styles.orchidPanel}>
-            <div className={styles.orchidPanelRail} aria-hidden="true"><span>ORCHID.AI</span><span>01</span></div>
-            <div className={styles.orchidContent}>
-              <SectionMarker number="02" label="CURRENT WORK" tone="brass" />
-              <h2 id="now-title">The signal is live at <span>Orchid.ai.</span></h2>
-              <p>I work on software that helps people get useful work done with AI. The details change quickly. The instinct stays the same: find the friction, understand the system, make the next step feel obvious.</p>
-              <a className={styles.textLink} href={portfolioIdentity.orchid} target="_blank" rel="noreferrer">Visit Orchid.ai <ArrowUpRight aria-hidden="true" /></a>
-            </div>
-            <div className={styles.orchidDiagram} aria-hidden="true">
-              <svg viewBox="0 0 420 250" preserveAspectRatio="none">
-                <path d="M25 126H395" />
-                <path d="M104 48v156M210 29v194M316 48v156" />
-                <circle cx="104" cy="126" r="17" /><circle cx="210" cy="126" r="24" /><circle cx="316" cy="126" r="17" />
-                <path className={styles.diagramAccent} d="M25 126h79m212 0h79M210 29v73m0 48v73" />
-                <circle className={styles.diagramPulse} cx="210" cy="126" r="5" />
-              </svg>
-              <div><span>LISTEN</span><span>MAKE</span><span>LEARN</span></div>
-            </div>
+        <section className={styles.moreSection} aria-labelledby="more-title">
+          <div className={styles.moreHeading}>
+            <span className={styles.kicker}><Github aria-hidden="true" /> More signals</span>
+            <h2 id="more-title">Small tools.<br /><em>Sharp edges.</em></h2>
           </div>
-        </section>
-
-        <section className={styles.philosophySection} id="about" aria-labelledby="about-title">
-          <div className={styles.philosophyIntro}>
-            <SectionMarker number="03" label="WORKING PHILOSOPHY" tone="lilac" />
-            <h2 id="about-title">Useful curiosity<br /><span>over shiny noise.</span></h2>
-          </div>
-          <div className={styles.philosophyList}>
-            <div><span>01</span><h3>Start with the irritation.</h3><p>The best project briefs usually begin as a sentence nobody bothered to write down.</p></div>
-            <div><span>02</span><h3>Understand the seams.</h3><p>Good tools respect the systems around them, whether that is PipeWire, Android, or a messy runtime.</p></div>
-            <div><span>03</span><h3>Ship the useful version.</h3><p>There is room for polish after the first person can rely on it. That is where the interesting work starts.</p></div>
+          <div className={styles.moreGrid}>
+            {supportingWork.map((project, index) => (
+              <a key={project.name} href={project.href} target="_blank" rel="noreferrer">
+                <span>0{index + 5}</span>
+                <strong>{project.name}</strong>
+                <small>{project.note}</small>
+                <ArrowUpRight aria-hidden="true" />
+              </a>
+            ))}
           </div>
         </section>
 
         <section className={styles.contactSection} id="contact" aria-labelledby="contact-title">
-          <div className={styles.contactCard}>
-            <div className={styles.contactIcon}><Cable aria-hidden="true" /></div>
-            <div>
-              <SectionMarker number="04" label="HANDOFF" tone="coral" />
-              <h2 id="contact-title">Have a strange<br /><span>workflow?</span></h2>
-              <p>Send the signal. I like hard edges, useful tools, and projects that make the next person’s day a little less annoying.</p>
-            </div>
-            <a className={styles.contactButton} href={portfolioIdentity.email}>Start a conversation <ArrowUpRight aria-hidden="true" /></a>
+          <div className={styles.contactOrb}><Image src="/images/portfolio/orchid-icon.png" alt="" width={150} height={150} /></div>
+          <div>
+            <span className={styles.kicker}><Radio aria-hidden="true" /> Open channel</span>
+            <h2 id="contact-title">Got something that should work <em>better?</em></h2>
+            <p>Send the signal. Interesting systems, native apps, agent infrastructure, and strange practical problems welcome.</p>
           </div>
+          <a href={portfolioIdentity.email}>Start a conversation <ArrowUpRight aria-hidden="true" /></a>
         </section>
       </main>
 
       <footer className={styles.footer}>
-        <span>© {new Date().getFullYear()} Lu / signal desk</span>
-        <div className={styles.footerLinks}>
+        <span>© {new Date().getFullYear()} LU / SIGNAL DESK</span>
+        <div>
           <a href={portfolioIdentity.github} target="_blank" rel="noreferrer"><Github aria-hidden="true" /> GitHub</a>
-          <a href={portfolioIdentity.x} target="_blank" rel="noreferrer"><Radio aria-hidden="true" /> X / social</a>
-          <span><TerminalSquare aria-hidden="true" /> built with intent</span>
+          <a href={portfolioIdentity.x} target="_blank" rel="noreferrer"><Radio aria-hidden="true" /> @x6c75</a>
+          <a href={portfolioIdentity.orchid} target="_blank" rel="noreferrer"><Image src="/images/portfolio/orchid-icon.png" alt="" width={16} height={16} /> Orchid.ai</a>
         </div>
       </footer>
     </div>

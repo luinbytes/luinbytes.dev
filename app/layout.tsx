@@ -31,14 +31,14 @@ export const metadata: Metadata = {
     template: "%s | Lu",
   },
   description:
-    "Lu is a software engineer at Orchid.ai building agents, native Android experiences, Linux tools, and open-source utilities.",
+    "Lu builds Orchid.ai's native Android app, agent systems, Linux tools, and stubbornly practical software.",
   metadataBase: new URL(siteUrl),
   twitter: {
     card: "summary_large_image",
     title: "Lu | Software Engineer",
     description:
-      "Software engineer at Orchid.ai building agents, Android experiences, Linux tools, and open-source utilities.",
-    creator: "@luinbytes",
+      "I make computers do the useful part. Native Android, agent systems, Linux tools, and practical software.",
+    creator: "@x6c75",
     images: `${siteUrl}/share-cards/luinbytes-dev-pink-print.png`,
   },
   openGraph: {
@@ -47,7 +47,7 @@ export const metadata: Metadata = {
     url: siteUrl,
     title: "Lu | Software Engineer",
     description:
-      "Software engineer at Orchid.ai building agents, Android experiences, Linux tools, and open-source utilities.",
+      "I make computers do the useful part. Native Android, agent systems, Linux tools, and practical software.",
     siteName: "Luinbytes",
     images: [
       {
@@ -102,8 +102,8 @@ export default function RootLayout({
         ║   b) Lu debugging something I broke (sorry)               ║
         ║   c) A recruiter snooping for code quality (it's good!)   ║
         ║                                                           ║
-        ║   Three portfolio directions. Pick your favourite.          ║
-        ║   The old case-study routes are still tucked underneath.    ║
+        ║   Welcome to the aquarium. Please do not tap the glass.      ║
+        ║   The fish are unionised and have excellent lawyers.         ║
         ║                                                           ║
         ╚═══════════════════════════════════════════════════════════╝
       */}

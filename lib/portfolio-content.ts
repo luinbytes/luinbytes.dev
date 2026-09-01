@@ -2,78 +2,82 @@ export type PortfolioProject = {
   id: string;
   name: string;
   category: string;
+  eyebrow?: string;
   summary: string;
   detail: string;
   stack: string[];
   href: string;
+  image?: string;
+  imageAlt?: string;
+  secondaryHref?: string;
+  secondaryLabel?: string;
+  proof?: string[];
 };
 
 export const portfolioProjects: PortfolioProject[] = [
   {
-    id: "homebot",
-    name: "HomeBot",
-    category: "AI systems",
-    summary: "An open-source home for persistent AI teammates.",
+    id: "orchid-android",
+    name: "Orchid.ai",
+    category: "Native Android",
+    eyebrow: "Current work / channel 01",
+    summary: "Building the native Android home for an assistant that gets things done.",
     detail:
-      "A Rust server and desktop runtime with native Android access, built around durable conversations, tools, routines, and user-owned state.",
-    stack: ["Rust", "Kotlin", "WebSocket"],
-    href: "https://github.com/luinbytes/HomeBot",
+      "I am building Orchid's native Android app, bringing its message-first assistant into a platform-native experience that feels at home on the device.",
+    stack: ["Kotlin", "Jetpack Compose", "Android"],
+    href: "https://orchid.ai",
+    image: "/images/portfolio/orchid-desk.jpg",
+    imageAlt: "Orchid's public campaign artwork showing a softly lit working desk",
+    secondaryHref: "https://orchid.ai/blog/introducing-keiki",
+    secondaryLabel: "Meet Orchid",
+    proof: ["Native Android", "Message-first UX", "In active development"],
   },
   {
     id: "rakazo-android",
-    name: "rakazo-android",
-    category: "Native Android",
-    summary: "A community native Android client for Rakazo.",
+    name: "Rakazo",
+    category: "Android + upstream",
+    eyebrow: "Open source / channel 02",
+    summary: "A native Android client, plus the upstream work needed to make it honest.",
     detail:
-      "A proper mobile surface for agent conversations and tools, shaped for Android rather than squeezed into a wrapped web view.",
-    stack: ["Kotlin", "Compose", "Android"],
+      "I built the community Android client and landed upstream fixes for delegated replies, Android parity, scheduled group work, and long-chat performance.",
+    stack: ["Kotlin", "Compose", "TypeScript"],
     href: "https://github.com/luinbytes/rakazo-android",
+    image: "/images/portfolio/rakazo-icon.png",
+    imageAlt: "Rakazo Android application icon",
+    secondaryHref: "https://github.com/elie222/rakazo/pulls?q=is%3Apr+author%3Aluinbytes+is%3Amerged",
+    secondaryLabel: "Merged work",
+    proof: ["Native client", "4 highlighted merged PRs", "Reliability + performance"],
   },
   {
     id: "linux-sonar",
     name: "linux-sonar",
     category: "Linux audio",
+    eyebrow: "Systems / channel 03",
     summary: "Per-app audio routing, ChatMix, and microphone effects for Linux.",
     detail:
-      "A native PipeWire and WirePlumber workflow for the headset controls Linux users are usually expected to live without.",
+      "A GTK control surface over PipeWire and WirePlumber, with five virtual channels, hardware ChatMix, microphone effects, and systemd lifecycle management.",
     stack: ["Python", "PipeWire", "GTK4"],
     href: "https://github.com/luinbytes/linux-sonar",
+    proof: ["5 virtual channels", "USB-HID ChatMix", "PipeWire + WirePlumber"],
   },
   {
-    id: "bongocat",
-    name: "bongocat",
-    category: "Desktop utility",
-    summary: "A small desktop companion animated by keyboard activity.",
+    id: "homebot",
+    name: "HomeBot",
+    category: "Agent systems",
+    eyebrow: "Personal system / channel 04",
+    summary: "An open-source home for persistent AI teammates.",
     detail:
-      "Thirty-one GitHub stars and proof that practical engineering is allowed to produce something charming for its own sake.",
-    stack: ["Python", "Linux", "Open source"],
-    href: "https://github.com/luinbytes/bongocat",
-  },
-  {
-    id: "cursor-barrier",
-    name: "cursor-barrier",
-    category: "Systems utility",
-    summary: "Pointer control at Linux workspace and monitor edges.",
-    detail:
-      "A focused C utility that removes one deeply irritating multi-monitor desktop edge case without becoming a platform of its own.",
-    stack: ["C", "Linux", "Wayland"],
-    href: "https://github.com/luinbytes/cursor-barrier",
-  },
-  {
-    id: "ballhammer",
-    name: "BallHammer",
-    category: "Runtime tooling",
-    summary: "Darktide overlays and configurable aim controls.",
-    detail:
-      "Runtime instrumentation, visual feedback, and tactical systems built inside the constraints of the Darktide Mod Framework.",
-    stack: ["Lua", "DMF", "Game systems"],
-    href: "https://github.com/luinbytes/BallHammer",
+      "A Rust server, native desktop client, and Android app built around durable conversations, tools, routines, permissions, checkpoints, and user-owned state.",
+    stack: ["Rust", "Kotlin", "WebSocket"],
+    href: "https://github.com/luinbytes/HomeBot",
+    image: "/images/portfolio/homebot-chat.png",
+    imageAlt: "HomeBot native desktop chat interface",
+    proof: ["Rust workspace", "Native desktop + Android", "Durable state + recovery"],
   },
 ];
 
 export const portfolioIdentity = {
   name: "Lu",
-  role: "Software engineer at Orchid.ai",
+  role: "Native Android engineer at Orchid.ai",
   location: "United Kingdom",
   email: "mailto:0x6c75@protonmail.com",
   github: "https://github.com/luinbytes",
