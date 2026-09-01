@@ -266,6 +266,9 @@ class PortfolioTests(BrowserTestCase):
                     page.evaluate("document.documentElement.scrollWidth"),
                     viewport["width"],
                 )
+                for section in ("#work", "#about", "#contact"):
+                    page.locator(section).scroll_into_view_if_needed()
+                    page.wait_for_timeout(120)
                 page.screenshot(
                     path=SCREENSHOTS / f"portfolio-final-{viewport_name}.png",
                     full_page=True,
@@ -279,13 +282,43 @@ class PortfolioTests(BrowserTestCase):
         page.on("pageerror", lambda error: page_errors.append(str(error)))
         page.goto(self.base_url, wait_until="networkidle")
 
-        canvas = page.locator("canvas[data-ripple-count]")
+        pond = page.locator("[data-pixi-state]")
+        page.wait_for_function(
+            """() => {
+                const pond = document.querySelector('[data-pixi-state]');
+                return pond?.dataset.pixiState === 'running' && pond.dataset.fishPositions;
+            }"""
+        )
+        first_positions = pond.get_attribute("data-fish-positions")
+        fish_x, fish_y = (
+            float(value)
+            for value in first_positions.split(";")[0].split(",")
+        )
+        page.mouse.move(fish_x, fish_y)
+        page.wait_for_function(
+            "document.querySelector('[data-pixi-state]')?.dataset.fishReacting === 'true'"
+        )
+        self.assertEqual(pond.get_attribute("data-fish-reacting"), "true")
         page.mouse.move(140, 180)
         page.mouse.move(320, 280, steps=6)
         page.mouse.click(320, 280)
         page.wait_for_timeout(300)
-        self.assertGreater(int(canvas.get_attribute("data-ripple-count")), 0)
+        self.assertGreater(int(pond.get_attribute("data-ripple-count")), 0)
+        self.assertGreater(int(pond.get_attribute("data-wake-count")), 0)
+        self.assertNotEqual(pond.get_attribute("data-fish-positions"), first_positions)
         self.assertEqual(page_errors, [])
+        browser.close()
+
+    def test_reduced_motion_keeps_the_pond_static(self) -> None:
+        browser = self.playwright.chromium.launch()
+        page = browser.new_page(viewport={"width": 1440, "height": 900})
+        page.emulate_media(reduced_motion="reduce")
+        page.goto(self.base_url, wait_until="networkidle")
+
+        pond = page.locator("[data-pixi-state]")
+        self.assertEqual(pond.get_attribute("data-pixi-state"), "reduced")
+        self.assertEqual(page.locator("[data-renderer]").get_attribute("data-renderer"), "reduced")
+        self.assertEqual(pond.locator("canvas").count(), 0)
         browser.close()
 
     def test_legacy_concept_routes_still_render(self) -> None:

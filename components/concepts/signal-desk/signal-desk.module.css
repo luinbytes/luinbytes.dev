@@ -40,21 +40,33 @@
 }
 
 .pondImage,
+.pixiHost,
 .pondGrade,
-.surfaceLight,
-.rippleCanvas {
+.surfaceLight {
   position: absolute;
   inset: 0;
 }
 
 .pondImage {
+  z-index: 0;
   background-image: url("/images/portfolio/pond-aerial.webp");
   background-position: center;
   background-size: cover;
   transform: scale(1.025);
 }
 
+.pixiHost {
+  z-index: 1;
+}
+
+.pixiCanvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 .pondGrade {
+  z-index: 3;
   background:
     linear-gradient(180deg, rgba(1, 18, 18, 0.2), rgba(1, 18, 18, 0.06) 52%, rgba(1, 18, 18, 0.5)),
     radial-gradient(circle at 18% 12%, rgba(224, 255, 222, 0.16), transparent 28%),
@@ -62,6 +74,7 @@
 }
 
 .surfaceLight {
+  z-index: 4;
   opacity: 0.62;
   background-image:
     radial-gradient(circle at 13% 19%, rgba(255, 255, 238, 0.95) 0 1px, transparent 2px),
@@ -70,13 +83,7 @@
     radial-gradient(circle at 28% 82%, rgba(231, 255, 249, 0.7) 0 1px, transparent 2px);
   background-size: 260px 220px, 310px 280px, 370px 320px, 290px 350px;
   mix-blend-mode: screen;
-  animation: glint 8s steps(2, end) infinite;
-}
-
-.rippleCanvas {
-  z-index: 4;
-  width: 100%;
-  height: 100%;
+  animation: glint 11s ease-in-out infinite alternate;
 }
 
 .koi {
@@ -86,7 +93,7 @@
   aspect-ratio: 2 / 3;
   opacity: 0.68;
   filter: drop-shadow(0 12px 10px rgba(0, 24, 23, 0.38));
-  will-change: transform;
+  transition: opacity 420ms ease;
 }
 
 .koi img {
@@ -94,17 +101,22 @@
 }
 
 .koiOne {
-  top: 13%;
-  left: 73%;
+  top: 13vh;
+  left: 73vw;
   animation: koiOne 24s ease-in-out infinite alternate;
 }
 
 .koiTwo {
-  right: 69%;
-  bottom: 9%;
+  right: 69vw;
+  bottom: 9vh;
   width: 96px;
   opacity: 0.52;
   animation: koiTwo 31s ease-in-out infinite alternate;
+}
+
+.pond[data-renderer="pixi"] .koi {
+  opacity: 0;
+  animation: none;
 }
 
 .header {
@@ -125,6 +137,14 @@
   color: var(--ink);
   backdrop-filter: blur(18px) saturate(1.15);
   transform: translateX(-50%);
+  transition: top 220ms var(--ease-out), background-color 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
+}
+
+.headerScrolled {
+  top: 10px;
+  border-color: rgba(235, 255, 248, 0.62);
+  background: rgba(229, 249, 241, 0.86);
+  box-shadow: 0 12px 38px rgba(0, 24, 24, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.82);
 }
 
 .brand,
@@ -204,11 +224,6 @@
   transition: color 150ms ease, background-color 150ms ease;
 }
 
-.header nav a:hover {
-  color: white;
-  background: rgba(5, 48, 46, 0.84);
-}
-
 .availability {
   display: inline-flex;
   align-items: center;
@@ -225,6 +240,7 @@
   border-radius: 50%;
   background: #69cf73;
   box-shadow: 0 0 0 4px rgba(105, 207, 115, 0.18);
+  animation: statusPulse 3.2s ease-in-out infinite;
 }
 
 .hero {
@@ -334,12 +350,6 @@
   backdrop-filter: blur(10px);
 }
 
-.heroActions a:hover,
-.projectActions a:hover,
-.contactSection > a:hover {
-  transform: translateY(-2px);
-}
-
 .heroActions a:active,
 .projectActions a:active,
 .contactSection > a:active {
@@ -351,6 +361,7 @@
 .contactSection > a svg {
   width: 15px;
   height: 15px;
+  transition: transform 150ms var(--ease-out);
 }
 
 .pondNote {
@@ -455,6 +466,7 @@
 }
 
 .projectNav button {
+  position: relative;
   display: grid;
   grid-template-columns: 28px minmax(0, 1fr);
   gap: 6px 12px;
@@ -474,19 +486,21 @@
   border-bottom: 0;
 }
 
-.projectNav button:hover,
 .projectNav button:focus-visible,
 .projectNav .activeProject {
   color: var(--foam);
   background: rgba(217, 255, 243, 0.08);
 }
 
-.projectNav button:hover {
-  transform: translateX(3px);
-}
-
-.projectNav .activeProject {
-  box-shadow: inset 3px 0 0 var(--aqua);
+.projectMarker {
+  position: absolute;
+  top: 14px;
+  bottom: 14px;
+  left: 0;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--aqua);
+  box-shadow: 0 0 16px rgba(145, 238, 224, 0.48);
 }
 
 .projectNav span {
@@ -514,6 +528,24 @@
   grid-template-columns: minmax(0, 1.25fr) minmax(330px, 0.75fr);
   min-width: 0;
   min-height: 570px;
+}
+
+.projectStage {
+  display: grid;
+  min-width: 0;
+}
+
+.projectStage > .projectPanel {
+  grid-area: 1 / 1;
+}
+
+.projectVisual {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.projectVisual > .projectMedia {
+  height: 100%;
 }
 
 .projectMedia {
@@ -808,11 +840,6 @@
   transition: color 150ms ease, transform 180ms var(--ease-out);
 }
 
-.moreGrid a:hover {
-  color: var(--sun);
-  transform: translateX(4px);
-}
-
 .moreGrid a > span {
   display: grid;
   gap: 5px;
@@ -911,12 +938,19 @@
   transition: color 150ms ease;
 }
 
-.footer a:hover {
-  color: white;
+@keyframes glint {
+  0% { opacity: 0.36; transform: translate3d(-4px, -2px, 0) scale(1.01); }
+  55% { opacity: 0.7; }
+  100% { opacity: 0.46; transform: translate3d(7px, 5px, 0) scale(1.035); }
 }
 
-@keyframes glint {
-  50% { opacity: 0.28; transform: translateY(2px); }
+@keyframes waterDrift {
+  0% { transform: translate3d(-1.5%, -1%, 0) rotate(-0.4deg); }
+  100% { transform: translate3d(2%, 1.5%, 0) rotate(0.5deg); }
+}
+
+@keyframes statusPulse {
+  50% { box-shadow: 0 0 0 7px rgba(105, 207, 115, 0.05); }
 }
 
 @keyframes koiOne {
@@ -930,6 +964,44 @@
   0% { transform: translate3d(-5vw, 1vh, 0) rotate(-22deg); }
   50% { transform: translate3d(12vw, -24vh, 0) rotate(17deg); }
   100% { transform: translate3d(22vw, -45vh, 0) rotate(38deg); }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .header nav a:hover {
+    color: white;
+    background: rgba(5, 48, 46, 0.84);
+  }
+
+  .heroActions a:hover,
+  .projectActions a:hover,
+  .contactSection > a:hover {
+    transform: translateY(-2px);
+  }
+
+  .heroActions a:hover svg,
+  .projectActions a:hover svg,
+  .contactSection > a:hover svg {
+    transform: translate3d(2px, -2px, 0);
+  }
+
+  .projectNav button:hover {
+    color: var(--foam);
+    background: rgba(217, 255, 243, 0.08);
+    transform: translateX(3px);
+  }
+
+  .moreGrid a:hover {
+    color: var(--sun);
+    transform: translateX(4px);
+  }
+
+  .moreGrid a:hover svg {
+    transform: translate3d(2px, -2px, 0);
+  }
+
+  .footer a:hover {
+    color: white;
+  }
 }
 
 @media (max-width: 1080px) {
@@ -1079,7 +1151,13 @@
   }
 
   .projectNav .activeProject {
-    box-shadow: inset 0 3px 0 var(--aqua);
+    box-shadow: none;
+  }
+
+  .projectMarker {
+    inset: 0 12px auto;
+    width: auto;
+    height: 3px;
   }
 
   .projectNav button:hover {
@@ -1242,6 +1320,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .surfaceLight,
+  .surfaceLight::before,
+  .availability i,
   .koi {
     animation: none;
   }
