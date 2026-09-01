@@ -282,6 +282,12 @@ class PortfolioTests(BrowserTestCase):
         page.on("pageerror", lambda error: page_errors.append(str(error)))
         page.goto(self.base_url, wait_until="networkidle")
 
+        self.assertEqual(
+            page.evaluate("getComputedStyle(document.querySelector('#top')).userSelect"),
+            "none",
+        )
+        self.assertEqual(page.get_by_text("Touch the water", exact=True).count(), 0)
+
         pond = page.locator("[data-pixi-state]")
         page.wait_for_function(
             """() => {

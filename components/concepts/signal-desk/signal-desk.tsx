@@ -10,7 +10,6 @@ import {
   ArrowUpRight,
   Github,
   Mail,
-  MousePointer2,
   Sparkles,
 } from "lucide-react";
 import { portfolioIdentity, portfolioProjects, type PortfolioProject } from "@/lib/portfolio-content";
@@ -175,8 +174,8 @@ function PondEnvironment({ reduced }: { reduced: boolean }) {
       };
 
       const swimmers = [
-        createFish(kohakuTexture, 124, window.innerWidth * 0.78, window.innerHeight * 0.2, 2.05, 29, 0.6, 0.72),
-        createFish(ogonTexture, 96, window.innerWidth * 0.22, window.innerHeight * 0.76, -0.72, 23, 3.1, 0.56),
+        createFish(kohakuTexture, 124, window.innerWidth * 0.78, window.innerHeight * 0.2, 2.05, 17, 0.6, 0.72),
+        createFish(ogonTexture, 96, window.innerWidth * 0.22, window.innerHeight * 0.76, -0.72, 13, 3.1, 0.56),
       ];
 
       let ripples: PondRipple[] = [];
@@ -246,16 +245,17 @@ function PondEnvironment({ reduced }: { reduced: boolean }) {
       app.ticker.add((ticker) => {
         const now = performance.now();
         const delta = Math.min(ticker.deltaMS / 1000, 0.034);
-        const pointerFresh = now - pointer.time < 1600;
+        const pointerInfluence = Math.max(0, 1 - (now - pointer.time) / 1100);
         let reacting = false;
 
         displacementMap.position.set(
-          window.innerWidth / 2 + Math.sin(now * 0.00034) * 30,
-          window.innerHeight / 2 + Math.cos(now * 0.00028) * 24,
+          window.innerWidth / 2 + Math.sin(now * 0.00021) * 62,
+          window.innerHeight / 2 + Math.cos(now * 0.00017) * 48,
         );
-        const waterEnergy = pointerFresh ? Math.max(0, 1 - (now - pointer.time) / 850) * pointer.energy : 0;
-        water.scale.x = 2.8 + Math.sin(now * 0.0003) * 0.24 + waterEnergy * 0.7;
-        water.scale.y = 2.2 + Math.cos(now * 0.00024) * 0.2 + waterEnergy * 0.55;
+        displacementMap.rotation = Math.sin(now * 0.0001) * 0.016;
+        const waterEnergy = pointerInfluence * pointer.energy;
+        water.scale.x = 7.4 + Math.sin(now * 0.00038) * 0.7 + waterEnergy * 1.6;
+        water.scale.y = 5.8 + Math.cos(now * 0.00031) * 0.55 + waterEnergy * 1.25;
         finger.enabled = waterEnergy > 0.005;
         finger.centerX = pointer.x / window.innerWidth;
         finger.centerY = pointer.y / window.innerHeight;
@@ -264,12 +264,14 @@ function PondEnvironment({ reduced }: { reduced: boolean }) {
 
         for (const swimmer of swimmers) {
           const distance = Math.hypot(swimmer.x - pointer.x, swimmer.y - pointer.y);
-          const fleeing = pointerFresh && distance < 280;
+          const threat = pointerInfluence * Math.max(0, 1 - distance / 230);
+          const fleeing = threat > 0.02;
           reacting ||= fleeing;
-          let desired = swimmer.heading + Math.sin(now * 0.00042 + swimmer.phase) * 0.42;
+          let desired = swimmer.heading + Math.sin(now * 0.0002 + swimmer.phase) * 0.24;
 
           if (fleeing) {
-            desired = Math.atan2(swimmer.y - pointer.y, swimmer.x - pointer.x);
+            const away = Math.atan2(swimmer.y - pointer.y, swimmer.x - pointer.x);
+            desired += angleDelta(desired, away) * Math.min(1, threat * 1.15);
           } else if (
             swimmer.x < 100 || swimmer.x > window.innerWidth - 100 ||
             swimmer.y < 120 || swimmer.y > window.innerHeight - 120
@@ -277,9 +279,9 @@ function PondEnvironment({ reduced }: { reduced: boolean }) {
             desired = Math.atan2(window.innerHeight / 2 - swimmer.y, window.innerWidth / 2 - swimmer.x);
           }
 
-          swimmer.heading += angleDelta(swimmer.heading, desired) * Math.min(1, delta * (fleeing ? 5.8 : 0.72));
-          const targetSpeed = swimmer.cruise * (fleeing ? 2.65 : 1);
-          swimmer.speed += (targetSpeed - swimmer.speed) * Math.min(1, delta * (fleeing ? 4.8 : 1.2));
+          swimmer.heading += angleDelta(swimmer.heading, desired) * Math.min(1, delta * (0.42 + threat * 1.5));
+          const targetSpeed = swimmer.cruise * (1 + threat * 0.55);
+          swimmer.speed += (targetSpeed - swimmer.speed) * Math.min(1, delta * (0.7 + threat * 1.1));
           swimmer.x += Math.cos(swimmer.heading) * swimmer.speed * delta;
           swimmer.y += Math.sin(swimmer.heading) * swimmer.speed * delta;
           swimmer.x = Math.max(swimmer.clearance, Math.min(window.innerWidth - swimmer.clearance, swimmer.x));
@@ -293,7 +295,7 @@ function PondEnvironment({ reduced }: { reduced: boolean }) {
           const effort = swimmer.speed / swimmer.cruise;
           for (let index = 0; index < vertices.length; index += 2) {
             const tail = swimmer.baseVertices[index + 1] / swimmer.textureHeight;
-            vertices[index] = swimmer.baseVertices[index] + Math.sin(now * 0.007 * effort + swimmer.phase + tail * 3.2) * Math.pow(tail, 2.35) * 30;
+            vertices[index] = swimmer.baseVertices[index] + Math.sin(now * 0.0027 * effort + swimmer.phase + tail * 3.2) * Math.pow(tail, 2.4) * 21;
           }
           swimmer.buffer.update();
 
@@ -584,16 +586,6 @@ export function SignalDesk() {
               <a href={portfolioIdentity.email}>Start a conversation <Mail aria-hidden="true" /></a>
             </motion.div>
           </motion.div>
-
-          <motion.aside
-            className={styles.pondNote}
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: reducedMotion ? 0 : 0.48, delay: reducedMotion ? 0 : 0.43, ease: EASE_OUT }}
-          >
-            <MousePointer2 aria-hidden="true" />
-            <span><strong>Touch the water</strong><small>Move your pointer through the pond.</small></span>
-          </motion.aside>
         </section>
 
         <ProjectExplorer reduced={reducedMotion} />
