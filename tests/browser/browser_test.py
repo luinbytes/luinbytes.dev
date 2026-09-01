@@ -247,7 +247,7 @@ class PortfolioTests(BrowserTestCase):
 
                 self.assertTrue(
                     page.get_by_role(
-                        "heading", name="I make computers do the useful part."
+                        "heading", name="I make stubborn software behave."
                     ).is_visible()
                 )
                 for project in ("Orchid.ai", "Rakazo", "linux-sonar", "HomeBot"):
@@ -272,18 +272,20 @@ class PortfolioTests(BrowserTestCase):
                 )
                 browser.close()
 
-    def test_sound_is_opt_in(self) -> None:
+    def test_pointer_stirs_the_pond(self) -> None:
         browser = self.playwright.chromium.launch()
         page = browser.new_page(viewport={"width": 1440, "height": 900})
+        page_errors = []
+        page.on("pageerror", lambda error: page_errors.append(str(error)))
         page.goto(self.base_url, wait_until="networkidle")
 
-        sound = page.get_by_role("button", name="sound off")
-        self.assertEqual(sound.get_attribute("aria-pressed"), "false")
-        sound.click()
-        self.assertEqual(
-            page.get_by_role("button", name="sound on").get_attribute("aria-pressed"),
-            "true",
-        )
+        canvas = page.locator("canvas[data-ripple-count]")
+        page.mouse.move(140, 180)
+        page.mouse.move(320, 280, steps=6)
+        page.mouse.click(320, 280)
+        page.wait_for_timeout(300)
+        self.assertGreater(int(canvas.get_attribute("data-ripple-count")), 0)
+        self.assertEqual(page_errors, [])
         browser.close()
 
     def test_legacy_concept_routes_still_render(self) -> None:

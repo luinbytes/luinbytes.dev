@@ -31,13 +31,13 @@ export const metadata: Metadata = {
     template: "%s | Lu",
   },
   description:
-    "Lu builds Orchid.ai's native Android app, agent systems, Linux tools, and stubbornly practical software.",
+    "Lu makes stubborn software behave: Orchid.ai's native Android app, agent systems, Linux tools, and practical software.",
   metadataBase: new URL(siteUrl),
   twitter: {
     card: "summary_large_image",
     title: "Lu | Software Engineer",
     description:
-      "I make computers do the useful part. Native Android, agent systems, Linux tools, and practical software.",
+      "I make stubborn software behave. Native Android, agent systems, Linux tools, and practical software.",
     creator: "@x6c75",
     images: `${siteUrl}/share-cards/luinbytes-dev-pink-print.png`,
   },
@@ -47,7 +47,7 @@ export const metadata: Metadata = {
     url: siteUrl,
     title: "Lu | Software Engineer",
     description:
-      "I make computers do the useful part. Native Android, agent systems, Linux tools, and practical software.",
+      "I make stubborn software behave. Native Android, agent systems, Linux tools, and practical software.",
     siteName: "Luinbytes",
     images: [
       {

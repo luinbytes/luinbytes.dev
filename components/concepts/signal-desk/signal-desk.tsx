@@ -1,36 +1,18 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   ArrowDown,
   ArrowUpRight,
-  Cable,
   Github,
   Mail,
-  Music2,
-  Radio,
+  MousePointer2,
   Sparkles,
-  Volume2,
-  VolumeX,
 } from "lucide-react";
 import { portfolioIdentity, portfolioProjects, type PortfolioProject } from "@/lib/portfolio-content";
 import styles from "./signal-desk.module.css";
-
-const bubbles = [
-  [6, 10, 0.55, 13], [12, 72, 0.8, 8], [19, 38, 0.65, 10], [25, 87, 0.9, 6],
-  [34, 19, 0.72, 11], [42, 64, 0.5, 15], [49, 92, 0.82, 9], [58, 31, 0.62, 12],
-  [64, 77, 0.94, 7], [71, 15, 0.7, 10], [78, 56, 0.58, 14], [84, 84, 0.88, 8],
-  [91, 27, 0.66, 12], [96, 68, 0.76, 9],
-] as const;
-
-const fish = [
-  { top: "13%", delay: "-4s", duration: "24s", scale: 0.78, tone: "sun" },
-  { top: "31%", delay: "-17s", duration: "31s", scale: 0.5, tone: "coral" },
-  { top: "56%", delay: "-10s", duration: "27s", scale: 0.64, tone: "mint" },
-  { top: "78%", delay: "-24s", duration: "35s", scale: 0.46, tone: "blue" },
-] as const;
 
 const supportingWork = [
   { name: "Bongo Cat", note: "Cross-platform desktop companion", href: "https://github.com/luinbytes/bongocat" },
@@ -39,133 +21,168 @@ const supportingWork = [
   { name: "ByteBot", note: "Stateful Discord operations", href: "https://github.com/luinbytes/bytebot-definitive-edition" },
 ] as const;
 
-function AmbientAquarium() {
+type Ripple = { x: number; y: number; born: number };
+
+function PondEnvironment({ reduced }: { reduced: boolean }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    if (reduced) return;
+
+    const canvas = canvasRef.current;
+    const context = canvas?.getContext("2d");
+    if (!canvas || !context) return;
+
+    let frame = 0;
+    let running = false;
+    let ripples: Ripple[] = [];
+    let last = { x: -1000, y: -1000, time: 0 };
+
+    const resize = () => {
+      const ratio = Math.min(window.devicePixelRatio || 1, 1.5);
+      canvas.width = Math.round(window.innerWidth * ratio);
+      canvas.height = Math.round(window.innerHeight * ratio);
+      canvas.style.width = `${window.innerWidth}px`;
+      canvas.style.height = `${window.innerHeight}px`;
+      context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    };
+
+    const draw = (now: number) => {
+      context.clearRect(0, 0, window.innerWidth, window.innerHeight);
+      ripples = ripples.filter((ripple) => now - ripple.born < 1650);
+
+      for (const ripple of ripples) {
+        if (now < ripple.born) continue;
+        const progress = (now - ripple.born) / 1650;
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const radius = 7 + eased * 76;
+        const alpha = Math.pow(1 - progress, 1.7);
+
+        context.save();
+        context.translate(ripple.x, ripple.y);
+        context.globalCompositeOperation = "screen";
+
+        for (let ring = 0; ring < 2; ring += 1) {
+          const ringRadius = radius - ring * 13;
+          if (ringRadius <= 0) continue;
+          context.beginPath();
+          context.ellipse(0, 0, ringRadius, ringRadius * 0.68, 0, 0, Math.PI * 2);
+          context.lineWidth = Math.max(0.4, 1.45 - progress);
+          context.strokeStyle = `rgba(218, 255, 247, ${alpha * (0.24 - ring * 0.07)})`;
+          context.stroke();
+        }
+
+        context.globalCompositeOperation = "multiply";
+        context.beginPath();
+        context.ellipse(1, 3, radius * 0.86, radius * 0.58, 0, 0, Math.PI * 2);
+        context.lineWidth = 1;
+        context.strokeStyle = `rgba(3, 45, 47, ${alpha * 0.18})`;
+        context.stroke();
+        context.restore();
+      }
+
+      canvas.dataset.rippleCount = String(ripples.length);
+      if (ripples.length > 0) {
+        frame = requestAnimationFrame(draw);
+      } else {
+        running = false;
+      }
+    };
+
+    const start = () => {
+      if (running) return;
+      running = true;
+      frame = requestAnimationFrame(draw);
+    };
+
+    const addRipple = (x: number, y: number, delay = 0) => {
+      ripples.push({ x, y, born: performance.now() + delay });
+      if (ripples.length > 28) ripples = ripples.slice(-28);
+      canvas.dataset.rippleCount = String(ripples.length);
+      start();
+    };
+
+    const move = (event: globalThis.PointerEvent) => {
+      const now = performance.now();
+      const distance = Math.hypot(event.clientX - last.x, event.clientY - last.y);
+      if (distance < 36 && now - last.time < 70) return;
+      last = { x: event.clientX, y: event.clientY, time: now };
+      addRipple(event.clientX, event.clientY);
+    };
+
+    const press = (event: globalThis.PointerEvent) => {
+      addRipple(event.clientX, event.clientY);
+      addRipple(event.clientX, event.clientY, 120);
+      addRipple(event.clientX, event.clientY, 240);
+    };
+
+    resize();
+    window.addEventListener("resize", resize);
+    window.addEventListener("pointermove", move, { passive: true });
+    window.addEventListener("pointerdown", press, { passive: true });
+
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("resize", resize);
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerdown", press);
+    };
+  }, [reduced]);
+
   return (
-    <div className={styles.aquarium} aria-hidden="true">
-      <div className={styles.sunwash} />
-      <div className={styles.caustics} />
-      <div className={styles.horizon} />
-      <div className={styles.bubbles}>
-        {bubbles.map(([left, bottom, scale, duration], index) => (
-          <span
-            key={`${left}-${bottom}`}
-            style={{
-              "--bubble-left": `${left}%`,
-              "--bubble-bottom": `${bottom}%`,
-              "--bubble-scale": scale,
-              "--bubble-duration": `${duration}s`,
-              "--bubble-delay": `${index * -1.7}s`,
-            } as CSSProperties}
-          />
-        ))}
+    <div className={styles.pond} aria-hidden="true">
+      <div className={styles.pondImage} />
+      <div className={styles.pondGrade} />
+      <div className={`${styles.koi} ${styles.koiOne}`}>
+        <Image src="/images/portfolio/koi-kohaku.webp" alt="" fill sizes="180px" priority />
       </div>
-      {fish.map((item) => (
-        <div
-          className={`${styles.fish} ${styles[`fish${item.tone}`]}`}
-          key={`${item.top}-${item.delay}`}
-          style={{
-            "--fish-top": item.top,
-            "--fish-delay": item.delay,
-            "--fish-duration": item.duration,
-            "--fish-scale": item.scale,
-          } as CSSProperties}
-        >
-          <span className={styles.fishBody}><i /></span>
-        </div>
-      ))}
-      <div className={styles.seabed} />
-      <div className={styles.pointerGlow} />
-      <div className={styles.glitter} />
+      <div className={`${styles.koi} ${styles.koiTwo}`}>
+        <Image src="/images/portfolio/koi-ogon.webp" alt="" fill sizes="140px" priority />
+      </div>
+      <div className={styles.surfaceLight} />
+      <canvas ref={canvasRef} className={styles.rippleCanvas} data-ripple-count="0" />
     </div>
   );
 }
 
 function ProjectArtwork({ project }: { project: PortfolioProject }) {
+  const image = project.id === "linux-sonar" ? "/share-cards/linux-sonar.png" : project.image;
+
+  if (!image) return null;
+
   if (project.id === "rakazo-android") {
     return (
-      <div className={styles.rakazoArtwork} aria-label="Stylised native Android conversation flow">
-        <div className={styles.androidPhone}>
-          <div className={styles.androidStatus}><span>9:41</span><i /><i /><i /></div>
-          <div className={styles.androidTitle}>
-            <Image src="/images/portfolio/rakazo-icon.png" alt="" width={36} height={36} />
-            <span><strong>Rakazo</strong><small>agent online</small></span>
-            <i />
-          </div>
-          <div className={styles.androidChat}>
-            <p>Keep the answer linked to the original request.</p>
-            <p>Done. The delegated reply is surfaced and the thread stays authoritative.</p>
-            <span><i /> mobile sync live</span>
-          </div>
-          <div className={styles.androidComposer}><span>Message Rakazo…</span><i>↑</i></div>
+      <div className={`${styles.projectMedia} ${styles.mediarakazoandroid}`}>
+        <div className={styles.rakazoIdentity}>
+          <Image src={image} alt={project.imageAlt ?? "Rakazo Android application icon"} width={104} height={104} />
+          <span><strong>Rakazo</strong><small>Native Android + upstream</small></span>
         </div>
-        <div className={styles.androidAnnotations}>
-          <span>COMPOSE NATIVE</span><span>DURABLE REPLIES</span><span>FAST LONG CHATS</span>
+        <div className={styles.rakazoSignals} aria-label="Highlighted upstream work">
+          <span>Delegated replies</span>
+          <span>Android parity</span>
+          <span>Scheduled group work</span>
+          <span>Long-chat performance</span>
         </div>
+        <span className={styles.mediaCaption}>{project.category}</span>
       </div>
     );
   }
-
-  if (project.id === "linux-sonar") {
-    return (
-      <div className={styles.sonarArtwork} aria-label="Five Linux audio channels visualised as a signal mixer">
-        <div className={styles.sonarWave}><i /><i /><i /><i /><i /><i /><i /><i /><i /></div>
-        <div className={styles.mixerTracks}>
-          {['GAME', 'CHAT', 'MEDIA', 'AUX', 'MIC'].map((label, index) => (
-            <div key={label}>
-              <span className={styles.meter}><i style={{ height: `${42 + index * 11}%` }} /></span>
-              <strong>{label}</strong>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (!project.image) return null;
 
   return (
-    <div className={`${styles.projectArtwork} ${styles[`artwork${project.id.replace('-', '')}`]}`}>
-      <Image src={project.image} alt={project.imageAlt ?? ""} fill sizes="(max-width: 760px) 92vw, 46vw" priority={project.id === "orchid-android"} />
-      {project.id === "orchid-android" && (
-        <>
-          <div className={styles.orchidFilmstrip} aria-hidden="true">
-            <span><Image src="/images/portfolio/orchid-coffee.jpg" alt="" fill sizes="120px" /></span>
-            <span><Image src="/images/portfolio/orchid-notes.jpg" alt="" fill sizes="120px" /></span>
-          </div>
-          <div className={styles.orchidBadge}>
-            <Image src="/images/portfolio/orchid-icon.png" alt="" width={54} height={54} />
-            <span><small>NOW BUILDING</small>ORCHID FOR ANDROID</span>
-          </div>
-        </>
-      )}
+    <div className={`${styles.projectMedia} ${styles[`media${project.id.replaceAll("-", "")}`]}`}>
+      <Image
+        src={image}
+        alt={project.imageAlt ?? `${project.name} project artwork`}
+        fill
+        sizes="(max-width: 820px) 92vw, 48vw"
+        priority={project.id === "orchid-android"}
+      />
+      <span className={styles.mediaCaption}>{project.category}</span>
     </div>
   );
 }
 
-function PatchCable({ activeIndex, reduced }: { activeIndex: number; reduced: boolean }) {
-  const endY = 47 + activeIndex * 58;
-  const path = `M 17 42 C 98 42, 86 ${endY}, 196 ${endY}`;
-
-  return (
-    <svg className={styles.patchCable} viewBox="0 0 220 240" preserveAspectRatio="none" aria-hidden="true">
-      <motion.path
-        d={path}
-        initial={reduced ? false : { pathLength: 0 }}
-        animate={{ pathLength: 1 }}
-        transition={{ duration: reduced ? 0 : 0.55, ease: [0.23, 1, 0.32, 1] }}
-      />
-      <circle cx="17" cy="42" r="7" />
-      <motion.circle
-        cx="196"
-        animate={{ cy: endY }}
-        r="7"
-        transition={{ duration: reduced ? 0 : 0.45, ease: [0.645, 0.045, 0.355, 1] }}
-      />
-    </svg>
-  );
-}
-
-function ProjectDesk({ reduced }: { reduced: boolean }) {
+function ProjectExplorer({ reduced }: { reduced: boolean }) {
   const [activeId, setActiveId] = useState(portfolioProjects[0]?.id ?? "orchid-android");
   const activeIndex = Math.max(0, portfolioProjects.findIndex((project) => project.id === activeId));
   const activeProject = portfolioProjects[activeIndex] ?? portfolioProjects[0];
@@ -174,243 +191,166 @@ function ProjectDesk({ reduced }: { reduced: boolean }) {
 
   return (
     <section className={styles.workSection} id="work" aria-labelledby="work-title">
-      <div className={styles.sectionHeading}>
-        <span className={styles.kicker}><Cable aria-hidden="true" /> Interactive patchbay</span>
-        <h2 id="work-title">Route the signal.<br /><em>Inspect the work.</em></h2>
-        <p>Four channels, ordered by what I’m doing now. Pick one to reroute the desk.</p>
+      <div className={styles.sectionIntro}>
+        <span className={styles.eyebrow}>Selected work / 2026</span>
+        <h2 id="work-title">Built where the interesting problems live.</h2>
+        <p>Native apps, agent infrastructure, Linux systems. Pick a project to inspect the work.</p>
       </div>
 
-      <div className={styles.deskShell} data-channel={activeIndex + 1}>
-        <div className={styles.deskTopbar}>
-          <span>LUINBYTES PERSONAL SIGNAL DESK</span>
-          <span className={styles.online}><i /> ONLINE / {String(activeIndex + 1).padStart(2, "0")}</span>
+      <div className={styles.projectExplorer}>
+        <div className={styles.projectNav} role="list" aria-label="Featured projects">
+          {portfolioProjects.map((project, index) => {
+            const active = project.id === activeProject.id;
+            return (
+              <button
+                type="button"
+                key={project.id}
+                onClick={() => setActiveId(project.id)}
+                className={active ? styles.activeProject : ""}
+                aria-pressed={active}
+              >
+                <span>0{index + 1}</span>
+                <strong>{project.name}</strong>
+                <small>{project.category}</small>
+              </button>
+            );
+          })}
         </div>
 
-        <div className={styles.deskGrid}>
-          <div className={styles.patchPanel}>
-            <div className={styles.patchLegend}><span>INPUT</span><span>SELECT OUTPUT</span></div>
-            <PatchCable activeIndex={activeIndex} reduced={reduced} />
-            <div className={styles.channelButtons} role="list" aria-label="Featured work channels">
-              {portfolioProjects.map((project, index) => {
-                const active = project.id === activeProject.id;
-                return (
-                  <button
-                    type="button"
-                    key={project.id}
-                    onClick={() => setActiveId(project.id)}
-                    className={active ? styles.activeChannel : ""}
-                    aria-pressed={active}
-                  >
-                    <span className={styles.channelJack}><i /></span>
-                    <span className={styles.channelNumber}>0{index + 1}</span>
-                    <span><strong>{project.name}</strong><small>{project.category}</small></span>
-                    <Radio aria-hidden="true" />
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <AnimatePresence mode="wait">
-            <motion.article
-              className={styles.projectReadout}
-              key={activeProject.id}
-              initial={reduced ? false : { opacity: 0, transform: "translateY(12px) scale(0.985)" }}
-              animate={{ opacity: 1, transform: "translateY(0) scale(1)" }}
-              exit={reduced ? undefined : { opacity: 0, transform: "translateY(-8px) scale(0.99)" }}
-              transition={{ duration: reduced ? 0 : 0.24, ease: [0.215, 0.61, 0.355, 1] }}
-            >
-              <ProjectArtwork project={activeProject} />
-              <div className={styles.projectCopy}>
-                <span className={styles.projectEyebrow}>{activeProject.eyebrow}</span>
-                <h3>{activeProject.name}</h3>
-                <p className={styles.projectSummary}>{activeProject.summary}</p>
-                <p className={styles.projectDetail}>{activeProject.detail}</p>
-                <div className={styles.proofRow}>
-                  {activeProject.proof?.map((item) => <span key={item}>{item}</span>)}
-                </div>
-                <div className={styles.projectActions}>
-                  <a href={activeProject.href} target="_blank" rel="noreferrer">Open channel <ArrowUpRight aria-hidden="true" /></a>
-                  {activeProject.secondaryHref && (
-                    <a className={styles.secondaryAction} href={activeProject.secondaryHref} target="_blank" rel="noreferrer">
-                      {activeProject.secondaryLabel} <ArrowUpRight aria-hidden="true" />
-                    </a>
-                  )}
-                </div>
+        <AnimatePresence mode="wait">
+          <motion.article
+            className={styles.projectPanel}
+            key={activeProject.id}
+            initial={reduced ? false : { opacity: 0, transform: "translateY(10px)" }}
+            animate={{ opacity: 1, transform: "translateY(0)" }}
+            exit={reduced ? undefined : { opacity: 0, transform: "translateY(-8px)" }}
+            transition={{ duration: reduced ? 0 : 0.22, ease: [0.23, 1, 0.32, 1] }}
+          >
+            <ProjectArtwork project={activeProject} />
+            <div className={styles.projectCopy}>
+              <span className={styles.projectEyebrow}>{activeProject.eyebrow}</span>
+              <h3>{activeProject.name}</h3>
+              <p className={styles.projectSummary}>{activeProject.summary}</p>
+              <p className={styles.projectDetail}>{activeProject.detail}</p>
+              <div className={styles.proofRow}>
+                {activeProject.proof?.map((item) => <span key={item}>{item}</span>)}
               </div>
-            </motion.article>
-          </AnimatePresence>
-        </div>
+              <div className={styles.projectActions}>
+                <a href={activeProject.href} target="_blank" rel="noreferrer">
+                  View project <ArrowUpRight aria-hidden="true" />
+                </a>
+                {activeProject.secondaryHref && (
+                  <a href={activeProject.secondaryHref} target="_blank" rel="noreferrer">
+                    {activeProject.secondaryLabel} <ArrowUpRight aria-hidden="true" />
+                  </a>
+                )}
+              </div>
+            </div>
+          </motion.article>
+        </AnimatePresence>
       </div>
     </section>
   );
 }
 
 export function SignalDesk() {
-  const pageRef = useRef<HTMLDivElement>(null);
-  const audioRef = useRef<AudioContext | null>(null);
-  const [soundOn, setSoundOn] = useState(false);
   const reducedMotion = Boolean(useReducedMotion());
 
-  const workStatus = useMemo(() => [
-    "Native Android at Orchid.ai",
-    "Open source across Android, Rust, and Linux",
-    "Based in the United Kingdom",
-  ], []);
-
-  useEffect(() => () => {
-    void audioRef.current?.close();
-  }, []);
-
-  const updatePointer = (event: PointerEvent<HTMLDivElement>) => {
-    if (reducedMotion || !pageRef.current) return;
-    pageRef.current.style.setProperty("--pointer-x", `${event.clientX}px`);
-    pageRef.current.style.setProperty("--pointer-y", `${event.clientY}px`);
-  };
-
-  const toggleSound = async () => {
-    if (audioRef.current) {
-      await audioRef.current.close();
-      audioRef.current = null;
-      setSoundOn(false);
-      return;
-    }
-
-    const context = new AudioContext();
-    const master = context.createGain();
-    const low = context.createOscillator();
-    const shimmer = context.createOscillator();
-    const lowGain = context.createGain();
-    const shimmerGain = context.createGain();
-    low.type = "sine";
-    low.frequency.value = 54;
-    shimmer.type = "sine";
-    shimmer.frequency.value = 246;
-    lowGain.gain.value = 0.012;
-    shimmerGain.gain.value = 0.0025;
-    master.gain.value = 0.65;
-    low.connect(lowGain).connect(master);
-    shimmer.connect(shimmerGain).connect(master);
-    master.connect(context.destination);
-    low.start();
-    shimmer.start();
-    audioRef.current = context;
-    setSoundOn(true);
-  };
-
   return (
-    <div className={styles.page} ref={pageRef} onPointerMove={updatePointer}>
-      <AmbientAquarium />
+    <div className={styles.page} id="top">
+      <PondEnvironment reduced={reducedMotion} />
 
       <header className={styles.header}>
         <a className={styles.brand} href="#top" aria-label="Lu, back to top">
-          <span className={styles.brandOrb}><Image src="/images/portfolio/lu-avatar.jpg" alt="" width={38} height={38} priority /></span>
-          <span><strong>LU / 6C75</strong><small>PERSONAL SIGNAL</small></span>
+          <Image src="/images/portfolio/lu-avatar.jpg" alt="" width={38} height={38} priority />
+          <span><strong>LU / 6C75</strong><small>SOFTWARE ENGINEER</small></span>
         </a>
         <nav aria-label="Portfolio navigation">
           <a href="#work">Work</a>
-          <a href="#about">Operator</a>
+          <a href="#about">About</a>
           <a href="#contact">Contact</a>
         </nav>
-        <button type="button" className={styles.soundToggle} onClick={toggleSound} aria-pressed={soundOn}>
-          {soundOn ? <Volume2 aria-hidden="true" /> : <VolumeX aria-hidden="true" />}
-          <span>{soundOn ? "sound on" : "sound off"}</span>
-        </button>
+        <span className={styles.availability}><i /> Building at Orchid.ai</span>
       </header>
 
-      <main id="top">
+      <main id="main">
         <section className={styles.hero} aria-labelledby="hero-title">
           <motion.div
             className={styles.heroCopy}
             initial={reducedMotion ? false : { opacity: 0, transform: "translateY(18px)" }}
             animate={{ opacity: 1, transform: "translateY(0)" }}
-            transition={{ duration: reducedMotion ? 0 : 0.55, ease: [0.23, 1, 0.32, 1] }}
+            transition={{ duration: reducedMotion ? 0 : 0.6, ease: [0.23, 1, 0.32, 1] }}
           >
-            <span className={styles.kicker}><Sparkles aria-hidden="true" /> Portfolio habitat / 2026</span>
-            <h1 id="hero-title">I make computers do the <em>useful part.</em></h1>
-            <p>Building Orchid.ai’s native Android app, agent systems, and stubbornly practical tools for everything underneath.</p>
+            <span className={styles.eyebrow}><Sparkles aria-hidden="true" /> Lu / software engineer</span>
+            <h1 id="hero-title">I make stubborn software <em>behave.</em></h1>
+            <p>I build Orchid.ai’s native Android app, agent systems, and Linux tools that do the useful part without making a fuss.</p>
             <div className={styles.heroActions}>
-              <a href="#work">Explore my work <ArrowDown aria-hidden="true" /></a>
-              <a className={styles.glassAction} href={portfolioIdentity.email}>Start a conversation <Mail aria-hidden="true" /></a>
+              <a href="#work">See the work <ArrowDown aria-hidden="true" /></a>
+              <a href={portfolioIdentity.email}>Start a conversation <Mail aria-hidden="true" /></a>
             </div>
           </motion.div>
 
           <motion.aside
-            className={styles.operatorCard}
-            initial={reducedMotion ? false : { opacity: 0, transform: "translateY(12px) rotate(1deg)" }}
-            animate={{ opacity: 1, transform: "translateY(0) rotate(-1.2deg)" }}
-            transition={{ duration: reducedMotion ? 0 : 0.6, delay: reducedMotion ? 0 : 0.16, ease: [0.23, 1, 0.32, 1] }}
+            className={styles.pondNote}
+            initial={reducedMotion ? false : { opacity: 0, transform: "translateY(12px)" }}
+            animate={{ opacity: 1, transform: "translateY(0)" }}
+            transition={{ duration: reducedMotion ? 0 : 0.5, delay: reducedMotion ? 0 : 0.2, ease: [0.23, 1, 0.32, 1] }}
           >
-            <div className={styles.operatorPortrait}>
-              <Image src="/images/portfolio/lu-avatar.jpg" alt="Lu's illustrated avatar wearing a pink cap and holding a Red Bull" fill priority sizes="(max-width: 700px) 62vw, 320px" />
-              <span className={styles.avatarSparkle}>✦</span>
-            </div>
-            <div className={styles.operatorMeta}>
-              <span><i /> OPERATOR ONLINE</span>
-              <strong>Lu</strong>
-              <small>@x6c75</small>
-            </div>
+            <MousePointer2 aria-hidden="true" />
+            <span><strong>Touch the water</strong><small>Move your pointer through the pond.</small></span>
           </motion.aside>
-
-          <div className={styles.statusRibbon}>
-            {workStatus.map((item) => <span key={item}><i />{item}</span>)}
-          </div>
         </section>
 
-        <ProjectDesk reduced={reducedMotion} />
+        <ProjectExplorer reduced={reducedMotion} />
 
         <section className={styles.aboutSection} id="about" aria-labelledby="about-title">
-          <div className={styles.aboutCopy}>
-            <span className={styles.kicker}><Music2 aria-hidden="true" /> Operator notes</span>
-            <h2 id="about-title">Useful software.<br /><em>No ornamental misery.</em></h2>
-            <p>I work across native apps, agent infrastructure, Linux, and the awkward seams between them. The recurring job is simple: find what is missing, understand the real constraints, and make the whole thing dependable.</p>
+          <div className={styles.aboutLead}>
+            <span className={styles.eyebrow}>About / how I work</span>
+            <h2 id="about-title">Practical systems. Properly finished.</h2>
+            <p>I work across native apps, agent infrastructure, Linux, and the awkward seams between them. I like the problems where “mostly works” is still broken.</p>
+            <div className={styles.profileLine}>
+              <Image src="/images/portfolio/lu-avatar.jpg" alt="Lu's illustrated avatar wearing a pink cap" width={64} height={64} />
+              <span><strong>Lu</strong><small>@x6c75 · United Kingdom</small></span>
+            </div>
           </div>
 
           <article className={styles.iniuriaCard}>
-            <span className={styles.windowBar}><i /><i /><i /><strong>INDEPENDENT WORK</strong></span>
-            <div>
-              <span className={styles.projectEyebrow}>Iniuria.us / side work</span>
-              <h3>Automation with an actual job to do.</h3>
-              <p>Discord automation, internal admin panels, and AI-assisted support triage built for an active community and its day-to-day operations.</p>
-              <div className={styles.proofRow}><span>Discord systems</span><span>Admin tooling</span><span>AI triage</span></div>
-            </div>
+            <span className={styles.projectEyebrow}>Independent work / Iniuria.us</span>
+            <h3>Automation with an actual job to do.</h3>
+            <p>Discord automation, internal admin panels, and AI-assisted support triage built around the daily realities of an active community.</p>
+            <div className={styles.proofRow}><span>Discord systems</span><span>Admin tooling</span><span>AI triage</span></div>
           </article>
-        </section>
 
-        <section className={styles.moreSection} aria-labelledby="more-title">
-          <div className={styles.moreHeading}>
-            <span className={styles.kicker}><Github aria-hidden="true" /> More signals</span>
-            <h2 id="more-title">Small tools.<br /><em>Sharp edges.</em></h2>
-          </div>
-          <div className={styles.moreGrid}>
-            {supportingWork.map((project, index) => (
-              <a key={project.name} href={project.href} target="_blank" rel="noreferrer">
-                <span>0{index + 5}</span>
-                <strong>{project.name}</strong>
-                <small>{project.note}</small>
-                <ArrowUpRight aria-hidden="true" />
-              </a>
-            ))}
+          <div className={styles.moreWork}>
+            <div>
+              <span className={styles.eyebrow}><Github aria-hidden="true" /> More open source</span>
+              <h3>Small tools. Sharp edges.</h3>
+            </div>
+            <div className={styles.moreGrid}>
+              {supportingWork.map((project) => (
+                <a key={project.name} href={project.href} target="_blank" rel="noreferrer">
+                  <span><strong>{project.name}</strong><small>{project.note}</small></span>
+                  <ArrowUpRight aria-hidden="true" />
+                </a>
+              ))}
+            </div>
           </div>
         </section>
 
         <section className={styles.contactSection} id="contact" aria-labelledby="contact-title">
-          <div className={styles.contactOrb}><Image src="/images/portfolio/orchid-icon.png" alt="" width={150} height={150} /></div>
-          <div>
-            <span className={styles.kicker}><Radio aria-hidden="true" /> Open channel</span>
-            <h2 id="contact-title">Got something that should work <em>better?</em></h2>
-            <p>Send the signal. Interesting systems, native apps, agent infrastructure, and strange practical problems welcome.</p>
-          </div>
+          <span className={styles.eyebrow}>Open channel</span>
+          <h2 id="contact-title">Got a useful problem?</h2>
+          <p>Native apps, agent infrastructure, strange systems, and software that needs to behave.</p>
           <a href={portfolioIdentity.email}>Start a conversation <ArrowUpRight aria-hidden="true" /></a>
         </section>
       </main>
 
       <footer className={styles.footer}>
-        <span>© {new Date().getFullYear()} LU / SIGNAL DESK</span>
+        <span>© {new Date().getFullYear()} Lu / 6C75</span>
         <div>
-          <a href={portfolioIdentity.github} target="_blank" rel="noreferrer"><Github aria-hidden="true" /> GitHub</a>
-          <a href={portfolioIdentity.x} target="_blank" rel="noreferrer"><Radio aria-hidden="true" /> @x6c75</a>
-          <a href={portfolioIdentity.orchid} target="_blank" rel="noreferrer"><Image src="/images/portfolio/orchid-icon.png" alt="" width={16} height={16} /> Orchid.ai</a>
+          <a href={portfolioIdentity.github} target="_blank" rel="noreferrer">GitHub</a>
+          <a href={portfolioIdentity.x} target="_blank" rel="noreferrer">@x6c75</a>
+          <a href={portfolioIdentity.orchid} target="_blank" rel="noreferrer">Orchid.ai</a>
         </div>
       </footer>
     </div>
