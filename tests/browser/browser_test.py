@@ -13,12 +13,34 @@ import xml.etree.ElementTree as ET
 from html.parser import HTMLParser
 from pathlib import Path
 
-from playwright.sync_api import Page, sync_playwright
+from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError, sync_playwright
 
 
 SCREENSHOTS = Path("test-results")
 SERVER_LOG = SCREENSHOTS / "dev-server.log"
 READY_PATTERN = re.compile(r"\bReady in\b")
+
+
+def find_open_water(page: Page, pond, preferred=()):
+    viewport = page.viewport_size
+    candidates = list(preferred)
+    candidates.extend(
+        (x, y)
+        for y in range(90, viewport["height"] - 30, 55)
+        for x in range(30, viewport["width"] - 30, 55)
+    )
+    for x, y in candidates:
+        if not (4 <= x < viewport["width"] - 4 and 4 <= y < viewport["height"] - 4):
+            continue
+        page.mouse.move(x, y)
+        if pond.get_attribute("data-food-affordance") == "true":
+            return float(x), float(y)
+    raise AssertionError("No unobstructed water point found in the rendered pond")
+
+
+def record_console_issue(bucket, message) -> None:
+    if message.type in ("warning", "error") and "GL Driver Message" not in message.text:
+        bucket.append(f"{message.type}: {message.text}")
 
 
 def test_port() -> int:
@@ -255,7 +277,22 @@ class PortfolioTests(BrowserTestCase):
                         page.get_by_role("button", name=re.compile(project, re.I)).is_visible()
                     )
 
+                page.wait_for_function(
+                    "document.querySelector('[data-pixi-state]')?.dataset.pixiState === 'running'"
+                )
+                impact_count = page.locator("[data-pixi-state]").get_attribute(
+                    "data-primary-impact-count"
+                )
+                self.assertTrue(
+                    page.get_by_role("group", name="Featured projects").is_visible()
+                )
                 page.get_by_role("button", name=re.compile("Rakazo", re.I)).click()
+                self.assertEqual(
+                    page.locator("[data-pixi-state]").get_attribute(
+                        "data-primary-impact-count"
+                    ),
+                    impact_count,
+                )
                 proof = page.get_by_text("4 highlighted merged PRs", exact=True)
                 proof.wait_for(state="visible")
                 self.assertTrue(proof.is_visible())
@@ -279,8 +316,13 @@ class PortfolioTests(BrowserTestCase):
         browser = self.playwright.chromium.launch()
         page = browser.new_page(viewport={"width": 1440, "height": 900})
         page_errors = []
+        console_issues = []
         page.on("pageerror", lambda error: page_errors.append(str(error)))
-        page.goto(self.base_url, wait_until="networkidle")
+        page.on(
+            "console",
+            lambda message: record_console_issue(console_issues, message),
+        )
+        page.goto(f"{self.base_url}/?pond-seed=e2e-pointer", wait_until="networkidle")
 
         self.assertEqual(
             page.evaluate("getComputedStyle(document.querySelector('#top')).userSelect"),
@@ -296,6 +338,91 @@ class PortfolioTests(BrowserTestCase):
             }"""
         )
         first_positions = pond.get_attribute("data-fish-positions")
+        first_water_offset = pond.get_attribute("data-water-offset")
+        self.assertGreaterEqual(int(pond.get_attribute("data-fish-count")), 12)
+        self.assertGreaterEqual(int(pond.get_attribute("data-pond-element-count")), 10)
+        self.assertGreaterEqual(int(pond.get_attribute("data-insect-count")), 2)
+        self.assertEqual(int(pond.get_attribute("data-cat-count")), 1)
+        self.assertEqual(
+            pond.get_attribute("data-fish-logic"),
+            "seeded-world-flock-predictive-evade",
+        )
+        self.assertEqual(
+            pond.get_attribute("data-world-model"),
+            "seeded-rock-target-food-environment",
+        )
+        page.wait_for_function(
+            """initial => {
+                const pond = document.querySelector('[data-pixi-state]');
+                return pond?.dataset.waterOffset !== initial;
+            }""",
+            arg=first_water_offset,
+        )
+        self.assertNotEqual(pond.get_attribute("data-water-offset"), first_water_offset)
+        cat_x, cat_y = (
+            float(value)
+            for value in pond.get_attribute("data-cat-position").split(",")
+        )
+        first_cat_position = pond.get_attribute("data-cat-position")
+        first_pounce_count = int(pond.get_attribute("data-cat-pounce-count"))
+        self.assertEqual(pond.get_attribute("data-cat-over-water"), "false")
+        self.assertEqual(pond.get_attribute("data-cat-water-violation"), "false")
+        self.assertLess(abs(float(pond.get_attribute("data-cat-rotation"))), 0.12)
+        page.wait_for_function(
+            "document.querySelector('[data-pixi-state]')?.dataset.catTarget !== 'none'",
+            timeout=20_000,
+        )
+        aim_x = float(pond.get_attribute("data-cat-aim-screen").split(",")[0])
+        cat_x = float(pond.get_attribute("data-cat-position").split(",")[0])
+        self.assertEqual(
+            int(pond.get_attribute("data-cat-facing")),
+            -1 if aim_x < cat_x else 1,
+        )
+        page.mouse.click(cat_x, cat_y)
+        page.wait_for_function(
+            """initial => {
+                const pond = document.querySelector('[data-pixi-state]');
+                return Number(pond?.dataset.catPounceCount) > initial;
+            }""",
+            arg=first_pounce_count,
+        )
+        self.assertNotEqual(pond.get_attribute("data-cat-state"), "idle")
+        page.wait_for_timeout(240)
+        self.assertNotEqual(pond.get_attribute("data-cat-position"), first_cat_position)
+        page.wait_for_function(
+            """() => {
+                const pond = document.querySelector('[data-pixi-state]');
+                return pond?.dataset.catGrounded === 'true' && ['idle', 'observe'].includes(pond.dataset.catState);
+            }"""
+        )
+        visited_rocks = {pond.get_attribute("data-cat-rock")}
+        for _ in range(6):
+            cat_x, cat_y = (
+                float(value)
+                for value in pond.get_attribute("data-cat-position").split(",")
+            )
+            pounce_count = int(pond.get_attribute("data-cat-pounce-count"))
+            page.mouse.click(cat_x, cat_y)
+            page.wait_for_function(
+                """initial => {
+                    const pond = document.querySelector('[data-pixi-state]');
+                    return Number(pond?.dataset.catPounceCount) > initial;
+                }""",
+                arg=pounce_count,
+            )
+            page.wait_for_function(
+                """() => {
+                    const pond = document.querySelector('[data-pixi-state]');
+                    return pond?.dataset.catGrounded === 'true' && ['idle', 'observe'].includes(pond.dataset.catState);
+                }"""
+            )
+            visited_rocks.add(pond.get_attribute("data-cat-rock"))
+        self.assertGreaterEqual(len(visited_rocks), 3)
+        self.assertEqual(pond.get_attribute("data-cat-over-water"), "false")
+        self.assertEqual(pond.get_attribute("data-cat-water-violation"), "false")
+        self.assertEqual(pond.get_attribute("data-cat-empty-bap-count"), "0")
+        self.assertLess(abs(float(pond.get_attribute("data-cat-rotation"))), 0.12)
+        self.assertLess(float(pond.get_attribute("data-fish-max-step")), 25)
         fish_x, fish_y = (
             float(value)
             for value in first_positions.split(";")[0].split(",")
@@ -310,21 +437,338 @@ class PortfolioTests(BrowserTestCase):
         page.mouse.click(320, 280)
         page.wait_for_timeout(300)
         self.assertGreater(int(pond.get_attribute("data-ripple-count")), 0)
+        self.assertGreater(int(pond.get_attribute("data-ring-count")), 0)
         self.assertGreater(int(pond.get_attribute("data-wake-count")), 0)
         self.assertNotEqual(pond.get_attribute("data-fish-positions"), first_positions)
+        self.assertEqual(page.evaluate("getSelection()?.toString()"), "")
+        self.assertEqual(pond.get_attribute("data-fish-water-violation"), "false")
+        self.assertEqual(page_errors, [])
+        self.assertEqual(console_issues, [])
+        browser.close()
+
+    def test_food_drop_reservation_and_feeding(self) -> None:
+        browser = self.playwright.chromium.launch()
+        page = browser.new_page(viewport={"width": 1440, "height": 900})
+        page_errors = []
+        page.on("pageerror", lambda error: page_errors.append(str(error)))
+        page.goto(f"{self.base_url}/?pond-seed=e2e-food", wait_until="networkidle")
+        pond = page.locator("[data-pixi-state]")
+        page.wait_for_function(
+            "document.querySelector('[data-pixi-state]')?.dataset.fishPositions"
+        )
+        food_before = int(pond.get_attribute("data-food-dropped-count"))
+        context_suppressed_on_link = page.get_by_role("link", name="See the work").evaluate(
+            """element => {
+                const event = new MouseEvent('contextmenu', {
+                    bubbles: true, cancelable: true, button: 2,
+                    clientX: element.getBoundingClientRect().x + 4,
+                    clientY: element.getBoundingClientRect().y + 4,
+                });
+                element.dispatchEvent(event);
+                return event.defaultPrevented;
+            }"""
+        )
+        self.assertFalse(context_suppressed_on_link)
+        self.assertEqual(int(pond.get_attribute("data-food-dropped-count")), food_before)
+
+        fish_points = [
+            tuple(float(value) for value in point.split(","))
+            for point in pond.get_attribute("data-fish-positions").split(";")
+        ]
+        fish_x, fish_y = find_open_water(page, pond, fish_points)
+        context_suppressed_on_water = page.evaluate(
+            """({ x, y }) => {
+                const target = document.elementFromPoint(x, y);
+                const event = new MouseEvent('contextmenu', {
+                    bubbles: true, cancelable: true, button: 2,
+                    clientX: x, clientY: y,
+                });
+                target.dispatchEvent(event);
+                return event.defaultPrevented;
+            }""",
+            {"x": fish_x, "y": fish_y},
+        )
+        self.assertTrue(context_suppressed_on_water)
+        page.wait_for_function(
+            "initial => Number(document.querySelector('[data-pixi-state]')?.dataset.foodDroppedCount) > initial",
+            arg=food_before,
+        )
+        camera_x, camera_y, scale_x, scale_y = (
+            float(value) for value in pond.get_attribute("data-pond-camera").split(",")
+        )
+        dropped_x, dropped_y = (
+            float(value) for value in pond.get_attribute("data-food-last-drop").split(",")
+        )
+        requested_x, requested_y = (
+            float(value) for value in pond.get_attribute("data-food-requested-at").split(",")
+        )
+        self.assertEqual((dropped_x, dropped_y), (requested_x, requested_y))
+        self.assertAlmostEqual(dropped_x, camera_x + (fish_x - 720) / scale_x, delta=1.2)
+        self.assertAlmostEqual(dropped_y, camera_y + (fish_y - 450) / scale_y, delta=1.2)
+        page.wait_for_function(
+            "document.querySelector('[data-pixi-state]')?.dataset.foodReservations",
+            timeout=20_000,
+        )
+        try:
+            page.wait_for_function(
+                "Number(document.querySelector('[data-pixi-state]')?.dataset.fishFedCount) > 0",
+                timeout=30_000,
+            )
+        except PlaywrightTimeoutError:
+            detail = pond.evaluate(
+                "element => ({ frame: element.dataset.frame, states: element.dataset.fishFoodStates, reservations: element.dataset.foodReservations, food: element.dataset.foodEntities, waterViolation: element.dataset.fishWaterViolation })"
+            )
+            browser.close()
+            self.fail(f"Fish never completed the reserved feeding cycle: {detail}")
+        self.assertLessEqual(int(pond.get_attribute("data-food-max-count")), 8)
+        self.assertEqual(pond.get_attribute("data-cat-empty-bap-count"), "0")
+        self.assertEqual(pond.get_attribute("data-fish-water-violation"), "false")
         self.assertEqual(page_errors, [])
         browser.close()
 
-    def test_reduced_motion_keeps_the_pond_static(self) -> None:
+    def test_reduced_motion_preserves_the_ecosystem_at_low_speed(self) -> None:
         browser = self.playwright.chromium.launch()
         page = browser.new_page(viewport={"width": 1440, "height": 900})
+        console_issues = []
+        page_errors = []
+        page.on("pageerror", lambda error: page_errors.append(str(error)))
+        page.on(
+            "console",
+            lambda message: record_console_issue(console_issues, message),
+        )
         page.emulate_media(reduced_motion="reduce")
-        page.goto(self.base_url, wait_until="networkidle")
+        page.goto(f"{self.base_url}/?pond-seed=e2e-reduced", wait_until="networkidle")
 
         pond = page.locator("[data-pixi-state]")
-        self.assertEqual(pond.get_attribute("data-pixi-state"), "reduced")
-        self.assertEqual(page.locator("[data-renderer]").get_attribute("data-renderer"), "reduced")
-        self.assertEqual(pond.locator("canvas").count(), 0)
+        page.wait_for_function(
+            """() => {
+                const pond = document.querySelector('[data-pixi-state]');
+                return pond?.dataset.pixiState === 'running' && pond.dataset.fishPositions;
+            }"""
+        )
+        first_positions = pond.get_attribute("data-fish-positions")
+        first_offset = pond.get_attribute("data-water-offset")
+        self.assertEqual(pond.get_attribute("data-motion"), "reduced")
+        self.assertEqual(page.locator("[data-renderer]").get_attribute("data-renderer"), "pixi")
+        self.assertEqual(pond.locator("canvas").count(), 1)
+        page.wait_for_function(
+            "initial => document.querySelector('[data-pixi-state]')?.dataset.fishPositions !== initial",
+            arg=first_positions,
+            timeout=5_000,
+        )
+        self.assertNotEqual(pond.get_attribute("data-fish-positions"), first_positions)
+        self.assertNotEqual(pond.get_attribute("data-water-offset"), first_offset)
+        fish_points = [
+            tuple(float(value) for value in point.split(","))
+            for point in pond.get_attribute("data-fish-positions").split(";")
+        ]
+        fish_x, fish_y = find_open_water(page, pond, fish_points)
+        page.mouse.click(fish_x, fish_y, button="right")
+        page.wait_for_function(
+            "Number(document.querySelector('[data-pixi-state]')?.dataset.foodDroppedCount) > 0"
+        )
+        self.assertGreater(int(pond.get_attribute("data-food-count")), 0)
+        self.assertEqual(page_errors, [])
+        self.assertEqual(console_issues, [])
+        browser.close()
+
+    def test_mobile_touch_disturbs_the_shared_pond(self) -> None:
+        browser = self.playwright.chromium.launch()
+        context = browser.new_context(
+            viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True
+        )
+        page = context.new_page()
+        page.goto(f"{self.base_url}/?pond-seed=e2e-touch", wait_until="networkidle")
+        pond = page.locator("[data-pixi-state]")
+        page.wait_for_function(
+            "document.querySelector('[data-pixi-state]')?.dataset.pixiState === 'running' && document.querySelector('[data-pixi-state]')?.dataset.fishPositions"
+        )
+        fish_points = [
+            tuple(float(value) for value in point.split(","))
+            for point in pond.get_attribute("data-fish-positions").split(";")
+        ]
+        fish_x, fish_y = find_open_water(page, pond, fish_points)
+        impacts_before = int(pond.get_attribute("data-primary-impact-count"))
+        page.touchscreen.tap(fish_x, fish_y)
+        page.wait_for_function(
+            "document.querySelector('[data-pixi-state]')?.dataset.touchGesture === 'single-tap-impact'"
+        )
+        self.assertEqual(
+            int(pond.get_attribute("data-primary-impact-count")),
+            impacts_before + 1,
+        )
+        self.assertGreater(int(pond.get_attribute("data-ring-count")), 0)
+        self.assertEqual(int(pond.get_attribute("data-food-dropped-count")), 0)
+        impacts_before_food = int(pond.get_attribute("data-primary-impact-count"))
+        page.touchscreen.tap(fish_x, fish_y)
+        page.wait_for_timeout(120)
+        page.touchscreen.tap(fish_x, fish_y)
+        try:
+            page.wait_for_function(
+                "Number(document.querySelector('[data-pixi-state]')?.dataset.foodDroppedCount) > 0"
+            )
+        except PlaywrightTimeoutError:
+            detail = pond.evaluate(
+                "element => ({ gesture: element.dataset.touchGesture, requested: element.dataset.foodRequestedAt, frame: element.dataset.frame, state: element.dataset.pixiState })"
+            )
+            context.close()
+            browser.close()
+            self.fail(f"Double-tap did not commit food: {detail}")
+        camera_x, camera_y, scale_x, scale_y = (
+            float(value) for value in pond.get_attribute("data-pond-camera").split(",")
+        )
+        dropped_x, dropped_y = (
+            float(value) for value in pond.get_attribute("data-food-last-drop").split(",")
+        )
+        requested_x, requested_y = (
+            float(value) for value in pond.get_attribute("data-food-requested-at").split(",")
+        )
+        self.assertEqual((dropped_x, dropped_y), (requested_x, requested_y))
+        self.assertAlmostEqual(dropped_x, camera_x + (fish_x - 195) / scale_x, delta=1.2)
+        self.assertAlmostEqual(dropped_y, camera_y + (fish_y - 422) / scale_y, delta=1.2)
+        page.wait_for_timeout(500)
+        self.assertEqual(
+            int(pond.get_attribute("data-primary-impact-count")),
+            impacts_before_food,
+        )
+        dropped_count = int(pond.get_attribute("data-food-dropped-count"))
+        project_button = page.get_by_role("button", name=re.compile("Orchid.ai", re.I))
+        project_button.scroll_into_view_if_needed()
+        box = project_button.bounding_box()
+        page.touchscreen.tap(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+        page.wait_for_timeout(100)
+        page.touchscreen.tap(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+        page.wait_for_timeout(500)
+        self.assertEqual(int(pond.get_attribute("data-food-dropped-count")), dropped_count)
+
+        def pointer_sequence(events):
+            page.evaluate(
+                """({ x, y, events }) => {
+                    const target = document.elementFromPoint(x, y);
+                    for (const item of events) {
+                        target.dispatchEvent(new PointerEvent(item.type, {
+                            bubbles: true,
+                            cancelable: true,
+                            pointerType: 'touch',
+                            pointerId: item.id,
+                            isPrimary: item.primary,
+                            clientX: x + (item.dx ?? 0),
+                            clientY: y + (item.dy ?? 0),
+                            button: 0,
+                            buttons: item.type === 'pointerup' || item.type === 'pointercancel' ? 0 : 1,
+                        }));
+                    }
+                }""",
+                {"x": fish_x, "y": fish_y, "events": events},
+            )
+
+        pointer_sequence(
+            [
+                {"type": "pointerdown", "id": 21, "primary": True},
+                {"type": "pointermove", "id": 21, "primary": True, "dy": 42},
+                {"type": "pointerup", "id": 21, "primary": True, "dy": 42},
+            ]
+        )
+        pointer_sequence(
+            [
+                {"type": "pointerdown", "id": 22, "primary": True},
+                {"type": "pointercancel", "id": 22, "primary": True},
+                {"type": "pointerup", "id": 22, "primary": True},
+            ]
+        )
+        pointer_sequence(
+            [
+                {"type": "pointerdown", "id": 23, "primary": True},
+                {"type": "pointerdown", "id": 24, "primary": False},
+                {"type": "pointerup", "id": 24, "primary": False},
+                {"type": "pointerup", "id": 23, "primary": True},
+            ]
+        )
+        page.wait_for_timeout(500)
+        self.assertEqual(int(pond.get_attribute("data-food-dropped-count")), dropped_count)
+        self.assertEqual(
+            int(pond.get_attribute("data-primary-impact-count")),
+            impacts_before_food,
+        )
+        self.assertGreaterEqual(int(pond.get_attribute("data-fish-count")), 8)
+        self.assertEqual(pond.get_attribute("data-cat-empty-bap-count"), "0")
+        context.close()
+        browser.close()
+
+    def test_webgl_failure_uses_the_art_directed_fallback(self) -> None:
+        browser = self.playwright.chromium.launch()
+        context = browser.new_context(viewport={"width": 1440, "height": 900})
+        context.add_init_script(
+            "HTMLCanvasElement.prototype.getContext = function () { return null; }"
+        )
+        page = context.new_page()
+        page.goto(self.base_url, wait_until="networkidle")
+        page.wait_for_function(
+            "document.querySelector('[data-pixi-state]')?.dataset.pixiState === 'fallback'"
+        )
+        self.assertEqual(
+            page.locator("[data-renderer]").get_attribute("data-renderer"),
+            "fallback",
+        )
+        self.assertEqual(page.locator("[data-pixi-state] canvas").count(), 0)
+        self.assertTrue(
+            page.get_by_role(
+                "heading", name="I make stubborn software behave."
+            ).is_visible()
+        )
+        context.close()
+        browser.close()
+
+    def test_pause_resize_and_remount_keep_world_state_bounded(self) -> None:
+        browser = self.playwright.chromium.launch()
+        page = browser.new_page(viewport={"width": 1280, "height": 800})
+        page.goto(f"{self.base_url}/?pond-seed=e2e-lifecycle", wait_until="networkidle")
+        pond = page.locator("[data-pixi-state]")
+        page.wait_for_function(
+            "document.querySelector('[data-pixi-state]')?.dataset.fishWorldPositions"
+        )
+        first = [
+            tuple(float(value) for value in point.split(","))
+            for point in pond.get_attribute("data-fish-world-positions").split(";")
+        ]
+        page.set_viewport_size({"width": 768, "height": 1024})
+        page.wait_for_timeout(350)
+        second = [
+            tuple(float(value) for value in point.split(","))
+            for point in pond.get_attribute("data-fish-world-positions").split(";")
+        ]
+        self.assertTrue(
+            all(
+                ((after[0] - before[0]) ** 2 + (after[1] - before[1]) ** 2) ** 0.5 < 80
+                for before, after in zip(first, second)
+            )
+        )
+        page.evaluate(
+            """() => {
+                Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+                document.dispatchEvent(new Event('visibilitychange'));
+            }"""
+        )
+        self.assertEqual(pond.get_attribute("data-pixi-state"), "paused")
+        paused_frame = pond.get_attribute("data-frame")
+        page.wait_for_timeout(350)
+        self.assertEqual(pond.get_attribute("data-frame"), paused_frame)
+        page.evaluate(
+            """() => {
+                Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
+                document.dispatchEvent(new Event('visibilitychange'));
+            }"""
+        )
+        page.wait_for_function(
+            "initial => document.querySelector('[data-pixi-state]')?.dataset.frame !== initial",
+            arg=paused_frame,
+        )
+        page.goto(f"{self.base_url}/concepts/trace", wait_until="networkidle")
+        page.go_back(wait_until="networkidle")
+        page.wait_for_function(
+            "document.querySelector('[data-pixi-state]')?.dataset.pixiState === 'running'"
+        )
+        self.assertEqual(page.locator("[data-pixi-state] canvas").count(), 1)
         browser.close()
 
     def test_legacy_concept_routes_still_render(self) -> None:

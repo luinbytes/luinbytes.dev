@@ -11,7 +11,7 @@ export function SiteFrame({ children }: { children: React.ReactNode }) {
   const isPortfolioMvp = pathname === "/" || pathname.startsWith("/concepts/");
 
   if (isPortfolioMvp) {
-    return <main id="main">{children}</main>;
+    return <main id="main" tabIndex={-1}>{children}</main>;
   }
 
   return (
@@ -19,7 +19,7 @@ export function SiteFrame({ children }: { children: React.ReactNode }) {
       <CommandMenu />
       <CaseInterfaceOverlay />
       <Header />
-      <main id="main" className="min-h-screen pt-16">
+      <main id="main" tabIndex={-1} className="min-h-screen pt-16">
         {children}
       </main>
       <Footer />
