@@ -8,22 +8,7 @@ const siteUrl = 'https://luinbytes.dev';
 const projectRoot = path.join(__dirname, '..');
 const outputPath = path.join(projectRoot, 'public/sitemap.xml');
 
-// Static pages
-const staticPages = [
-  '',
-  '/concepts/signal-desk',
-  '/concepts/signal-field',
-  '/concepts/trace',
-  '/ballhammer',
-  '/brc-trainer',
-  '/dagger-fall',
-  '/linux-sonar',
-  '/meteor',
-  '/meteor/privacy',
-  '/risk-of-anticheat',
-  '/sleepr',
-  '/super-hacker-golf',
-];
+const staticPages = [''];
 
 function generateSitemap() {
   const today = new Date().toISOString().split('T')[0];

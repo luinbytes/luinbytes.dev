@@ -1,273 +1,27 @@
-export type PondPoint = { x: number; y: number };
+import {
+  ROCK_ANCHORS,
+  createPondRandom,
+  pondClamp as clamp,
+  pondDistance as distance,
+  pondHashSeed as hashSeed,
+  pondLerp as lerp,
+  pondSmoothstep as smoothstep,
+  type CatRoutine,
+  type CatWorldState,
+  type FishFoodEntity,
+  type FishFoodStateName,
+  type FishWorldIntent,
+  type FlyRoutineState,
+  type FlyWorldIntent,
+  type PondPoint,
+  type PondTarget,
+  type PondWorldEvent,
+  type PondWorldFrame,
+  type PondWorldInput,
+  type RockAnchor,
+} from "./pond-model.ts";
 
-export type PondTarget = {
-  id: string;
-  type: "fish" | "fly";
-  position: PondPoint;
-  velocity: PondPoint;
-  visible: boolean;
-  attackable: boolean;
-  interactionRange: number;
-  species?: string;
-  danger?: number;
-};
-
-export type FishFoodState = "dropping" | "floating" | "depleted";
-
-export type FishFoodEntity = {
-  id: string;
-  position: PondPoint;
-  age: number;
-  state: FishFoodState;
-  remainingAmount: number;
-  attractionRadius: number;
-  consumed: boolean;
-  expired: boolean;
-  pelletSize: number;
-  settleDelay: number;
-  lifetime: number;
-  dropProgress: number;
-};
-
-export type FishFoodStateName =
-  | "cruising"
-  | "detecting-food"
-  | "approaching-food"
-  | "circling"
-  | "feeding"
-  | "startled"
-  | "returning-to-cruise";
-
-export type FishWorldIntent = {
-  fishId: string;
-  state: FishFoodStateName;
-  foodId: string | null;
-  goal: PondPoint | null;
-  arrivalRadius: number;
-  speedScale: number;
-  reserved: boolean;
-  feedingPulse: number;
-  reason: string;
-};
-
-export type RockSurface = {
-  id: string;
-  center: PondPoint;
-  tangent: PondPoint;
-  normal: PondPoint;
-  sittingRegion: { radiusX: number; radiusY: number };
-  surfaceAngle: number;
-  anchors: readonly { id: string; local: PondPoint; clearance: number }[];
-};
-
-export type RockAnchor = {
-  id: string;
-  rockId: string;
-  position: PondPoint;
-  normal: PondPoint;
-  surfaceAngle: number;
-  clearance: number;
-  surfaceArea: number;
-};
-
-export type CatWorldState =
-  | "idle"
-  | "observe"
-  | "notice-target"
-  | "approach"
-  | "anticipate-hop"
-  | "airborne"
-  | "land"
-  | "settle"
-  | "prepare-bat"
-  | "bat"
-  | "react"
-  | "recover";
-
-export type PondWorldEvent =
-  | { type: "transition"; from: CatWorldState; to: CatWorldState; reason: string }
-  | { type: "takeoff"; fromAnchor: string; toAnchor: string }
-  | { type: "land"; anchorId: string; position: PondPoint; impact: number }
-  | {
-      type: "bat";
-      targetId: string;
-      targetType: PondTarget["type"];
-      aim: PondPoint;
-      distance: number;
-      reach: number;
-      hit: boolean;
-    }
-  | { type: "ambient-ripple"; position: PondPoint; strength: number }
-  | { type: "food-dropped"; foodId: string; position: PondPoint; rippleStrength: number; merged: boolean }
-  | { type: "fish-state"; fishId: string; from: FishFoodStateName; to: FishFoodStateName; reason: string }
-  | { type: "fish-noticed-food"; fishId: string; foodId: string }
-  | { type: "fish-reserved-food"; fishId: string; foodId: string; slot: number }
-  | { type: "fish-arrived"; fishId: string; foodId: string; position: PondPoint }
-  | { type: "fish-fed"; fishId: string; foodId: string; position: PondPoint; remainingAmount: number }
-  | { type: "food-expired"; foodId: string; position: PondPoint; consumed: boolean; reason: "consumed" | "lifetime" | "capacity" };
-
-export type PondWorldInput = {
-  now: number;
-  delta: number;
-  targets: readonly PondTarget[];
-  visibleAnchorIds: readonly string[];
-};
-
-export type PondWorldFrame = {
-  cat: {
-    state: CatWorldState;
-    contact: PondPoint;
-    lift: number;
-    squashX: number;
-    squashY: number;
-    surfaceAngle: number;
-    facing: 1 | -1;
-    aim: PondPoint;
-    grounded: boolean;
-    anchorId: string;
-    rockId: string;
-    destinationAnchorId: string | null;
-    selectedTargetId: string | null;
-    selectedTargetType: PondTarget["type"] | null;
-    batReach: number;
-  };
-  environment: {
-    wind: number;
-    currentA: PondPoint;
-    currentB: PondPoint;
-    surfaceA: PondPoint;
-    surfaceB: PondPoint;
-    light: number;
-  };
-  foods: readonly FishFoodEntity[];
-  fish: readonly FishWorldIntent[];
-  events: readonly PondWorldEvent[];
-  debug: {
-    seed: number;
-    reason: string;
-    grounded: boolean;
-    selectedTarget: string | null;
-    destinationAnchor: string | null;
-  };
-};
-
-export const ROCK_SURFACES: readonly RockSurface[] = [
-  {
-    id: "south-stone",
-    center: { x: 790, y: 954 },
-    tangent: { x: 0.999, y: -0.035 },
-    normal: { x: 0.035, y: 0.999 },
-    sittingRegion: { radiusX: 67, radiusY: 34 },
-    surfaceAngle: -0.035,
-    anchors: [{ id: "south-stone-top", local: { x: 0, y: -6 }, clearance: 74 }],
-  },
-  {
-    id: "reed-step",
-    center: { x: 1080, y: 852 },
-    tangent: { x: 0.998, y: 0.055 },
-    normal: { x: -0.055, y: 0.998 },
-    sittingRegion: { radiusX: 44, radiusY: 27 },
-    surfaceAngle: 0.055,
-    anchors: [{ id: "reed-step-top", local: { x: 0, y: -5 }, clearance: 56 }],
-  },
-  {
-    id: "moss-step",
-    center: { x: 1185, y: 890 },
-    tangent: { x: 0.999, y: -0.03 },
-    normal: { x: 0.03, y: 0.999 },
-    sittingRegion: { radiusX: 72, radiusY: 40 },
-    surfaceAngle: -0.03,
-    anchors: [{ id: "moss-step-top", local: { x: -3, y: -8 }, clearance: 82 }],
-  },
-  {
-    id: "broad-shelf",
-    center: { x: 1275, y: 855 },
-    tangent: { x: 0.999, y: 0.025 },
-    normal: { x: -0.025, y: 0.999 },
-    sittingRegion: { radiusX: 91, radiusY: 43 },
-    surfaceAngle: 0.025,
-    anchors: [{ id: "broad-shelf-top", local: { x: 0, y: -9 }, clearance: 96 }],
-  },
-  {
-    id: "lower-shelf",
-    center: { x: 1285, y: 930 },
-    tangent: { x: 1, y: 0 },
-    normal: { x: 0, y: 1 },
-    sittingRegion: { radiusX: 92, radiusY: 45 },
-    surfaceAngle: 0,
-    anchors: [{ id: "lower-shelf-top", local: { x: 2, y: -8 }, clearance: 98 }],
-  },
-  {
-    id: "fern-stone",
-    center: { x: 1480, y: 780 },
-    tangent: { x: 0.998, y: -0.06 },
-    normal: { x: 0.06, y: 0.998 },
-    sittingRegion: { radiusX: 69, radiusY: 37 },
-    surfaceAngle: -0.06,
-    anchors: [{ id: "fern-stone-top", local: { x: -2, y: -7 }, clearance: 78 }],
-  },
-];
-
-export const ROCK_ANCHORS: readonly RockAnchor[] = ROCK_SURFACES.flatMap((rock) =>
-  rock.anchors.map((anchor) => ({
-    id: anchor.id,
-    rockId: rock.id,
-    position: {
-      x: rock.center.x + rock.tangent.x * anchor.local.x + rock.normal.x * anchor.local.y,
-      y: rock.center.y + rock.tangent.y * anchor.local.x + rock.normal.y * anchor.local.y,
-    },
-    normal: rock.normal,
-    surfaceAngle: rock.surfaceAngle,
-    clearance: anchor.clearance,
-    surfaceArea: Math.PI * rock.sittingRegion.radiusX * rock.sittingRegion.radiusY,
-  })),
-);
-
-export const CAT_INTEREST_RADIUS = 340;
-
-const anchorById = new Map(ROCK_ANCHORS.map((anchor) => [anchor.id, anchor]));
-
-function distance(a: PondPoint, b: PondPoint) {
-  return Math.hypot(a.x - b.x, a.y - b.y);
-}
-
-function lerp(a: number, b: number, amount: number) {
-  return a + (b - a) * amount;
-}
-
-function clamp(value: number, minimum: number, maximum: number) {
-  return Math.max(minimum, Math.min(maximum, value));
-}
-
-function smoothstep(value: number) {
-  const clamped = clamp(value, 0, 1);
-  return clamped * clamped * (3 - 2 * clamped);
-}
-
-function hashSeed(value: string | number) {
-  if (typeof value === "number") return value >>> 0;
-  let hash = 2166136261;
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
-  }
-  return hash >>> 0;
-}
-
-function seededRandom(seed: number) {
-  let state = seed >>> 0;
-  return () => {
-    state += 0x6d2b79f5;
-    let value = state;
-    value = Math.imul(value ^ (value >>> 15), value | 1);
-    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
-    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-export function createPondRandom(seedValue: string | number) {
-  return seededRandom(hashSeed(seedValue));
-}
+export * from "./pond-model.ts";
 
 type FoodInternal = Omit<FishFoodEntity, "age" | "dropProgress"> & {
   spawnedAt: number;
@@ -289,8 +43,25 @@ type FishBrain = {
   reason: string;
 };
 
+type FlyBrain = {
+  state: FlyRoutineState;
+  stateStarted: number;
+  stateDuration: number;
+  goal: PondPoint;
+  home: PondPoint;
+  reason: string;
+};
+
+type AnchorRoute = {
+  anchor: RockAnchor;
+  path: readonly RockAnchor[];
+  distance: number;
+};
+
 const MAX_FOOD = 8;
 const FOOD_MERGE_DISTANCE = 32;
+const CAT_HOP_MIN = 55;
+const CAT_HOP_MAX = 360;
 const LEGAL_CAT_TRANSITIONS: Record<CatWorldState, readonly CatWorldState[]> = {
   idle: ["notice-target", "approach", "observe"],
   observe: ["notice-target", "approach", "observe"],
@@ -314,26 +85,41 @@ const LEGAL_FISH_TRANSITIONS: Record<FishFoodStateName, readonly FishFoodStateNa
   startled: ["returning-to-cruise"],
   "returning-to-cruise": ["cruising", "detecting-food", "startled"],
 };
+const LEGAL_FLY_TRANSITIONS: Record<FlyRoutineState, readonly FlyRoutineState[]> = {
+  hovering: ["foraging", "resting", "startled"],
+  foraging: ["hovering", "resting", "startled"],
+  resting: ["hovering", "foraging", "startled"],
+  startled: ["hovering"],
+};
 
 export function createPondWorld(seedValue: string | number = "6c75") {
   const seed = hashSeed(seedValue);
   const random = createPondRandom(seed);
   const anchorCooldowns = new Map<string, number>();
+  const anchorVisits = new Map<string, number>();
   const targetCooldowns = new Map<string, number>();
   const foods = new Map<string, FoodInternal>();
   const fishBrains = new Map<string, FishBrain>();
+  const flyBrains = new Map<string, FlyBrain>();
   const reservations = new Map<string, Set<string>>();
   const pendingFoodDrops: { id: string; position: PondPoint }[] = [];
   let foodSequence = 0;
   let initialized = false;
   let hopRequested = false;
   let state: CatWorldState = "idle";
+  let routine: CatRoutine = "watching";
   let stateStarted = 0;
   let stateDuration = 3200;
   let currentAnchor = ROCK_ANCHORS[0];
   let takeoffAnchor = currentAnchor;
   let destinationAnchor: RockAnchor | null = null;
   let selectedTargetId: string | null = null;
+  let huntExpiresAt = 0;
+  let huntHops = 0;
+  let nextHuntAt = 0;
+  let nextTargetScan = 0;
+  let nextPatrolAt = 0;
+  const recentAnchors: string[] = [];
   let lastReason = "initialised";
   let idleAim = { x: currentAnchor.position.x - 90, y: currentAnchor.position.y - 10 };
   let wind = 0;
@@ -366,6 +152,14 @@ export function createPondWorld(seedValue: string | number = "6c75") {
     const reserved = reservations.get(brain.foodId);
     reserved?.delete(fishId);
     if (reserved?.size === 0) reservations.delete(brain.foodId);
+  }
+
+  function wakeFishForFood(now: number) {
+    for (const brain of fishBrains.values()) {
+      if (brain.state === "cruising") {
+        brain.nextInterestAt = Math.min(brain.nextInterestAt, now + duration(20, 90));
+      }
+    }
   }
 
   function transitionFish(
@@ -421,6 +215,7 @@ export function createPondWorld(seedValue: string | number = "6c75") {
           rippleStrength: 0.32 + random() * 0.22,
           merged: true,
         });
+        wakeFishForFood(now);
         continue;
       }
       if (foods.size >= MAX_FOOD) {
@@ -433,7 +228,7 @@ export function createPondWorld(seedValue: string | number = "6c75") {
         spawnedAt: now,
         state: "dropping",
         remainingAmount: 3 + Math.floor(random() * 4),
-        attractionRadius: 250 + random() * 145,
+        attractionRadius: 430 + random() * 180,
         consumed: false,
         expired: false,
         pelletSize: 4 + random() * 3.5,
@@ -450,6 +245,7 @@ export function createPondWorld(seedValue: string | number = "6c75") {
         rippleStrength: food.rippleStrength,
         merged: false,
       });
+      wakeFishForFood(now);
     }
 
     for (const food of [...foods.values()]) {
@@ -494,7 +290,7 @@ export function createPondWorld(seedValue: string | number = "6c75") {
 
   function chooseFood(fish: PondTarget, brain: FishBrain) {
     return [...foods.values()]
-      .filter((food) => food.state === "floating" && !food.expired && food.remainingAmount > 0)
+      .filter((food) => food.state !== "depleted" && !food.expired && food.remainingAmount > 0)
       .map((food) => {
         const foodDistance = distance(fish.position, food.position);
         const reserved = reservations.get(food.id)?.size ?? 0;
@@ -557,7 +353,7 @@ export function createPondWorld(seedValue: string | number = "6c75") {
           stateDuration: 0,
           foodId: null,
           hunger: 0.38 + random() * 0.5,
-          nextInterestAt: input.now + duration(700, 3600),
+          nextInterestAt: input.now + duration(30, 120),
           pathBias: (random() < 0.5 ? -1 : 1) * duration(0.45, 1),
           slot: 0,
           slotAngle: random() * Math.PI * 2,
@@ -571,24 +367,28 @@ export function createPondWorld(seedValue: string | number = "6c75") {
       let food = brain.foodId ? foods.get(brain.foodId) ?? null : null;
       const elapsed = input.now - brain.stateStarted;
       const danger = fish.danger ?? 0;
+      const foodAvailable = [...foods.values()].some((candidate) =>
+        !candidate.expired && candidate.remainingAmount > 0,
+      );
 
-      if (danger > 0.72 && brain.state !== "startled") {
+      if (danger > (foodAvailable ? 0.92 : 0.72) && brain.state !== "startled") {
         releaseReservation(fish.id, brain);
         brain.foodId = null;
         transitionFish(fish.id, brain, "startled", "danger-interrupted-goal", input.now, duration(620, 1150), events);
-      } else if (brain.state === "cruising" && input.now >= brain.nextInterestAt && danger < 0.5) {
+      } else if (brain.state === "cruising" && input.now >= brain.nextInterestAt && danger < (foodAvailable ? 0.9 : 0.5)) {
         food = chooseFood(fish, brain);
-        brain.nextInterestAt = input.now + duration(900, 3100);
+        const foodIsSettling = [...foods.values()].some((candidate) => candidate.state === "dropping" && !candidate.expired);
+        brain.nextInterestAt = input.now + (foodIsSettling ? duration(20, 75) : duration(420, 1100));
         if (food) {
           brain.foodId = food.id;
-          transitionFish(fish.id, brain, "detecting-food", "food-entered-interest-radius", input.now, duration(220, 720), events);
+          transitionFish(fish.id, brain, "detecting-food", "food-entered-interest-radius", input.now, duration(40, 110), events);
           events.push({ type: "fish-noticed-food", fishId: fish.id, foodId: food.id });
         }
       } else if (brain.state === "detecting-food" && elapsed >= brain.stateDuration) {
-        if (!food || food.state !== "floating" || food.remainingAmount <= 0) {
+        if (!food || food.state === "depleted" || food.remainingAmount <= 0) {
           brain.foodId = null;
           transitionFish(fish.id, brain, "returning-to-cruise", "food-lost-before-reservation", input.now, duration(520, 1100), events);
-        } else {
+        } else if (food.state === "floating") {
           const reserved = reservations.get(food.id) ?? new Set<string>();
           const capacity = Math.min(3, Math.max(1, Math.ceil(food.remainingAmount / 2)));
           if (reserved.size >= capacity) {
@@ -598,7 +398,7 @@ export function createPondWorld(seedValue: string | number = "6c75") {
             brain.slot = reserved.size;
             reserved.add(fish.id);
             reservations.set(food.id, reserved);
-            transitionFish(fish.id, brain, "approaching-food", "food-reserved", input.now, duration(8000, 15000), events);
+            transitionFish(fish.id, brain, "approaching-food", "food-reserved", input.now, duration(18000, 26000), events);
             events.push({ type: "fish-reserved-food", fishId: fish.id, foodId: food.id, slot: brain.slot });
           }
         }
@@ -651,7 +451,7 @@ export function createPondWorld(seedValue: string | number = "6c75") {
 
       food = brain.foodId ? foods.get(brain.foodId) ?? null : null;
       const arrivalRadius = food ? feedingRadius(fish, food) : 28;
-      const goal = food && ["approaching-food", "circling", "feeding"].includes(brain.state)
+      const goal = food && ["detecting-food", "approaching-food", "circling", "feeding"].includes(brain.state)
         ? foodGoal(fish, food, brain, input.now)
         : null;
       return {
@@ -661,8 +461,10 @@ export function createPondWorld(seedValue: string | number = "6c75") {
         goal,
         arrivalRadius,
         speedScale:
-          brain.state === "approaching-food"
-            ? 1.14
+          brain.state === "detecting-food"
+            ? 1.16
+            : brain.state === "approaching-food"
+              ? 3.1
             : brain.state === "circling"
               ? 0.68
               : brain.state === "feeding"
@@ -672,6 +474,85 @@ export function createPondWorld(seedValue: string | number = "6c75") {
                   : 1,
         reserved: Boolean(brain.foodId && reservations.get(brain.foodId)?.has(fish.id)),
         feedingPulse: brain.state === "feeding" ? smoothstep(elapsed / Math.max(1, brain.stateDuration)) : 0,
+        reason: brain.reason,
+      };
+    });
+  }
+
+  function transitionFly(
+    flyId: string,
+    brain: FlyBrain,
+    next: FlyRoutineState,
+    reason: string,
+    now: number,
+    nextDuration: number,
+    events: PondWorldEvent[],
+  ) {
+    if (!LEGAL_FLY_TRANSITIONS[brain.state].includes(next)) {
+      throw new Error(`Illegal fly transition ${brain.state} -> ${next}`);
+    }
+    const previous = brain.state;
+    brain.state = next;
+    brain.stateStarted = now;
+    brain.stateDuration = nextDuration;
+    brain.reason = reason;
+    events.push({ type: "fly-state", flyId, from: previous, to: next, reason });
+  }
+
+  function updateFlies(input: PondWorldInput, events: PondWorldEvent[]) {
+    const liveFlies = input.targets.filter((target) => target.type === "fly");
+    const liveIds = new Set(liveFlies.map((fly) => fly.id));
+    for (const flyId of flyBrains.keys()) {
+      if (!liveIds.has(flyId)) flyBrains.delete(flyId);
+    }
+
+    return liveFlies.map((fly): FlyWorldIntent => {
+      let brain = flyBrains.get(fly.id);
+      if (!brain) {
+        brain = {
+          state: "hovering",
+          stateStarted: input.now,
+          stateDuration: duration(900, 2600),
+          goal: { ...fly.position },
+          home: { ...fly.position },
+          reason: "surveying-home-patch",
+        };
+        flyBrains.set(fly.id, brain);
+      }
+
+      const elapsed = input.now - brain.stateStarted;
+      const arrived = distance(fly.position, brain.goal) < 34;
+      if ((fly.danger ?? 0) > 0.52 && brain.state !== "startled") {
+        const heading = Math.atan2(fly.velocity.y, fly.velocity.x) + duration(-0.7, 0.7);
+        brain.goal = {
+          x: clamp(fly.position.x + Math.cos(heading) * duration(130, 230), 80, 1506),
+          y: clamp(fly.position.y + Math.sin(heading) * duration(90, 170) - 35, 70, 850),
+        };
+        transitionFly(fly.id, brain, "startled", "danger-broke-routine", input.now, duration(520, 980), events);
+      } else if (brain.state === "startled" && elapsed >= brain.stateDuration) {
+        brain.goal = { ...fly.position };
+        transitionFly(fly.id, brain, "hovering", "found-safe-air", input.now, duration(620, 1500), events);
+      } else if (brain.state === "foraging" && (arrived || elapsed >= brain.stateDuration)) {
+        brain.goal = { ...fly.position };
+        transitionFly(fly.id, brain, "hovering", arrived ? "reached-forage-point" : "abandoned-long-route", input.now, duration(900, 2800), events);
+      } else if ((brain.state === "hovering" || brain.state === "resting") && elapsed >= brain.stateDuration) {
+        if (brain.state === "hovering" && random() < 0.22) {
+          brain.goal = { ...fly.position };
+          transitionFly(fly.id, brain, "resting", "settled-on-reed", input.now, duration(1800, 4600), events);
+        } else {
+          brain.goal = {
+            x: clamp(brain.home.x + duration(-280, 280), 80, 1506),
+            y: clamp(brain.home.y + duration(-150, 150), 70, 850),
+          };
+          transitionFly(fly.id, brain, "foraging", "chose-new-air-patch", input.now, duration(3600, 7800), events);
+        }
+      }
+
+      return {
+        flyId: fly.id,
+        state: brain.state,
+        goal: brain.goal,
+        speedScale: brain.state === "startled" ? 1.75 : brain.state === "foraging" ? 1 : brain.state === "hovering" ? 0.42 : 0.08,
         reason: brain.reason,
       };
     });
@@ -697,35 +578,117 @@ export function createPondWorld(seedValue: string | number = "6c75") {
     };
   }
 
-  function chooseTarget(targets: readonly PondTarget[], now: number, catPosition: PondPoint) {
+  function anchorRoutes(visible: Set<string>, now: number) {
+    const visibleAnchors = ROCK_ANCHORS.filter(
+      (anchor) =>
+        visible.has(anchor.id) &&
+        (anchor.id === currentAnchor.id || (anchorCooldowns.get(anchor.id) ?? 0) <= now),
+    );
+    const anchors = visibleAnchors.some((anchor) => anchor.id === currentAnchor.id)
+      ? visibleAnchors
+      : [currentAnchor, ...visibleAnchors];
+    const routes = new Map<string, AnchorRoute>([
+      [currentAnchor.id, { anchor: currentAnchor, path: [currentAnchor], distance: 0 }],
+    ]);
+    const visited = new Set<string>();
+
+    while (visited.size < anchors.length) {
+      const route = [...routes.values()]
+        .filter((candidate) => !visited.has(candidate.anchor.id))
+        .sort((a, b) => a.distance - b.distance)[0];
+      if (!route) break;
+      visited.add(route.anchor.id);
+
+      for (const anchor of anchors) {
+        if (visited.has(anchor.id)) continue;
+        const hop = distance(route.anchor.position, anchor.position);
+        if (hop < CAT_HOP_MIN || hop > CAT_HOP_MAX) continue;
+        const nextDistance = route.distance + hop;
+        const known = routes.get(anchor.id);
+        if (!known || nextDistance < known.distance) {
+          routes.set(anchor.id, {
+            anchor,
+            path: [...route.path, anchor],
+            distance: nextDistance,
+          });
+        }
+      }
+    }
+
+    return [...routes.values()];
+  }
+
+  function targetPlan(target: PondTarget, routes: readonly AnchorRoute[]) {
+    const targetPosition = predictedTarget(target);
+    return routes
+      .map((route) => {
+        const targetDistance = distance(route.anchor.position, targetPosition);
+        const reach = route.anchor.clearance + 72 + target.interactionRange * 0.42;
+        const verticalReach = 88 + route.anchor.clearance * 0.48;
+        if (targetDistance > reach || Math.abs(targetPosition.y - route.anchor.position.y) > verticalReach) return null;
+        const visits = anchorVisits.get(route.anchor.id) ?? 0;
+        const recentIndex = recentAnchors.lastIndexOf(route.anchor.id);
+        const recent = recentIndex < 0
+          ? 0
+          : Math.max(0, 72 - (recentAnchors.length - 1 - recentIndex) * 18);
+        return {
+          route,
+          score:
+            460 -
+            targetDistance * 1.15 -
+            route.distance * 0.055 -
+            (route.path.length - 1) * 10 +
+            (visits === 0 ? 110 : Math.max(0, 28 - visits * 8)) -
+            recent,
+        };
+      })
+      .filter((plan): plan is { route: AnchorRoute; score: number } => plan !== null)
+      .sort((a, b) => b.score - a.score)[0] ?? null;
+  }
+
+  function chooseTarget(targets: readonly PondTarget[], now: number, catPosition: PondPoint, visible: Set<string>) {
+    const routes = anchorRoutes(visible, now);
     return targets
       .filter((target) => target.visible && target.attackable && (targetCooldowns.get(target.id) ?? 0) <= now)
       .map((target) => {
-        const targetDistance = distance(catPosition, predictedTarget(target));
-        const typeInterest = target.type === "fish" ? 1 : 0.72;
-        return { target, targetDistance, score: typeInterest * 420 - targetDistance + random() * 26 };
+        const plan = targetPlan(target, routes);
+        if (!plan) return null;
+        const typeInterest = target.type === "fish" ? 130 : 0;
+        const proximity = Math.max(0, 80 - distance(catPosition, target.position) * 0.06);
+        return { target, score: typeInterest + proximity + plan.score + random() * 14 };
       })
-      .filter(({ targetDistance }) => targetDistance <= CAT_INTEREST_RADIUS)
+      .filter((candidate): candidate is { target: PondTarget; score: number } => candidate !== null)
       .sort((a, b) => b.score - a.score)[0]?.target ?? null;
   }
 
   function chooseDestination(visible: Set<string>, now: number, target: PondTarget | null) {
     const currentPosition = currentAnchor.position;
-    const targetPosition = target ? predictedTarget(target) : null;
-    return ROCK_ANCHORS
+    if (target) {
+      const plan = targetPlan(target, anchorRoutes(visible, now));
+      return plan?.route.path[1] ?? null;
+    }
+    const reachable = ROCK_ANCHORS
       .filter((anchor) => anchor.id !== currentAnchor.id && visible.has(anchor.id))
       .filter((anchor) => (anchorCooldowns.get(anchor.id) ?? 0) <= now)
+      .filter((anchor) => {
+        const hopDistance = distance(currentPosition, anchor.position);
+        return hopDistance >= CAT_HOP_MIN && hopDistance <= CAT_HOP_MAX;
+      });
+    const previousAnchor = recentAnchors.at(-2);
+    const pool = reachable.filter((anchor) => anchor.id !== previousAnchor);
+    return pool
       .map((anchor) => {
         const hopDistance = distance(currentPosition, anchor.position);
-        if (hopDistance < 55 || hopDistance > 360) return null;
-        const targetGain = targetPosition
-          ? distance(currentPosition, targetPosition) - distance(anchor.position, targetPosition)
-          : 0;
-        if (targetPosition && targetGain < 18) return null;
         const areaScore = Math.min(90, anchor.surfaceArea / 130);
         const distanceScore = 120 - Math.abs(hopDistance - 175) * 0.42;
         const newRock = anchor.rockId === currentAnchor.rockId ? 0 : 38;
-        return { anchor, score: distanceScore + areaScore + newRock + targetGain * 0.58 + random() * 32 };
+        const recentIndex = recentAnchors.lastIndexOf(anchor.id);
+        const recentPenalty = recentIndex < 0 ? 0 : (recentAnchors.length - recentIndex) * 78;
+        const unvisitedBonus = (anchorVisits.get(anchor.id) ?? 0) === 0 ? 96 : 0;
+        return {
+          anchor,
+          score: distanceScore + areaScore + newRock - recentPenalty + unvisitedBonus + random() * 14,
+        };
       })
       .filter((candidate): candidate is { anchor: RockAnchor; score: number } => candidate !== null)
       .sort((a, b) => b.score - a.score)[0]?.anchor ?? null;
@@ -783,6 +746,7 @@ export function createPondWorld(seedValue: string | number = "6c75") {
     updateEnvironment(input, events);
     updateFoods(input.now, events);
     const fish = updateFish(input, events);
+    const flies = updateFlies(input, events);
 
     if (!initialized) {
       const initial = ROCK_ANCHORS
@@ -793,6 +757,12 @@ export function createPondWorld(seedValue: string | number = "6c75") {
       idleAim = { x: currentAnchor.position.x - 80, y: currentAnchor.position.y - 10 };
       stateStarted = input.now;
       stateDuration = duration(2200, 4800);
+      routine = "watching";
+      recentAnchors.push(currentAnchor.id);
+      anchorVisits.set(currentAnchor.id, 1);
+      nextTargetScan = input.now + duration(240, 720);
+      nextHuntAt = input.now + duration(1200, 3000);
+      nextPatrolAt = input.now + duration(15000, 30000);
       nextWindShift = input.now + duration(900, 2600);
       nextCurrentShift = input.now + duration(1100, 3100);
       nextAmbientRipple = input.now + duration(1400, 3600);
@@ -803,41 +773,62 @@ export function createPondWorld(seedValue: string | number = "6c75") {
     const target = selectedTargetId ? input.targets.find((candidate) => candidate.id === selectedTargetId) ?? null : null;
     const targetAim = target ? predictedTarget(target) : null;
     const targetDistance = targetAim ? distance(currentAnchor.position, targetAim) : Number.POSITIVE_INFINITY;
-    const batReach = currentAnchor.clearance + 58 + (target?.interactionRange ?? 0) * 0.35;
-    const batVerticalReach = 58 + currentAnchor.clearance * 0.35;
+    const batReach = currentAnchor.clearance + 72 + (target?.interactionRange ?? 0) * 0.42;
+    const batVerticalReach = 88 + currentAnchor.clearance * 0.48;
 
     if (state === "idle" || state === "observe") {
-      if (elapsed >= stateDuration || hopRequested) {
-        const candidate = chooseTarget(input.targets, input.now, currentAnchor.position);
-        if (!hopRequested && candidate && random() < 0.86) {
-          selectedTargetId = candidate.id;
-          targetCooldowns.set(candidate.id, input.now + duration(2400, 3800));
-          transition("notice-target", `noticed-${candidate.type}`, input.now, duration(280, 620), events);
-        } else if ((hopRequested || random() < 0.58) && (destinationAnchor = chooseDestination(visible, input.now, candidate))) {
-          selectedTargetId = candidate?.id ?? null;
-          transition("approach", hopRequested ? "pointer-requested-rock-hop" : "chose-new-vantage", input.now, duration(180, 360), events);
+      const scanDue = input.now >= nextTargetScan && input.now >= nextHuntAt;
+      const candidate = scanDue ? chooseTarget(input.targets, input.now, currentAnchor.position, visible) : null;
+      if (scanDue) nextTargetScan = input.now + duration(520, 1200);
+
+      if (hopRequested) {
+        destinationAnchor = chooseDestination(visible, input.now, null);
+        hopRequested = false;
+        if (destinationAnchor) {
+          selectedTargetId = null;
+          routine = "patrolling";
+          nextPatrolAt = input.now + duration(12000, 26000);
+          transition("approach", "pointer-requested-rock-hop", input.now, duration(180, 360), events);
+        }
+      } else if (candidate) {
+        selectedTargetId = candidate.id;
+        huntExpiresAt = input.now + duration(12000, 18000);
+        huntHops = 0;
+        routine = "hunting";
+        transition("notice-target", `noticed-${candidate.type}`, input.now, duration(240, 520), events);
+      } else if (elapsed >= stateDuration) {
+        destinationAnchor = input.now >= nextPatrolAt ? chooseDestination(visible, input.now, null) : null;
+        if (destinationAnchor) {
+          selectedTargetId = null;
+          routine = "patrolling";
+          nextPatrolAt = input.now + duration(12000, 26000);
+          transition("approach", "routine-patrol-to-fresh-vantage", input.now, duration(220, 420), events);
         } else {
           selectedTargetId = null;
+          routine = random() < 0.38 ? "resting" : "watching";
           idleAim = {
             x: currentAnchor.position.x + duration(-130, 130),
             y: currentAnchor.position.y + duration(-55, 45),
           };
-          transition("observe", "chose-to-stay-and-look", input.now, duration(1800, 4800), events);
+          transition("observe", routine === "resting" ? "settled-into-rest" : "chose-to-stay-and-look", input.now, duration(3200, 7200), events);
         }
-        hopRequested = false;
       }
     } else if (state === "notice-target") {
       if (!target || !target.visible || !target.attackable) {
         selectedTargetId = null;
+        nextHuntAt = input.now + duration(4200, 8200);
         transition("recover", "target-lost-before-action", input.now, duration(420, 760), events);
       } else if (elapsed >= stateDuration) {
         if (targetDistance <= batReach && Math.abs(targetAim!.y - currentAnchor.position.y) <= batVerticalReach) {
           transition("prepare-bat", "target-entered-paw-range", input.now, duration(320, 560), events);
-        } else if ((destinationAnchor = chooseDestination(visible, input.now, target))) {
+        } else if (input.now < huntExpiresAt && huntHops < 5 && (destinationAnchor = chooseDestination(visible, input.now, target))) {
+          huntHops += 1;
           transition("approach", "moving-to-better-rock", input.now, duration(220, 420), events);
         } else {
           targetCooldowns.set(target.id, input.now + duration(3200, 5200));
           selectedTargetId = null;
+          nextHuntAt = input.now + duration(4800, 9000);
+          routine = "watching";
           transition("observe", "target-visible-but-unreachable", input.now, duration(900, 1800), events);
         }
       }
@@ -855,13 +846,16 @@ export function createPondWorld(seedValue: string | number = "6c75") {
       } else if (elapsed >= stateDuration) {
         takeoffAnchor = currentAnchor;
         const hopDistance = distance(takeoffAnchor.position, destinationAnchor.position);
+        anchorCooldowns.set(takeoffAnchor.id, input.now + duration(7200, 11800));
         transition("airborne", "takeoff", input.now, clamp(580 + hopDistance * 1.55, 680, 1140), events);
         events.push({ type: "takeoff", fromAnchor: takeoffAnchor.id, toAnchor: destinationAnchor.id });
       }
     } else if (state === "airborne" && destinationAnchor && elapsed >= stateDuration) {
       currentAnchor = destinationAnchor;
       destinationAnchor = null;
-      anchorCooldowns.set(currentAnchor.id, input.now + duration(5200, 9400));
+      anchorVisits.set(currentAnchor.id, (anchorVisits.get(currentAnchor.id) ?? 0) + 1);
+      recentAnchors.push(currentAnchor.id);
+      if (recentAnchors.length > 4) recentAnchors.shift();
       events.push({ type: "land", anchorId: currentAnchor.id, position: currentAnchor.position, impact: 0.55 + random() * 0.3 });
       transition("land", "contact-on-authored-surface", input.now, duration(110, 180), events);
     } else if (state === "land" && elapsed >= stateDuration) {
@@ -871,20 +865,13 @@ export function createPondWorld(seedValue: string | number = "6c75") {
         ? input.targets.find((candidate) => candidate.id === selectedTargetId) ?? null
         : null;
       const settledAim = settledTarget ? predictedTarget(settledTarget) : null;
-      const settledReach = settledTarget
-        ? currentAnchor.clearance + 58 + settledTarget.interactionRange * 0.35
-        : 0;
-      if (
-        settledTarget?.visible &&
-        settledTarget.attackable &&
-        settledAim &&
-        distance(currentAnchor.position, settledAim) <= settledReach * 1.28 &&
-        Math.abs(settledAim.y - currentAnchor.position.y) <= batVerticalReach * 1.2
-      ) {
+      if (settledTarget?.visible && settledTarget.attackable && settledAim && input.now < huntExpiresAt && huntHops <= 5) {
         transition("notice-target", "target-reacquired-after-landing", input.now, duration(220, 440), events);
       } else {
         if (settledTarget) targetCooldowns.set(settledTarget.id, input.now + duration(3200, 5200));
         selectedTargetId = null;
+        nextHuntAt = input.now + duration(3200, 6200);
+        routine = "watching";
         transition("idle", "stable-contact-restored", input.now, duration(2200, 5200), events);
       }
     } else if (state === "prepare-bat") {
@@ -910,6 +897,7 @@ export function createPondWorld(seedValue: string | number = "6c75") {
           hit,
         });
         targetCooldowns.set(target.id, input.now + duration(4200, 7600));
+        nextHuntAt = input.now + duration(2800, 5600);
         transition("bat", hit ? "paw-contact" : "target-evaded-paw", input.now, duration(190, 280), events);
       }
     } else if (state === "bat" && elapsed >= stateDuration) {
@@ -918,6 +906,8 @@ export function createPondWorld(seedValue: string | number = "6c75") {
       transition("recover", "action-recovery", input.now, duration(480, 860), events);
     } else if (state === "recover" && elapsed >= stateDuration) {
       selectedTargetId = null;
+      routine = "watching";
+      nextTargetScan = input.now + duration(520, 1200);
       idleAim = {
         x: currentAnchor.position.x + duration(-100, 100),
         y: currentAnchor.position.y + duration(-45, 35),
@@ -937,13 +927,15 @@ export function createPondWorld(seedValue: string | number = "6c75") {
       squashX = 1.04 + stateProgress * 0.04;
       squashY = 0.98 - stateProgress * 0.1;
     } else if (state === "airborne" && destinationAnchor) {
-      const progress = smoothstep(stateProgress);
+      const hopFrames = Math.max(8, Math.round(stateDuration / 85));
+      const steppedProgress = Math.min(1, Math.round(stateProgress * hopFrames) / hopFrames);
+      const progress = smoothstep(steppedProgress);
       contact = {
         x: lerp(takeoffAnchor.position.x, destinationAnchor.position.x, progress),
         y: lerp(takeoffAnchor.position.y, destinationAnchor.position.y, progress),
       };
       const hopDistance = distance(takeoffAnchor.position, destinationAnchor.position);
-      lift = Math.sin(stateProgress * Math.PI) * clamp(24 + hopDistance * 0.16, 30, 72);
+      lift = Math.sin(steppedProgress * Math.PI) * clamp(24 + hopDistance * 0.16, 30, 72);
       surfaceAngle = lerp(takeoffAnchor.surfaceAngle, destinationAnchor.surfaceAngle, progress);
       squashX = 0.97;
       squashY = 1.04;
@@ -968,6 +960,7 @@ export function createPondWorld(seedValue: string | number = "6c75") {
     return {
       cat: {
         state,
+        routine,
         contact,
         lift,
         squashX,
@@ -981,11 +974,12 @@ export function createPondWorld(seedValue: string | number = "6c75") {
         destinationAnchorId: destinationAnchor?.id ?? null,
         selectedTargetId,
         selectedTargetType: selectedTarget?.type ?? null,
-        batReach: currentAnchor.clearance + 58 + (selectedTarget?.interactionRange ?? 0) * 0.35,
+        batReach: currentAnchor.clearance + 72 + (selectedTarget?.interactionRange ?? 0) * 0.42,
       },
       environment: { wind, currentA, currentB, surfaceA, surfaceB, light },
       foods: foodFrames(input.now),
       fish,
+      flies,
       events,
       debug: {
         seed,
@@ -993,6 +987,7 @@ export function createPondWorld(seedValue: string | number = "6c75") {
         grounded,
         selectedTarget: selectedTargetId,
         destinationAnchor: destinationAnchor?.id ?? null,
+        routine,
       },
     };
   }

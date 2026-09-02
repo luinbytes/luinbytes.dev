@@ -1,0 +1,227 @@
+.page {
+  --ink: #061817;
+  --foam: #edfff7;
+  --aqua: #91eee0;
+  --sun: #f5e6a5;
+  position: relative;
+  display: grid;
+  min-height: 100svh;
+  place-items: center;
+  overflow: hidden;
+  padding: max(92px, calc(env(safe-area-inset-top) + 72px)) max(20px, env(safe-area-inset-right)) max(56px, calc(env(safe-area-inset-bottom) + 32px)) max(20px, env(safe-area-inset-left));
+  isolation: isolate;
+  color: var(--foam);
+  background: var(--ink);
+  font-family: var(--font-space-grotesk), "Space Grotesk", sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.wash {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 44%, rgba(5, 58, 55, 0.1), rgba(1, 20, 20, 0.56) 72%),
+    linear-gradient(180deg, rgba(1, 16, 16, 0.22), rgba(1, 15, 15, 0.46));
+}
+
+.brand {
+  position: fixed;
+  top: max(22px, calc(env(safe-area-inset-top) + 12px));
+  left: max(24px, calc(env(safe-area-inset-left) + 18px));
+  z-index: 2;
+  display: grid;
+  gap: 2px;
+  color: var(--foam);
+  font-family: var(--font-space-mono), "Space Mono", monospace;
+  text-decoration: none;
+  text-shadow: 0 2px 12px rgba(0, 18, 18, 0.5);
+}
+
+.brand span {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.brand small {
+  color: rgba(225, 250, 241, 0.68);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+
+.card {
+  position: relative;
+  z-index: 2;
+  width: min(100%, 620px);
+  overflow: hidden;
+  padding: clamp(28px, 6vw, 58px);
+  border: 1px solid rgba(230, 255, 246, 0.46);
+  border-radius: 24px;
+  background: rgba(3, 29, 28, 0.76);
+  box-shadow: 0 30px 90px rgba(0, 14, 14, 0.46), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(18px) saturate(1.08);
+}
+
+.card::before {
+  position: absolute;
+  inset: 10px;
+  border: 1px solid rgba(213, 255, 243, 0.1);
+  border-radius: 16px;
+  content: "";
+  pointer-events: none;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--aqua);
+  font-family: var(--font-space-mono), "Space Mono", monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.eyebrow svg {
+  width: 14px;
+  height: 14px;
+}
+
+.code {
+  display: block;
+  margin: 18px 0 -8px;
+  color: rgba(237, 255, 247, 0.12);
+  font-family: var(--font-pixelify), "Space Grotesk", sans-serif;
+  font-size: clamp(92px, 22vw, 172px);
+  font-weight: 700;
+  line-height: 0.76;
+  letter-spacing: -0.08em;
+  text-shadow: 4px 4px 0 rgba(145, 238, 224, 0.08);
+}
+
+.card h1 {
+  max-width: 10ch;
+  margin: 30px 0 16px;
+  font-size: clamp(40px, 7vw, 68px);
+  font-weight: 400;
+  line-height: 0.94;
+  letter-spacing: -0.055em;
+}
+
+.card > p {
+  max-width: 42ch;
+  margin: 0;
+  color: rgba(229, 250, 242, 0.76);
+  font-size: clamp(15px, 2vw, 18px);
+  line-height: 1.55;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 30px;
+}
+
+.primaryAction,
+.secondaryAction {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 18px;
+  border: 1px solid rgba(235, 255, 248, 0.72);
+  border-radius: 10px;
+  font-family: var(--font-space-mono), "Space Mono", monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 170ms cubic-bezier(0.23, 1, 0.32, 1), background-color 170ms ease, border-color 170ms ease;
+}
+
+.primaryAction {
+  color: var(--ink);
+  background: rgba(231, 251, 243, 0.94);
+}
+
+.secondaryAction {
+  color: var(--foam);
+  background: rgba(2, 22, 22, 0.3);
+}
+
+.primaryAction svg,
+.secondaryAction svg {
+  width: 15px;
+  height: 15px;
+}
+
+.primaryAction:hover,
+.secondaryAction:hover {
+  transform: translateY(-2px);
+}
+
+.secondaryAction:hover {
+  border-color: var(--aqua);
+  background: rgba(145, 238, 224, 0.1);
+}
+
+.primaryAction:focus-visible,
+.secondaryAction:focus-visible,
+.brand:focus-visible {
+  outline: 2px solid var(--sun);
+  outline-offset: 4px;
+}
+
+.coordinate {
+  position: fixed;
+  right: max(24px, calc(env(safe-area-inset-right) + 18px));
+  bottom: max(20px, calc(env(safe-area-inset-bottom) + 14px));
+  z-index: 2;
+  margin: 0;
+  color: rgba(224, 249, 241, 0.5);
+  font-family: var(--font-space-mono), "Space Mono", monospace;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+@media (max-width: 540px) {
+  .card {
+    border-radius: 20px;
+  }
+
+  .actions {
+    display: grid;
+  }
+
+  .primaryAction,
+  .secondaryAction {
+    width: 100%;
+  }
+
+  .coordinate {
+    display: none;
+  }
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .card {
+    background: rgba(3, 29, 28, 0.94);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .primaryAction,
+  .secondaryAction {
+    transition: none;
+  }
+}

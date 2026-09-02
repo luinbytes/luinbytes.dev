@@ -2,6 +2,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import signal
 import socket
 import subprocess
@@ -19,6 +20,20 @@ from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError, sy
 SCREENSHOTS = Path("test-results")
 SERVER_LOG = SCREENSHOTS / "dev-server.log"
 READY_PATTERN = re.compile(r"\bReady in\b")
+LEGACY_ROUTES = (
+    "/concepts/signal-desk",
+    "/concepts/signal-field",
+    "/concepts/trace",
+    "/ballhammer",
+    "/brc-trainer",
+    "/dagger-fall",
+    "/linux-sonar",
+    "/meteor",
+    "/meteor/privacy",
+    "/risk-of-anticheat",
+    "/sleepr",
+    "/super-hacker-golf",
+)
 
 
 def find_open_water(page: Page, pond, preferred=()):
@@ -39,7 +54,8 @@ def find_open_water(page: Page, pond, preferred=()):
 
 
 def record_console_issue(bucket, message) -> None:
-    if message.type in ("warning", "error") and "GL Driver Message" not in message.text:
+    ignored = ("GL Driver Message", "was preloaded using link preload but not used")
+    if message.type in ("warning", "error") and not any(item in message.text for item in ignored):
         bucket.append(f"{message.type}: {message.text}")
 
 
@@ -104,7 +120,7 @@ class ServerStartupTests(unittest.TestCase):
 
 
 class GeneratedArtifactTests(unittest.TestCase):
-    def test_sitemap_includes_ballhammer(self) -> None:
+    def test_sitemap_exposes_only_the_portfolio(self) -> None:
         root = ET.parse("public/sitemap.xml").getroot()
         locations = [
             location.text
@@ -114,15 +130,7 @@ class GeneratedArtifactTests(unittest.TestCase):
             )
         ]
 
-        self.assertEqual(len(locations), 13)
-        self.assertEqual(locations.count("https://luinbytes.dev/ballhammer"), 1)
-        self.assertEqual(
-            locations.count("https://luinbytes.dev/concepts/signal-desk"), 1
-        )
-        self.assertEqual(
-            locations.count("https://luinbytes.dev/concepts/signal-field"), 1
-        )
-        self.assertEqual(locations.count("https://luinbytes.dev/concepts/trace"), 1)
+        self.assertEqual(locations, ["https://luinbytes.dev"])
 
 
 class MetadataParser(HTMLParser):
@@ -139,36 +147,19 @@ class MetadataParser(HTMLParser):
 class ShareCardStaticExportTests(unittest.TestCase):
     route_cards = {
         "/": "/share-cards/luinbytes-dev-pink-print.png",
-        "/ballhammer": "/share-cards/ballhammer.png",
-        "/super-hacker-golf": "/share-cards/super-hacker-golf.png",
-        "/meteor": "/share-cards/meteor.png",
-        "/meteor/privacy": "/share-cards/meteor-privacy.png",
-        "/linux-sonar": "/share-cards/linux-sonar.png",
-        "/sleepr": "/share-cards/sleepr.png",
-        "/risk-of-anticheat": "/share-cards/risk-of-anticheat.png",
-        "/brc-trainer": "/share-cards/brc-trainer.png",
-        "/dagger-fall": "/share-cards/dagger-fall.png",
     }
     expected_sha256 = {
-        "/share-cards/ballhammer.png": "66ffdaa908fa12d5b2ce7afc101168b3f6d613ce858b820021f3e9c9b27fdd6c",
-        "/share-cards/brc-trainer.png": "81a0c985297a959d25f990a71cfc66c28b23468f8c9656ef42dd0ccebc75a784",
-        "/share-cards/dagger-fall.png": "fac041426b34e062cbb23532f4da4730d78ee181923cf747d27d098d1f25a646",
-        "/share-cards/linux-sonar.png": "d2ffacd26aacbc020f4210fa4c8a841a3f4af70e795ccf934021f76a264d933a",
         "/share-cards/luinbytes-dev-pink-print.png": "06bab5ee959d737dae537d7440c39a516c23e17ce976391dcbc68a7fe3a93548",
-        "/share-cards/meteor.png": "5ce91084e679f7cf91a1d0a398c27f7a1f36fa8381697ffaf720102f31f14bf6",
-        "/share-cards/meteor-privacy.png": "0bcafd678816b610a2a1bc88789c8b2d1c45796abcbcd46922780620c4c52e7e",
-        "/share-cards/risk-of-anticheat.png": "11ff645c3355613d5c6195a61b3327a71882725cd1cfb95c6774439724e139ab",
-        "/share-cards/sleepr.png": "c8335b54f4271d5a46e3ce3982a3d3f9471b339f616c2934a53ae486f6429283",
-        "/share-cards/super-hacker-golf.png": "81a60de7534c679852a6e9f7422d8c3f1d52678b8606e3039f9df7f7d6c0e370",
     }
 
     def test_every_scoped_route_exports_a_production_large_image_card(self) -> None:
         build = subprocess.run(["npm", "run", "build"], check=False)
         self.assertEqual(build.returncode, 0)
+        export_root = Path(os.environ.get("NEXT_DIST_DIR", "out"))
 
         for route, card_path in self.route_cards.items():
             with self.subTest(route=route):
-                exported_html = Path("out") / (
+                exported_html = export_root / (
                     "index.html" if route == "/" else f"{route.lstrip('/')}.html"
                 )
                 html = exported_html.read_text()
@@ -189,7 +180,7 @@ class ShareCardStaticExportTests(unittest.TestCase):
                 self.assertEqual(names.get("twitter:card"), "summary_large_image")
                 self.assertEqual(names.get("twitter:image"), card_url)
 
-                png = (Path("out") / card_path.lstrip("/")).read_bytes()
+                png = (export_root / card_path.lstrip("/")).read_bytes()
                 self.assertEqual(png[:8], b"\x89PNG\r\n\x1a\n")
                 self.assertEqual(png[12:16], b"IHDR")
                 self.assertEqual(
@@ -203,12 +194,21 @@ class ShareCardStaticExportTests(unittest.TestCase):
                     (1200, 630),
                 )
 
+        self.assertTrue((export_root / "404.html").is_file())
+        for route in LEGACY_ROUTES:
+            with self.subTest(removed_route=route):
+                route_path = export_root / route.lstrip("/")
+                self.assertFalse(route_path.with_suffix(".html").exists())
+                self.assertFalse((route_path / "index.html").exists())
+
 
 class BrowserTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         SCREENSHOTS.mkdir(exist_ok=True)
         port = test_port()
+        cls.dist_dir = Path(".next-e2e")
+        shutil.rmtree(cls.dist_dir, ignore_errors=True)
         cls.server_log = SERVER_LOG.open("w")
         try:
             cls.server = subprocess.Popen(
@@ -221,10 +221,16 @@ class BrowserTestCase(unittest.TestCase):
                     "127.0.0.1",
                     "--port",
                     str(port),
+                    "--webpack",
                 ],
                 stdout=cls.server_log,
                 stderr=subprocess.STDOUT,
                 start_new_session=True,
+                env={
+                    **os.environ,
+                    "NEXT_DISABLE_WEBPACK_CACHE": "1",
+                    "NEXT_DIST_DIR": str(cls.dist_dir),
+                },
             )
         except BaseException:
             cls.server_log.close()
@@ -248,6 +254,7 @@ class BrowserTestCase(unittest.TestCase):
                 os.killpg(cls.server.pid, signal.SIGKILL)
                 cls.server.wait(timeout=10)
         cls.server_log.close()
+        shutil.rmtree(cls.dist_dir, ignore_errors=True)
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -312,6 +319,244 @@ class PortfolioTests(BrowserTestCase):
                 )
                 browser.close()
 
+    def test_homepage_preserves_layout_and_world_state_across_viewport_matrix(self) -> None:
+        viewports = (
+            ("phone-320", {"width": 320, "height": 568}),
+            ("phone-375", {"width": 375, "height": 667}),
+            ("phone-390", {"width": 390, "height": 844}),
+            ("phone-430", {"width": 430, "height": 932}),
+            ("tablet-portrait", {"width": 768, "height": 1024}),
+            ("tablet-landscape", {"width": 1024, "height": 768}),
+            ("desktop-1280", {"width": 1280, "height": 800}),
+            ("desktop-1440", {"width": 1440, "height": 900}),
+            ("desktop-1920", {"width": 1920, "height": 1080}),
+        )
+        browser = self.playwright.chromium.launch()
+        page = browser.new_page(viewport={"width": 1440, "height": 900})
+        page_errors = []
+        page.on("pageerror", lambda error: page_errors.append(str(error)))
+        page.goto(f"{self.base_url}/?pond-seed=e2e-viewport-matrix", wait_until="networkidle")
+        pond = page.locator("[data-pixi-state]")
+        page.wait_for_function(
+            "document.querySelector('[data-pixi-state]')?.dataset.fishWorldPositions"
+        )
+
+        for name, viewport in viewports:
+            with self.subTest(viewport=name):
+                previous_frame = pond.get_attribute("data-frame")
+                previous_world = [
+                    tuple(float(value) for value in point.split(","))
+                    for point in pond.get_attribute("data-fish-world-positions").split(";")
+                ]
+                page.set_viewport_size(viewport)
+                page.wait_for_function(
+                    "frame => document.querySelector('[data-pixi-state]')?.dataset.frame !== frame",
+                    arg=previous_frame,
+                )
+                page.wait_for_timeout(260)
+                state = page.evaluate(
+                    """({ width, height }) => {
+                        const heading = document.querySelector('#hero-title').getBoundingClientRect();
+                        const header = document.querySelector('header').getBoundingClientRect();
+                        const pond = document.querySelector('[data-renderer]').getBoundingClientRect();
+                        const buttons = [...document.querySelectorAll('[aria-label="Featured projects"] button')]
+                            .map(element => element.getBoundingClientRect());
+                        const projectNames = [...document.querySelectorAll('[aria-label="Featured projects"] strong')];
+                        const aboutCards = [...document.querySelectorAll('#about > article, #about > div:last-child')];
+                        const layoutWidth = document.documentElement.clientWidth;
+                        const fish = document.querySelector('[data-pixi-state]').dataset.fishPositions
+                            .split(';').map(point => point.split(',').map(Number));
+                        return {
+                            overflow: document.documentElement.scrollWidth - width,
+                            headingInside: heading.left >= -1 && heading.right <= width + 1 && heading.width > 120,
+                            headerInside: header.left >= -1 && header.right <= width + 1,
+                            pondFits: Math.abs(pond.width - width) < 1 && Math.abs(pond.height - height) < 1,
+                            projectTargets: buttons.length === 4 && buttons.every(button => button.width >= 44 && button.height >= 44),
+                            projectNamesFit: width > 430 || projectNames.every(element => {
+                                const range = document.createRange();
+                                range.selectNodeContents(element);
+                                return range.getBoundingClientRect().width <= element.getBoundingClientRect().width + 1;
+                            }),
+                            aboutCardsCentered: width > 430 || aboutCards.every(element => {
+                                const bounds = element.getBoundingClientRect();
+                                return Math.abs(bounds.left - (layoutWidth - bounds.right)) <= 1;
+                            }),
+                            visibleFish: fish.filter(([x, y]) => x >= -12 && x <= width + 12 && y >= -12 && y <= height + 12).length,
+                        };
+                    }""",
+                    viewport,
+                )
+                self.assertLessEqual(state["overflow"], 0)
+                self.assertTrue(state["headingInside"])
+                self.assertTrue(state["headerInside"])
+                self.assertTrue(state["pondFits"])
+                self.assertTrue(state["projectTargets"])
+                self.assertTrue(state["projectNamesFit"])
+                self.assertTrue(state["aboutCardsCentered"])
+                self.assertGreaterEqual(state["visibleFish"], 5)
+                self.assertEqual(pond.get_attribute("data-fish-water-violation"), "false")
+                self.assertEqual(pond.get_attribute("data-cat-water-violation"), "false")
+                current_world = [
+                    tuple(float(value) for value in point.split(","))
+                    for point in pond.get_attribute("data-fish-world-positions").split(";")
+                ]
+                self.assertTrue(
+                    all(
+                        ((after[0] - before[0]) ** 2 + (after[1] - before[1]) ** 2) ** 0.5 < 80
+                        for before, after in zip(previous_world, current_world)
+                    )
+                )
+
+        self.assertEqual(page_errors, [])
+        browser.close()
+
+    def test_loading_shows_only_the_pond_then_fades_in_the_live_ecosystem(self) -> None:
+        browser = self.playwright.chromium.launch()
+        page = browser.new_page(viewport={"width": 1280, "height": 800})
+
+        def delay_koi_atlas(route) -> None:
+            time.sleep(0.7)
+            route.continue_()
+
+        page.route("**/pixel-koi-atlas.png", delay_koi_atlas)
+        page.goto(f"{self.base_url}/?pond-seed=e2e-loading", wait_until="domcontentloaded")
+        pond = page.locator("[data-renderer]")
+        host = page.locator("[data-pixi-state]")
+        self.assertEqual(pond.get_attribute("data-renderer"), "fallback")
+        self.assertEqual(host.locator("canvas").count(), 0)
+        self.assertIn(
+            "pixel-pond-world.png",
+            pond.locator(":scope > div").first.evaluate(
+                "element => getComputedStyle(element).backgroundImage"
+            ),
+        )
+        self.assertFalse(
+            page.locator("div").evaluate_all(
+                "elements => elements.some(element => /pixel-(koi|tabby)-atlas/.test(getComputedStyle(element).backgroundImage))"
+            )
+        )
+        self.assertEqual(host.evaluate("element => getComputedStyle(element).opacity"), "0")
+        page.wait_for_function(
+            "document.querySelector('[data-renderer]')?.dataset.renderer === 'pixi'"
+        )
+        page.wait_for_timeout(820)
+        self.assertEqual(host.evaluate("element => getComputedStyle(element).opacity"), "1")
+        browser.close()
+
+    def test_hero_copy_does_not_block_pointer_water_reaction(self) -> None:
+        browser = self.playwright.chromium.launch()
+        page = browser.new_page(viewport={"width": 1280, "height": 800})
+        page.goto(f"{self.base_url}/?pond-seed=e2e-hero-pointer", wait_until="networkidle")
+        pond = page.locator("[data-pixi-state]")
+        page.wait_for_function(
+            "document.querySelector('[data-pixi-state]')?.dataset.pixiState === 'running'"
+        )
+
+        box = page.get_by_role(
+            "heading", name="I make stubborn software behave."
+        ).bounding_box()
+        responsive = False
+        for horizontal in (0.2, 0.5, 0.8):
+            for vertical in (0.2, 0.5, 0.8):
+                page.mouse.move(
+                    box["x"] + box["width"] * horizontal,
+                    box["y"] + box["height"] * vertical,
+                )
+                responsive |= pond.get_attribute("data-food-affordance") == "true"
+        self.assertTrue(responsive)
+
+        action = page.get_by_role("link", name="See the work").bounding_box()
+        page.mouse.move(
+            action["x"] + action["width"] / 2,
+            action["y"] + action["height"] / 2,
+        )
+        self.assertEqual(pond.get_attribute("data-food-affordance"), "false")
+        browser.close()
+
+    def test_navigation_and_bordered_controls_keep_their_visual_hierarchy(self) -> None:
+        browser = self.playwright.chromium.launch()
+        page = browser.new_page(viewport={"width": 1280, "height": 800})
+        page.goto(f"{self.base_url}/?pond-seed=e2e-control-polish", wait_until="networkidle")
+        page.wait_for_timeout(1_200)
+
+        hero = page.locator("section[aria-labelledby='hero-title']")
+        hero_action = hero.get_by_role("link", name="Start a conversation")
+        hero_action.hover()
+        page.wait_for_timeout(180)
+        clipping_ancestors = hero_action.evaluate(
+            """element => {
+                const rect = element.getBoundingClientRect();
+                const failures = [];
+                for (let parent = element.parentElement; parent; parent = parent.parentElement) {
+                    const style = getComputedStyle(parent);
+                    const bounds = parent.getBoundingClientRect();
+                    const clips = ['hidden', 'clip'].includes(style.overflowY) || style.clipPath !== 'none';
+                    if (clips && (rect.top < bounds.top - 0.1 || rect.bottom > bounds.bottom + 0.1)) {
+                        failures.push({ className: parent.className, clipPath: style.clipPath });
+                    }
+                }
+                return failures;
+            }"""
+        )
+        self.assertEqual(clipping_ancestors, [])
+
+        self.assertEqual(page.get_by_text("Building at Orchid.ai", exact=True).count(), 0)
+        self.assertEqual(page.locator("header nav a").count(), 3)
+        self.assertEqual(page.locator("header [class*='profileTilt']").count(), 1)
+        self.assertEqual(page.locator("#about [class*='profileTilt']").count(), 0)
+        self.assertTrue(
+            page.locator("header [class*='profileTilt']").evaluate(
+                """element => {
+                    const card = element.getBoundingClientRect();
+                    const header = element.closest('header').getBoundingClientRect();
+                    return card.left >= header.left && card.right <= header.right
+                        && card.top >= header.top && card.bottom <= header.bottom;
+                }"""
+            )
+        )
+        category_labels = page.locator("[aria-label='Featured projects'] button small")
+        self.assertEqual(category_labels.count(), 4)
+        self.assertTrue(
+            category_labels.evaluate_all(
+                "elements => elements.every(element => parseFloat(getComputedStyle(element).fontSize) >= 10)"
+            )
+        )
+        proof_labels = page.locator("[class*='proofRow'] span")
+        self.assertGreater(proof_labels.count(), 0)
+        self.assertTrue(
+            proof_labels.evaluate_all(
+                "elements => elements.every(element => parseFloat(getComputedStyle(element).fontSize) >= 11)"
+            )
+        )
+
+        for project in ("Rakazo", "linux-sonar", "HomeBot"):
+            page.get_by_role("button", name=re.compile(project, re.I)).click()
+            page.locator("[class*='rakazoSignals']").wait_for(state="visible")
+            self.assertTrue(
+                page.locator("[class*='rakazoIdentity']").evaluate(
+                    """identity => {
+                        const identityBounds = identity.querySelector('strong').getBoundingClientRect();
+                        const signalsBounds = identity.nextElementSibling.getBoundingClientRect();
+                        return identityBounds.right <= signalsBounds.left + 0.5;
+                    }"""
+                ),
+                f"{project} identity overlaps its signal list",
+            )
+
+        page.set_viewport_size({"width": 390, "height": 844})
+        page.get_by_role("button", name=re.compile("HomeBot", re.I)).click()
+        page.locator("[class*='rakazoSignals']").wait_for(state="visible")
+        self.assertTrue(
+            page.locator("[class*='rakazoSignals']").evaluate(
+                """signals => {
+                    const signalBounds = signals.getBoundingClientRect();
+                    const captionBounds = signals.parentElement.querySelector('[class*=mediaCaption]').getBoundingClientRect();
+                    return signalBounds.bottom <= captionBounds.top;
+                }"""
+            )
+        )
+        browser.close()
+
     def test_pointer_stirs_the_pond(self) -> None:
         browser = self.playwright.chromium.launch()
         page = browser.new_page(viewport={"width": 1440, "height": 900})
@@ -339,17 +584,21 @@ class PortfolioTests(BrowserTestCase):
         )
         first_positions = pond.get_attribute("data-fish-positions")
         first_water_offset = pond.get_attribute("data-water-offset")
-        self.assertGreaterEqual(int(pond.get_attribute("data-fish-count")), 12)
+        self.assertGreaterEqual(int(pond.get_attribute("data-fish-count")), 18)
+        self.assertGreater(float(pond.get_attribute("data-fish-average-speed")), 14)
+        visible_anchors = pond.get_attribute("data-visible-anchor-ids").split(",")
+        self.assertIn("fern-stone-top", visible_anchors)
+        self.assertIn("east-island-top", visible_anchors)
         self.assertGreaterEqual(int(pond.get_attribute("data-pond-element-count")), 10)
         self.assertGreaterEqual(int(pond.get_attribute("data-insect-count")), 2)
         self.assertEqual(int(pond.get_attribute("data-cat-count")), 1)
         self.assertEqual(
             pond.get_attribute("data-fish-logic"),
-            "seeded-world-flock-predictive-evade",
+            "authoritative-seeded-world-steering",
         )
         self.assertEqual(
             pond.get_attribute("data-world-model"),
-            "seeded-rock-target-food-environment",
+            "seeded-routine-rock-target-food-environment",
         )
         page.wait_for_function(
             """initial => {
@@ -364,6 +613,7 @@ class PortfolioTests(BrowserTestCase):
             for value in pond.get_attribute("data-cat-position").split(",")
         )
         first_cat_position = pond.get_attribute("data-cat-position")
+        first_cat_rock = pond.get_attribute("data-cat-rock")
         first_pounce_count = int(pond.get_attribute("data-cat-pounce-count"))
         self.assertEqual(pond.get_attribute("data-cat-over-water"), "false")
         self.assertEqual(pond.get_attribute("data-cat-water-violation"), "false")
@@ -378,7 +628,22 @@ class PortfolioTests(BrowserTestCase):
             int(pond.get_attribute("data-cat-facing")),
             -1 if aim_x < cat_x else 1,
         )
-        page.mouse.click(cat_x, cat_y)
+
+        def disturb_water_near_cat(x, y) -> None:
+            offsets = (
+                (70, 0), (-70, 0), (0, 70), (0, -70),
+                (105, 105), (-105, 105), (105, -105), (-105, -105),
+                (210, 0), (-210, 0), (0, 210), (0, -210),
+            )
+            impact_x, impact_y = find_open_water(
+                page,
+                pond,
+                ((x + offset_x, y + offset_y) for offset_x, offset_y in offsets),
+            )
+            self.assertLess(((impact_x - x) ** 2 + (impact_y - y) ** 2) ** 0.5, 280)
+            page.mouse.click(impact_x, impact_y)
+
+        disturb_water_near_cat(cat_x, cat_y)
         page.wait_for_function(
             """initial => {
                 const pond = document.querySelector('[data-pixi-state]');
@@ -387,7 +652,10 @@ class PortfolioTests(BrowserTestCase):
             arg=first_pounce_count,
         )
         self.assertNotEqual(pond.get_attribute("data-cat-state"), "idle")
-        page.wait_for_timeout(240)
+        page.wait_for_function(
+            "initial => document.querySelector('[data-pixi-state]')?.dataset.catPosition !== initial",
+            arg=first_cat_position,
+        )
         self.assertNotEqual(pond.get_attribute("data-cat-position"), first_cat_position)
         page.wait_for_function(
             """() => {
@@ -395,47 +663,51 @@ class PortfolioTests(BrowserTestCase):
                 return pond?.dataset.catGrounded === 'true' && ['idle', 'observe'].includes(pond.dataset.catState);
             }"""
         )
-        visited_rocks = {pond.get_attribute("data-cat-rock")}
-        for _ in range(6):
-            cat_x, cat_y = (
-                float(value)
-                for value in pond.get_attribute("data-cat-position").split(",")
-            )
-            pounce_count = int(pond.get_attribute("data-cat-pounce-count"))
-            page.mouse.click(cat_x, cat_y)
-            page.wait_for_function(
-                """initial => {
-                    const pond = document.querySelector('[data-pixi-state]');
-                    return Number(pond?.dataset.catPounceCount) > initial;
-                }""",
-                arg=pounce_count,
-            )
-            page.wait_for_function(
-                """() => {
-                    const pond = document.querySelector('[data-pixi-state]');
-                    return pond?.dataset.catGrounded === 'true' && ['idle', 'observe'].includes(pond.dataset.catState);
-                }"""
-            )
-            visited_rocks.add(pond.get_attribute("data-cat-rock"))
-        self.assertGreaterEqual(len(visited_rocks), 3)
+        self.assertNotEqual(pond.get_attribute("data-cat-rock"), first_cat_rock)
         self.assertEqual(pond.get_attribute("data-cat-over-water"), "false")
         self.assertEqual(pond.get_attribute("data-cat-water-violation"), "false")
         self.assertEqual(pond.get_attribute("data-cat-empty-bap-count"), "0")
         self.assertLess(abs(float(pond.get_attribute("data-cat-rotation"))), 0.12)
         self.assertLess(float(pond.get_attribute("data-fish-max-step")), 25)
-        fish_x, fish_y = (
-            float(value)
-            for value in first_positions.split(";")[0].split(",")
-        )
-        page.mouse.move(fish_x, fish_y)
+        responsive_positions = [
+            tuple(float(value) for value in pair.split(","))
+            for pair in pond.get_attribute("data-fish-positions").split(";")
+        ]
+        fish_index = None
+        fish_x = fish_y = 0.0
+        for index, point in enumerate(responsive_positions):
+            if not (40 < point[0] < 1400 and 40 < point[1] < 860):
+                continue
+            page.mouse.move(*point)
+            if pond.get_attribute("data-food-affordance") == "true":
+                fish_index = index
+                fish_x, fish_y = point
+                break
+        self.assertIsNotNone(fish_index)
+        pointer_x, pointer_y = fish_x, fish_y
+        page.mouse.move(fish_x - 220, fish_y - 60)
+        page.mouse.move(pointer_x, pointer_y, steps=2)
         page.wait_for_function(
             "document.querySelector('[data-pixi-state]')?.dataset.fishReacting === 'true'"
         )
         self.assertEqual(pond.get_attribute("data-fish-reacting"), "true")
-        page.mouse.move(140, 180)
-        page.mouse.move(320, 280, steps=6)
-        page.mouse.click(320, 280)
-        page.wait_for_timeout(300)
+        page.wait_for_timeout(320)
+        reacted_x, reacted_y = [
+            tuple(float(value) for value in pair.split(","))
+            for pair in pond.get_attribute("data-fish-positions").split(";")
+        ][fish_index]
+        self.assertGreater(
+            ((reacted_x - pointer_x) ** 2 + (reacted_y - pointer_y) ** 2) ** 0.5,
+            6,
+        )
+        impact_x, impact_y = find_open_water(page, pond)
+        page.mouse.move(impact_x - 120, impact_y - 40)
+        page.mouse.move(impact_x, impact_y, steps=6)
+        page.mouse.click(impact_x, impact_y)
+        page.wait_for_function(
+            "Number(document.querySelector('[data-pixi-state]')?.dataset.rippleCount) > 0",
+            timeout=2_000,
+        )
         self.assertGreater(int(pond.get_attribute("data-ripple-count")), 0)
         self.assertGreater(int(pond.get_attribute("data-ring-count")), 0)
         self.assertGreater(int(pond.get_attribute("data-wake-count")), 0)
@@ -476,22 +748,19 @@ class PortfolioTests(BrowserTestCase):
             for point in pond.get_attribute("data-fish-positions").split(";")
         ]
         fish_x, fish_y = find_open_water(page, pond, fish_points)
-        context_suppressed_on_water = page.evaluate(
-            """({ x, y }) => {
-                const target = document.elementFromPoint(x, y);
-                const event = new MouseEvent('contextmenu', {
-                    bubbles: true, cancelable: true, button: 2,
-                    clientX: x, clientY: y,
-                });
-                target.dispatchEvent(event);
-                return event.defaultPrevented;
-            }""",
-            {"x": fish_x, "y": fish_y},
+        page.evaluate(
+            """() => window.addEventListener('contextmenu', event => {
+                document.documentElement.dataset.pondContextPrevented = String(event.defaultPrevented);
+            }, { once: true })"""
         )
-        self.assertTrue(context_suppressed_on_water)
+        page.mouse.click(fish_x, fish_y, button="right")
         page.wait_for_function(
             "initial => Number(document.querySelector('[data-pixi-state]')?.dataset.foodDroppedCount) > initial",
             arg=food_before,
+        )
+        self.assertEqual(
+            page.locator("html").get_attribute("data-pond-context-prevented"),
+            "true",
         )
         camera_x, camera_y, scale_x, scale_y = (
             float(value) for value in pond.get_attribute("data-pond-camera").split(",")
@@ -523,6 +792,75 @@ class PortfolioTests(BrowserTestCase):
         self.assertLessEqual(int(pond.get_attribute("data-food-max-count")), 8)
         self.assertEqual(pond.get_attribute("data-cat-empty-bap-count"), "0")
         self.assertEqual(pond.get_attribute("data-fish-water-violation"), "false")
+        self.assertEqual(page_errors, [])
+        browser.close()
+
+    def test_profile_card_foil_is_square_pointer_driven_and_motion_safe(self) -> None:
+        browser = self.playwright.chromium.launch()
+        page = browser.new_page(viewport={"width": 1280, "height": 800})
+        page_errors = []
+        page.on("pageerror", lambda error: page_errors.append(str(error)))
+        page.goto(self.base_url, wait_until="networkidle")
+
+        card = page.locator('[class*="profileTilt"]')
+        card_surface = card.locator('[class*="profileLine"]')
+        portrait = page.locator('[class*="profilePortrait"]')
+        card.scroll_into_view_if_needed()
+        page.wait_for_function(
+            "document.querySelector('[class*=profilePortrait]')?.dataset.foilRenderer"
+        )
+        page.wait_for_timeout(700)
+        card_box = card.bounding_box()
+        portrait_box = portrait.bounding_box()
+        canvas_box = portrait.locator("canvas").bounding_box()
+        self.assertIsNotNone(card_box)
+        self.assertIsNotNone(portrait_box)
+        self.assertIsNotNone(canvas_box)
+        self.assertAlmostEqual(portrait_box["width"], portrait_box["height"], delta=0.5)
+        self.assertNotEqual(card_surface.evaluate("element => getComputedStyle(element).clipPath"), "none")
+        self.assertEqual(card_surface.evaluate("element => getComputedStyle(element).backdropFilter"), "none")
+        self.assertEqual(portrait.evaluate("element => getComputedStyle(element).overflow"), "hidden")
+        self.assertEqual(portrait.evaluate("element => getComputedStyle(element).boxSizing"), "border-box")
+        self.assertAlmostEqual(canvas_box["x"] - portrait_box["x"], 3, delta=0.25)
+        self.assertAlmostEqual(canvas_box["y"] - portrait_box["y"], 3, delta=0.25)
+        self.assertAlmostEqual(canvas_box["width"], portrait_box["width"] - 6, delta=0.25)
+        self.assertNotEqual(
+            portrait.evaluate("element => getComputedStyle(element, '::after').boxShadow"),
+            "none",
+        )
+        self.assertIn(portrait.get_attribute("data-foil-renderer"), ("webgl", "fallback"))
+        if portrait.get_attribute("data-foil-renderer") == "webgl":
+            self.assertRegex(portrait.locator("canvas").get_attribute("data-foil-view"), r"^\d\.\d{3},\d\.\d{3}$")
+        foil_background = portrait.evaluate(
+            "element => getComputedStyle(element, '::before').backgroundImage"
+        )
+        self.assertIn("linear-gradient", foil_background)
+        self.assertNotIn("radial-gradient", foil_background)
+        self.assertNotIn("conic-gradient", foil_background)
+        self.assertEqual(card.locator("a, button").count(), 0)
+        self.assertEqual(
+            card.locator("small").first.evaluate("element => getComputedStyle(element.parentElement).userSelect"),
+            "text",
+        )
+
+        page.mouse.move(card_box["x"] + 12, card_box["y"] + 12)
+        page.wait_for_timeout(100)
+        self.assertNotEqual(card.evaluate("element => element.style.getPropertyValue('--profile-tilt-y')"), "0deg")
+        page.mouse.move(card_box["x"] + card_box["width"] + 40, card_box["y"])
+        page.wait_for_timeout(360)
+        self.assertEqual(card.evaluate("element => element.style.getPropertyValue('--profile-tilt-y')"), "0deg")
+
+        page.emulate_media(reduced_motion="reduce")
+        page.reload(wait_until="networkidle")
+        reduced_card = page.locator('[class*="profileTilt"]')
+        reduced_card.scroll_into_view_if_needed()
+        reduced_box = reduced_card.bounding_box()
+        page.mouse.move(reduced_box["x"] + 12, reduced_box["y"] + 12)
+        page.wait_for_timeout(100)
+        self.assertEqual(
+            reduced_card.locator('[class*="profileLine"]').evaluate("element => getComputedStyle(element).transform"),
+            "none",
+        )
         self.assertEqual(page_errors, [])
         browser.close()
 
@@ -763,7 +1101,13 @@ class PortfolioTests(BrowserTestCase):
             "initial => document.querySelector('[data-pixi-state]')?.dataset.frame !== initial",
             arg=paused_frame,
         )
-        page.goto(f"{self.base_url}/concepts/trace", wait_until="networkidle")
+        missing_response = page.goto(
+            f"{self.base_url}/definitely-not-a-route", wait_until="networkidle"
+        )
+        self.assertEqual(missing_response.status, 404)
+        self.assertTrue(
+            page.get_by_role("heading", name="Nothing surfaced here.").is_visible()
+        )
         page.go_back(wait_until="networkidle")
         page.wait_for_function(
             "document.querySelector('[data-pixi-state]')?.dataset.pixiState === 'running'"
@@ -771,569 +1115,26 @@ class PortfolioTests(BrowserTestCase):
         self.assertEqual(page.locator("[data-pixi-state] canvas").count(), 1)
         browser.close()
 
-    def test_legacy_concept_routes_still_render(self) -> None:
+    def test_removed_routes_use_the_pond_not_found_page(self) -> None:
         browser = self.playwright.chromium.launch()
         page = browser.new_page(viewport={"width": 1280, "height": 800})
-        for path in ("/concepts/signal-desk", "/concepts/trace", "/concepts/signal-field"):
+        for path in LEGACY_ROUTES:
             with self.subTest(path=path):
-                page.goto(f"{self.base_url}{path}", wait_until="networkidle")
-                self.assertGreater(page.get_by_role("heading").count(), 0)
-        browser.close()
+                response = page.request.get(f"{self.base_url}{path}")
+                self.assertEqual(response.status, 404)
 
-
-PRODUCTS = (
-    ("Meteor", "/meteor"),
-    ("Sleepr", "/sleepr"),
-    ("BallHammer", "/ballhammer"),
-    ("Risk of Anticheat", "/risk-of-anticheat"),
-    ("BrcTrainer", "/brc-trainer"),
-    ("DaggerFall", "/dagger-fall"),
-    ("SuperHackerGolf", "/super-hacker-golf"),
-)
-
-EXTERNAL_PRODUCTS = (
-    ("Minecrooft", "https://github.com/luinbytes/minecrooft"),
-    ("Cursor Barrier", "https://github.com/luinbytes/cursor-barrier"),
-    ("Raycast automation", "https://github.com/luinbytes/extensions"),
-)
-
-PRODUCT_ROUTES = PRODUCTS + (("linux-sonar", "/linux-sonar"),)
-
-CORE_PRODUCT_ROUTES = (
-    (
-        "Meteor",
-        "/meteor",
-        (
-            ("Privacy Policy", "/meteor/privacy"),
-        ),
-    ),
-    ("Sleepr", "/sleepr", (("Get Sleepr", "#get-it"),)),
-    (
-        "linux-sonar",
-        "/linux-sonar",
-        (("View on GitHub", "https://github.com/luinbytes/linux-sonar"),),
-    ),
-)
-
-GAME_TOOLING_ROUTES = (
-    ("DaggerFall", "/dagger-fall", "https://github.com/luinbytes/dagger-fall"),
-    (
-        "SuperHackerGolf",
-        "/super-hacker-golf",
-        "https://github.com/luinbytes/SuperHackerGolf",
-    ),
-)
-
-UNAVAILABLE_GAME_TOOLING_ROUTES = (
-    (
-        "Risk of Anticheat",
-        "/risk-of-anticheat",
-        "https://github.com/luinbytes/risk-of-anticheat",
-    ),
-    ("BrcTrainer", "/brc-trainer", "https://github.com/luinbytes/brc-trainer"),
-)
-
-
-def open_products_navigation(page: Page, mobile: bool) -> None:
-    if mobile:
-        page.get_by_role("button", name="Open menu").click()
-    else:
-        page.get_by_role("button", name="/products").click()
-
-
-def product_link(page: Page, name: str, path: str, mobile: bool):
-    accessible_name = path if mobile else re.compile(rf"^{re.escape(name)}")
-    return page.get_by_role("link", name=accessible_name)
-
-
-class MotionTests(BrowserTestCase):
-    @unittest.skip("Superseded by the three portfolio MVP motion systems")
-    def test_homepage_motion_uses_smooth_static_print_treatment(self) -> None:
-        browser = self.playwright.chromium.launch()
-        page = browser.new_page(viewport={"width": 1440, "height": 900})
-        page.goto(self.base_url, wait_until="networkidle")
-
-        hero_plate = page.locator('[class*="heroSignalPlate"]')
-        poster_mark = page.locator('[class*="posterMark"]')
-        hero_timing = hero_plate.evaluate(
-            """element => {
-                const style = getComputedStyle(element);
-                return {
-                    duration: style.animationDuration,
-                    timing: style.animationTimingFunction,
-                };
-            }"""
+        response = page.goto(
+            f"{self.base_url}/retired-route", wait_until="networkidle"
         )
-        decoration_animation = poster_mark.evaluate(
-            "element => getComputedStyle(element, '::before').animationName"
-        )
-        cssom_rules = page.evaluate(
-            """() => {
-                const rules = [];
-                const collect = (ruleList) => {
-                    for (const rule of ruleList) {
-                        rules.push(rule.cssText);
-                        if (rule.cssRules) collect(rule.cssRules);
-                    }
-                };
-                for (const sheet of document.styleSheets) {
-                    if (sheet.href && new URL(sheet.href).origin !== location.origin) continue;
-                    try { collect(sheet.cssRules); } catch (_) {}
-                }
-                return rules.join('\\n');
-            }"""
-        )
-
-        self.assertNotIn("steps", hero_timing["timing"])
-        self.assertLessEqual(float(hero_timing["duration"].removesuffix("s")) * 1000, 220)
-        self.assertIn("cubic-bezier(0.23, 1, 0.32, 1)", hero_timing["timing"])
-        self.assertEqual(decoration_animation, "none")
-        self.assertNotIn("steps(", cssom_rules)
-
-        reduced_page = browser.new_page(viewport={"width": 1440, "height": 900})
-        reduced_page.emulate_media(reduced_motion="reduce")
-        reduced_page.goto(self.base_url, wait_until="networkidle")
-        reduced_plate = reduced_page.locator('[class*="heroSignalPlate"]')
-        self.assertEqual(
-            reduced_plate.evaluate("element => getComputedStyle(element).animationName"),
-            "none",
-        )
-        self.assertEqual(
-            reduced_plate.evaluate("element => getComputedStyle(element).transform"),
-            "none",
-        )
-
-        browser.close()
-
-
-class ProductNavigationTests(BrowserTestCase):
-    @unittest.skip("Product catalogue navigation is intentionally absent from the portfolio MVPs")
-    def test_ballhammer_product_at_desktop_and_mobile(self) -> None:
-        viewports = (
-            {"width": 1440, "height": 900},
-            {"width": 412, "height": 915},
-        )
-
-        for viewport in viewports:
-            with self.subTest(viewport=viewport):
-                browser = self.playwright.chromium.launch()
-                page = browser.new_page(viewport=viewport)
-                mobile = viewport["width"] == 412
-                page.goto(self.base_url)
-
-                open_products_navigation(page, mobile)
-                link = product_link(page, "BallHammer", "/ballhammer", mobile)
-                self.assertTrue(link.is_visible())
-                if not mobile:
-                    self.assertTrue(
-                        page.get_by_text(
-                            "Darktide ESP, aim and fire controls, and opt-in tactical systems.",
-                            exact=True,
-                        ).is_visible()
-                    )
-                link.click()
-                page.wait_for_url("**/ballhammer")
-
-                lede = page.get_by_text(
-                    "All-enemy and pickup ESP, configurable aim and fire controls, and opt-in tactical systems for Darktide.",
-                    exact=True,
-                )
-                lede.wait_for(state="visible")
-                self.assertTrue(lede.is_visible())
-                self.assertEqual(page.title(), "BallHammer | Lu")
-                self.assertEqual(
-                    page.locator('meta[name="description"]').get_attribute("content"),
-                    "A Darktide mod with all-enemy and pickup ESP, configurable aim and fire controls, and opt-in tactical systems.",
-                )
-                self.assertEqual(
-                    page.locator('meta[property="og:image:alt"]').get_attribute("content"),
-                    "BallHammer — Darktide ESP, aim and fire controls, and tactical systems",
-                )
-                source = page.get_by_role("link", name="View source on GitHub")
-                self.assertEqual(
-                    source.get_attribute("href"),
-                    "https://github.com/luinbytes/BallHammer",
-                )
-                capabilities = (
-                    "Bone-projected boxes for all enemies, including enemies spawned or respawned after the mod loads",
-                    "Distinct special-enemy names, SPECIAL flags, distances, outlines, and health bars",
-                    "Distance fading and a visibility check that turns visible ESP white",
-                    "Compact world-space horde grouping with separate horizontal and elevation limits, buffered off-screen membership, aim-bone dots, and reversible join/split animation",
-                    "Collision-spaced pickup cards with compact stacking, fixed screen sizing, category accents, distance fading, category presets, custom per-pickup filters, and distinct Med, Concentration, Combat, and Celerity Stimm labels",
-                    "Normal aimbot and triggerbot keep an in-FOV target locked, then replace it when it leaves the FOV, dies, or becomes occluded",
-                    "Head or torso aim, configurable distance and field of view, interpolated smoothing, and aim curvature",
-                    "Distance-scaled target preview follows the armor-aware or configured aim bone nearest the crosshair and becomes the activation target",
-                    "Left mouse, right mouse, either mouse button, or a custom keyboard activation key",
-                    "Configurable magnet triggerbot with aim radius, fire radius, and smoothing",
-                    "Rage mode selects visible on-screen targets using danger, range, and crosshair weighting",
-                    "Melee-aware aim range limits mouse-one targeting to enemies inside the current weapon sweep reach",
-                    "Optional timed repeat fire for press-driven, non-automatic weapons whenever mouse one is held",
-                    "Optional local weapon recoil and spread suppression without camera compensation",
-                    "Weighted Arbites and Skitarii companion orders based on special type, distance, and remaining health without moving the camera; native companion-rescue states override normal weights, retargeting waits for companion damage, and an optional charged Arbites dog EMP sends its press, hold, and release through Darktide's networked input frames when the dog connects",
-                    "Armor and Weakspot Director ranks visible hit zones using the current weapon damage profile, live armor overrides, shields, and weakspot finesse; triggerbot skips invulnerable shots and rage mode can choose another target",
-                    "Threat Interceptor marks committed hound, trapper, mutant, rager, sniper, flamer, grenade, and verified overhead attacks while a HUD shows the planned reaction and impact countdown",
-                    "Opt-in defensive reactions use bounded safe-window timing, preserve held attacks until the final dodge window, keep the player's movement direction, and dodge committed specialist, rager, and overhead attacks",
-                    "Opt-in Guard Brain preserves a configurable stamina reserve and pushes only when at least three nearby melee threats cover the available retreat directions",
-                    "Opt-in Warp and Heat Governor predicts the next resource increase, stops unsafe generated shots, and can use the current weapon's native quell or non-damaging vent input when no nearby threat exists",
-                    "Diagnostic logging records threat timing and reaction decisions for live compatibility checks without changing the safe defaults",
-                )
-                for capability in capabilities:
-                    self.assertTrue(page.get_by_text(capability, exact=True).is_visible())
-                for heading in (
-                    "Overlay and pickup intelligence",
-                    "Aim and fire controls",
-                    "Tactical systems",
-                ):
-                    self.assertTrue(
-                        page.get_by_role("heading", name=heading, exact=True).is_visible()
-                    )
-                self.assertEqual(
-                    page.get_by_text(
-                        "Triggerbot and rage modes are not included", exact=True
-                    ).count(),
-                    0,
-                )
-                get_it = page.get_by_role("region", name="Get it")
-                self.assertTrue(
-                    get_it.get_by_text("Darktide Mod Loader", exact=True).is_visible()
-                )
-                self.assertTrue(
-                    get_it.get_by_text("Darktide Mod Framework", exact=True).is_visible()
-                )
-                self.assertTrue(
-                    get_it.get_by_text(
-                        "Copy the repository to the game mods directory as BallHammer.",
-                        exact=True,
-                    ).is_visible()
-                )
-                self.assertTrue(
-                    get_it.get_by_text(
-                        "Add BallHammer to mod_load_order.txt.", exact=True
-                    ).is_visible()
-                )
-                self.assertTrue(
-                    get_it.get_by_text(
-                        "Restart Darktide after installing or replacing mod files.",
-                        exact=True,
-                    ).is_visible()
-                )
-                self.assertTrue(
-                    get_it.get_by_text(
-                        "Configure BallHammer in Darktide mod options.", exact=True
-                    ).is_visible()
-                )
-
-                hero = page.get_by_role(
-                    "img", name="Darktide gameplay with BallHammer enemy overlays"
-                )
-                self.assertTrue(hero.is_visible())
-                self.assertTrue(
-                    hero.evaluate(
-                        "element => element.complete && element.naturalWidth > 0"
-                    )
-                )
-                self.assertEqual(hero.evaluate("element => getComputedStyle(element).objectFit"), "contain")
-                if not mobile:
-                    heading_box = page.get_by_role("heading", name="BallHammer.").bounding_box()
-                    hero_box = hero.bounding_box()
-                    self.assertIsNotNone(heading_box)
-                    self.assertIsNotNone(hero_box)
-                    self.assertLessEqual(
-                        heading_box["x"] + heading_box["width"], hero_box["x"]
-                    )
-                self.assertLessEqual(
-                    page.evaluate("document.documentElement.scrollWidth"),
-                    viewport["width"],
-                )
-
-                page.goto(f"{self.base_url}/#builds")
-                builds = page.locator("#builds")
-                builds.scroll_into_view_if_needed()
-                self.assertNotIn(
-                    "BallHammer",
-                    "\n".join(
-                        builds.locator("ol[data-build-list] small").all_text_contents()
-                    ),
-                )
-
-                browser.close()
-
-    @unittest.skip("Product catalogue navigation is intentionally absent from the portfolio MVPs")
-    def test_products_navigation_at_desktop_and_mobile(self) -> None:
-        viewports = {
-            "desktop": {"width": 1440, "height": 900},
-            "mobile": {"width": 412, "height": 915},
-        }
-
-        for viewport_name, viewport in viewports.items():
-            with self.subTest(viewport=viewport_name):
-                browser = self.playwright.chromium.launch()
-                page = browser.new_page(viewport=viewport)
-                mobile = viewport_name == "mobile"
-                page.goto(self.base_url)
-
-                open_products_navigation(page, mobile)
-                for name, path in PRODUCTS:
-                    link = product_link(page, name, path, mobile)
-                    self.assertTrue(link.is_visible())
-                    link.click()
-                    page.wait_for_url(f"**{path}")
-                    self.assertEqual(page.url, f"{self.base_url}{path}")
-                    heading = page.get_by_role(
-                        "heading", level=1, name=f"{name}."
-                    )
-                    heading.wait_for(state="visible")
-                    self.assertTrue(heading.is_visible())
-                    open_products_navigation(page, mobile)
-
-                for name, href in EXTERNAL_PRODUCTS:
-                    link = page.get_by_role(
-                        "link", name=re.compile(rf"^{re.escape(name)}")
-                    )
-                    self.assertTrue(link.is_visible())
-                    self.assertEqual(link.get_attribute("href"), href)
-                    self.assertEqual(link.get_attribute("target"), "_blank")
-                    self.assertEqual(link.get_attribute("rel"), "noopener noreferrer")
-
-                page.screenshot(
-                    path=SCREENSHOTS / f"products-navigation-{viewport_name}.png",
-                    full_page=True,
-                )
-
-                browser.close()
-
-    @unittest.skip("Superseded by the curated repository interactions")
-    def test_homepage_shows_current_builds(self) -> None:
-        browser = self.playwright.chromium.launch()
-        page = browser.new_page(viewport={"width": 1440, "height": 900})
-        page.goto(self.base_url)
-
-        builds = page.locator("#builds")
-        builds.scroll_into_view_if_needed()
-
+        self.assertEqual(response.status, 404)
         self.assertTrue(
-            builds.get_by_role(
-                "heading", level=2, name="Problems made tangible."
-            ).is_visible()
+            page.get_by_role("heading", name="Nothing surfaced here.").is_visible()
         )
         self.assertTrue(
-            builds.locator("ol[data-build-list]").get_by_role("button").first.is_visible()
+            page.get_by_role("link", name="Return to the pond").is_visible()
         )
-        build_names = builds.locator("ol[data-build-list] small").all_text_contents()
-        visible_build_names = "\n".join(build_names)
-        self.assertIn("HomeBot", visible_build_names)
-        self.assertNotIn("Poke Android", visible_build_names)
-        self.assertEqual(
-            [name.split(" / ", 1)[0] for name in build_names],
-            [
-                "HomeBot",
-                "Linux Sonar",
-                "Meteor",
-                "Sleepr",
-                "Game Systems",
-            ],
+        self.assertEqual(page.locator("[data-renderer]").count(), 1)
+        self.assertLessEqual(
+            page.evaluate("document.documentElement.scrollWidth"), 1280
         )
-
-        homebot_button = builds.get_by_role("button", name=re.compile(r"HomeBot"))
-        homebot_button.click()
-        selected_case = builds.get_by_role("article", name="Selected build: HomeBot")
-        self.assertTrue(selected_case.is_visible())
-        self.assertTrue(
-            selected_case.get_by_text(
-                "An open-source Rust desktop, server, and Android home for persistent AI teammates, with Codex, Claude Code, and OpenAI-compatible provider integrations.",
-                exact=True,
-            ).is_visible()
-        )
-        self.assertTrue(
-            selected_case.get_by_text(
-                "Public pre-v1 source in M6 Packaging, Hardening & v1 Parity Gate; no supported release packages yet.",
-                exact=True,
-            ).is_visible()
-        )
-        homebot_link = selected_case.get_by_role("link", name="Open project")
-        self.assertEqual(
-            homebot_link.get_attribute("href"),
-            "https://github.com/luinbytes/HomeBot",
-        )
-        self.assertEqual(homebot_link.get_attribute("target"), "_blank")
-        self.assertEqual(homebot_link.get_attribute("rel"), "noopener noreferrer")
-        for removed_name in ("Minecrooft", "Cursor Barrier", "Raycast automation"):
-            self.assertNotIn(removed_name, "\n".join(build_names))
-
-        browser.close()
-
-    @unittest.skip("Superseded by the three portfolio MVPs")
-    def test_homepage_has_standalone_homebot_section_at_desktop_and_mobile(self) -> None:
-        for viewport in ({"width": 1440, "height": 900}, {"width": 412, "height": 915}):
-            with self.subTest(viewport=viewport):
-                browser = self.playwright.chromium.launch()
-                page = browser.new_page(viewport=viewport)
-                page.goto(f"{self.base_url}/#homebot", wait_until="networkidle")
-
-                homebot = page.get_by_role("region", name="A home for persistent AI teammates.")
-                self.assertTrue(homebot.is_visible())
-                self.assertEqual(homebot.get_attribute("id"), "homebot")
-                self.assertTrue(homebot.get_by_text("M6 / Packaging, Hardening & v1 Parity Gate", exact=True).is_visible())
-                self.assertTrue(homebot.get_by_text("There are no supported release packages yet.", exact=False).is_visible())
-                source = homebot.get_by_role("link", name="View HomeBot on GitHub")
-                self.assertEqual(source.get_attribute("href"), "https://github.com/luinbytes/HomeBot")
-                self.assertEqual(source.get_attribute("target"), "_blank")
-                self.assertEqual(source.get_attribute("rel"), "noopener noreferrer")
-                self.assertLessEqual(page.evaluate("document.documentElement.scrollWidth"), viewport["width"])
-
-                browser.close()
-
-    def test_dedicated_product_routes_render_at_desktop_and_mobile(self) -> None:
-        viewports = (
-            {"width": 1440, "height": 900},
-            {"width": 412, "height": 915},
-        )
-
-        for viewport in viewports:
-            with self.subTest(viewport=viewport):
-                browser = self.playwright.chromium.launch()
-                page = browser.new_page(viewport=viewport)
-
-                for name, path in PRODUCT_ROUTES:
-                    page.goto(f"{self.base_url}{path}")
-                    heading = page.get_by_role(
-                        "heading", level=1, name=f"{name}."
-                    )
-                    heading.wait_for(state="visible")
-                    self.assertTrue(heading.is_visible())
-
-                browser.close()
-
-    def test_core_product_pages_are_compact_and_obtainable_at_desktop_and_mobile(self) -> None:
-        viewports = (
-            {"width": 1440, "height": 900},
-            {"width": 412, "height": 915},
-        )
-
-        for viewport in viewports:
-            for name, path, destinations in CORE_PRODUCT_ROUTES:
-                with self.subTest(viewport=viewport, path=path):
-                    browser = self.playwright.chromium.launch()
-                    page = browser.new_page(viewport=viewport)
-                    page.goto(f"{self.base_url}{path}")
-
-                    self.assertTrue(
-                        page.get_by_role(
-                            "heading", level=1, name=f"{name}."
-                        ).is_visible()
-                    )
-                    self.assertEqual(
-                        page.get_by_role(
-                            "complementary", name=f"{name} case interface"
-                        ).count(),
-                        0,
-                    )
-                    self.assertEqual(
-                        page.get_by_role("navigation", name="Case sections").count(),
-                        0,
-                    )
-                    for section_name in ("What it does", "Under the hood", "Get it"):
-                        section = page.get_by_role("region", name=section_name)
-                        self.assertTrue(section.is_visible())
-
-                    for link_name, href in destinations:
-                        link = page.get_by_role("link", name=link_name).last
-                        self.assertTrue(link.is_visible())
-                        self.assertEqual(link.get_attribute("href"), href)
-
-                    if path == "/meteor":
-                        self.assertTrue(
-                            page.get_by_text(
-                                "A public Google Play listing is not currently available.",
-                                exact=False,
-                            ).is_visible()
-                        )
-                        self.assertEqual(
-                            page.locator(
-                                'a[href="https://play.google.com/store/apps/details?id=com.luinbytes.meteor"]'
-                            ).count(),
-                            0,
-                        )
-
-                    self.assertLessEqual(
-                        page.evaluate("document.documentElement.scrollWidth"),
-                        viewport["width"],
-                    )
-                    browser.close()
-
-    def test_unavailable_game_tooling_has_no_dead_source_or_release_links(self) -> None:
-        for name, path, source_href in UNAVAILABLE_GAME_TOOLING_ROUTES:
-            with self.subTest(path=path):
-                browser = self.playwright.chromium.launch()
-                page = browser.new_page(viewport={"width": 1440, "height": 900})
-                page.goto(f"{self.base_url}{path}")
-
-                self.assertTrue(
-                    page.get_by_text(
-                        "Public source and releases are not currently available.",
-                        exact=True,
-                    ).is_visible()
-                )
-                self.assertEqual(page.locator(f'a[href="{source_href}"]').count(), 0)
-                self.assertEqual(
-                    page.locator(f'a[href="{source_href}/releases"]').count(), 0
-                )
-                browser.close()
-
-    def test_game_tooling_pages_are_compact_and_source_backed_at_desktop_and_mobile(self) -> None:
-        viewports = (
-            {"width": 1440, "height": 900},
-            {"width": 412, "height": 915},
-        )
-
-        for viewport in viewports:
-            for name, path, source_href in GAME_TOOLING_ROUTES:
-                with self.subTest(viewport=viewport, path=path):
-                    browser = self.playwright.chromium.launch()
-                    page = browser.new_page(viewport=viewport)
-                    page.goto(f"{self.base_url}{path}")
-
-                    self.assertTrue(
-                        page.get_by_role(
-                            "heading", level=1, name=f"{name}."
-                        ).is_visible()
-                    )
-                    for section_name in ("What it does", "Under the hood", "Get it"):
-                        self.assertTrue(
-                            page.get_by_role("region", name=section_name).is_visible()
-                        )
-                    source = page.get_by_role("link", name="View source on GitHub").last
-                    self.assertTrue(source.is_visible())
-                    self.assertEqual(source.get_attribute("href"), source_href)
-                    self.assertEqual(
-                        page.get_by_role(
-                            "complementary", name=f"{name} case interface"
-                        ).count(),
-                        0,
-                    )
-                    self.assertEqual(
-                        page.get_by_role("navigation", name="Case sections").count(),
-                        0,
-                    )
-                    self.assertLessEqual(
-                        page.evaluate("document.documentElement.scrollWidth"),
-                        viewport["width"],
-                    )
-                    browser.close()
-
-    def test_linux_sonar_channel_labels_use_dark_ink(self) -> None:
-        browser = self.playwright.chromium.launch()
-        page = browser.new_page(viewport={"width": 1440, "height": 900})
-        page.goto(f"{self.base_url}/linux-sonar")
-
-        labels = page.get_by_label("Five virtual audio channels").locator("span")
-        self.assertEqual(
-            labels.all_text_contents(), ["Game", "Chat", "Media", "Aux", "Mic"]
-        )
-        for label in labels.all():
-            self.assertEqual(
-                label.evaluate("element => getComputedStyle(element).color"),
-                "rgb(7, 19, 18)",
-            )
-
         browser.close()

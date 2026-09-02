@@ -1,23 +1,20 @@
 # luinbytes.dev
 
-Lu's personal portfolio, currently presented as three fully built interactive directions for review.
+Lu's interactive personal portfolio, built around the living pixel pond version of Signal Desk.
 
-The homepage is a comparison gallery. Each concept reframes the site around Lu, his current work at [Orchid.ai](https://orchid.ai), and a curated group of public repositories rather than a catalogue of product pages.
+The homepage focuses on Lu's current work at [Orchid.ai](https://orchid.ai), selected public projects, and an interactive procedural pond rather than a catalogue of product pages.
 
-## What is featured
+The site intentionally has one public route: `/`. Retired concept and product URLs resolve to the pond-themed 404 instead of preserving stale copies of older portfolios.
 
-- `/concepts/signal-desk` — a warm, tactile studio patchbay with animated repository channels.
-- `/concepts/trace` — a bold editorial identity with a native range-driven project scrubber.
-- `/concepts/signal-field` — a spatial topographic map with plotted repository routes and a list-view fallback.
-
-All three feature [HomeBot](https://github.com/luinbytes/HomeBot), [rakazo-android](https://github.com/luinbytes/rakazo-android), [Linux Sonar](https://github.com/luinbytes/linux-sonar), [bongocat](https://github.com/luinbytes/bongocat), [cursor-barrier](https://github.com/luinbytes/cursor-barrier), and [BallHammer](https://github.com/luinbytes/BallHammer). Existing case-study routes remain available as an archive while a final direction is selected.
+The portfolio features [HomeBot](https://github.com/luinbytes/HomeBot), [rakazo-android](https://github.com/luinbytes/rakazo-android), [Linux Sonar](https://github.com/luinbytes/linux-sonar), [bongocat](https://github.com/luinbytes/bongocat), and [cursor-barrier](https://github.com/luinbytes/cursor-barrier).
 
 ## Stack
 
 - Next.js 16 with static export for GitHub Pages
 - React 19 and TypeScript
 - Tailwind CSS v4
-- Framer Motion and GSAP for motion
+- Framer Motion for interface motion
+- PixiJS and Yuka for the procedural pond ecosystem
 - Lucide React for interface icons
 
 ## Development

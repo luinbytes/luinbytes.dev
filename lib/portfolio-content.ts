@@ -80,6 +80,7 @@ export const portfolioIdentity = {
   role: "Native Android engineer at Orchid.ai",
   location: "United Kingdom",
   email: "mailto:0x6c75@protonmail.com",
+  calendar: "https://cal.com/luinbytes",
   github: "https://github.com/luinbytes",
   x: "https://x.com/x6c75",
   orchid: "https://orchid.ai",

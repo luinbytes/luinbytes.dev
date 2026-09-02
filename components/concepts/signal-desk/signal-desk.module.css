@@ -32,122 +32,13 @@
   box-shadow: none;
 }
 
-.pond {
-  position: fixed;
-  inset: 0;
-  z-index: -2;
-  overflow: hidden;
+.content {
+  pointer-events: none;
+}
+
+.content > :where(.workSection, .aboutSection, .contactSection),
+.heroActions a {
   pointer-events: auto;
-  touch-action: manipulation;
-  background: #073d3a;
-}
-
-.pondImage,
-.pixiHost,
-.pondGrade,
-.surfaceLight {
-  position: absolute;
-  inset: 0;
-}
-
-.pondImage {
-  z-index: 0;
-  background-image: url("/images/portfolio/pixel-pond-world.png");
-  background-position: center;
-  background-size: cover;
-  transform: scale(1.025);
-  image-rendering: pixelated;
-}
-
-.pixiHost {
-  z-index: 1;
-}
-
-.pixiCanvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-  image-rendering: pixelated;
-}
-
-.pondGrade {
-  z-index: 3;
-  background:
-    linear-gradient(180deg, rgba(1, 18, 18, 0.2), rgba(1, 18, 18, 0.06) 52%, rgba(1, 18, 18, 0.5)),
-    radial-gradient(circle at 18% 12%, rgba(224, 255, 222, 0.16), transparent 28%),
-    linear-gradient(90deg, rgba(0, 31, 31, 0.34), transparent 60%);
-}
-
-.surfaceLight {
-  z-index: 4;
-  opacity: 0.62;
-  background-image:
-    radial-gradient(circle at 13% 19%, rgba(255, 255, 238, 0.95) 0 1px, transparent 2px),
-    radial-gradient(circle at 86% 23%, rgba(219, 255, 245, 0.8) 0 1px, transparent 2px),
-    radial-gradient(circle at 72% 74%, rgba(255, 241, 178, 0.7) 0 1px, transparent 2px),
-    radial-gradient(circle at 28% 82%, rgba(231, 255, 249, 0.7) 0 1px, transparent 2px);
-  background-size: 260px 220px, 310px 280px, 370px 320px, 290px 350px;
-  mix-blend-mode: screen;
-  animation: glint 11s ease-in-out infinite alternate;
-}
-
-.koi {
-  position: absolute;
-  z-index: 2;
-  width: 82px;
-  aspect-ratio: 1;
-  opacity: 0.82;
-  background-image: url("/images/portfolio/pixel-koi-atlas.png");
-  background-repeat: no-repeat;
-  background-size: 400% 400%;
-  filter: drop-shadow(4px 6px 0 rgba(0, 24, 23, 0.3));
-  image-rendering: pixelated;
-  transition: opacity 420ms ease;
-}
-
-.koiOne {
-  top: 13vh;
-  left: 73vw;
-  background-position: 33.333% 0;
-  animation: koiOne 24s ease-in-out infinite alternate;
-}
-
-.koiTwo {
-  right: 69vw;
-  bottom: 9vh;
-  width: 66px;
-  opacity: 0.68;
-  background-position: 33.333% 33.333%;
-  animation: koiTwo 31s ease-in-out infinite alternate;
-}
-
-.tabby {
-  position: absolute;
-  right: 5vw;
-  bottom: 3vh;
-  z-index: 2;
-  width: 132px;
-  aspect-ratio: 1;
-  opacity: 0.95;
-  background-image: url("/images/portfolio/pixel-tabby-atlas.png");
-  background-position: 0 0;
-  background-repeat: no-repeat;
-  background-size: 400% 400%;
-  filter: drop-shadow(4px 7px 0 rgba(0, 24, 23, 0.28));
-  image-rendering: pixelated;
-  transform: rotate(-18deg);
-  transition: opacity 420ms ease;
-}
-
-.pond[data-renderer="pixi"] .koi,
-.pond[data-renderer="pixi"] .tabby {
-  opacity: 0;
-  animation: none;
-}
-
-.pond[data-renderer="pixi"] .surfaceLight {
-  opacity: 0.16;
-  animation: none;
 }
 
 .srOnly {
@@ -193,9 +84,8 @@
 .brand,
 .header nav a,
 .heroActions a,
-.projectActions a,
 .moreGrid a,
-.contactSection > a,
+.contactCta,
 .footer a {
   color: inherit;
   text-decoration: none;
@@ -204,68 +94,50 @@
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
   width: fit-content;
-  min-height: 44px;
 }
 
-.brand > img {
-  width: 38px;
-  height: 38px;
-  border: 1px solid rgba(255, 255, 255, 0.88);
-  border-radius: 50%;
-  object-fit: cover;
-  box-shadow: 0 4px 12px rgba(1, 40, 38, 0.22);
-}
-
-.brand > span,
-.profileLine > span {
-  display: grid;
-  gap: 2px;
-}
-
-.brand strong,
-.brand small,
-.header nav,
-.availability,
 .eyebrow,
-.projectEyebrow,
-.mediaCaption,
-.projectNav span,
-.projectNav small,
-.proofRow,
-.projectActions,
 .heroActions,
 .footer {
   font-family: var(--font-space-mono), "Space Mono", monospace;
   text-transform: uppercase;
 }
 
-.brand strong {
-  font-size: 11px;
-  letter-spacing: 0.08em;
-}
-
-.brand small {
-  color: rgba(4, 36, 35, 0.58);
-  font-size: 7px;
-  letter-spacing: 0.13em;
-}
-
 .header nav {
   display: flex;
   align-items: center;
-  gap: 2px;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  gap: 8px;
+  font-family: var(--font-space-mono), "Space Mono", monospace;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
 }
 
 .header nav a {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 76px;
   min-height: 44px;
-  padding: 14px 15px;
-  border-radius: 10px;
+  padding: 11px 15px;
+  border-radius: 9px;
+  color: rgba(4, 36, 35, 0.82);
   transition: color 150ms ease, background-color 150ms ease;
+}
+
+.header nav a::before {
+  position: absolute;
+  right: 16px;
+  bottom: 7px;
+  left: 16px;
+  height: 1px;
+  background: rgba(9, 79, 73, 0.58);
+  content: "";
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 150ms ease;
 }
 
 .footer a {
@@ -274,25 +146,6 @@
   justify-content: center;
   min-width: 44px;
   min-height: 44px;
-}
-
-.availability {
-  display: inline-flex;
-  align-items: center;
-  justify-self: end;
-  gap: 8px;
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-}
-
-.availability i {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #69cf73;
-  box-shadow: 0 0 0 4px rgba(105, 207, 115, 0.18);
-  animation: statusPulse 3.2s ease-in-out infinite;
 }
 
 .hero {
@@ -318,7 +171,7 @@
   padding-bottom: 10px;
   border-bottom: 1px solid rgba(235, 255, 247, 0.52);
   color: rgba(237, 255, 248, 0.76);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.11em;
 }
@@ -334,8 +187,7 @@
 .aboutLead h2,
 .contactSection h2,
 .iniuriaCard h3,
-.moreWork h3,
-.projectCopy h3 {
+.moreWork h3 {
   margin: 0;
   font-weight: 400;
   letter-spacing: -0.065em;
@@ -367,8 +219,7 @@
   text-shadow: 0 2px 18px rgba(0, 24, 24, 0.52);
 }
 
-.heroActions,
-.projectActions {
+.heroActions {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -376,8 +227,7 @@
 }
 
 .heroActions a,
-.projectActions a,
-.contactSection > a {
+.contactCta {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -389,7 +239,7 @@
   color: var(--ink);
   background: rgba(237, 255, 248, 0.9);
   box-shadow: 0 9px 26px rgba(0, 25, 24, 0.18), inset 0 1px 0 white;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.06em;
   transition: transform 150ms ease, background-color 150ms ease;
@@ -402,14 +252,12 @@
 }
 
 .heroActions a:active,
-.projectActions a:active,
-.contactSection > a:active {
+.contactCta:active {
   transform: scale(0.98);
 }
 
 .heroActions svg,
-.projectActions svg,
-.contactSection > a svg {
+.contactCta svg {
   width: 15px;
   height: 15px;
   transition: transform 150ms var(--ease-out);
@@ -460,283 +308,6 @@
   line-height: 1.6;
 }
 
-.projectExplorer {
-  display: grid;
-  grid-template-columns: 260px minmax(0, 1fr);
-  overflow: hidden;
-  border: 1px solid rgba(224, 255, 244, 0.35);
-  border-radius: 22px;
-  background: rgba(4, 31, 30, 0.72);
-  box-shadow: 0 32px 80px rgba(0, 10, 10, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.12);
-}
-
-.projectNav {
-  display: grid;
-  grid-template-rows: repeat(4, minmax(112px, 1fr));
-  padding: 12px;
-  border-right: 1px solid rgba(230, 255, 246, 0.16);
-  background: rgba(0, 14, 14, 0.22);
-}
-
-.projectNav button {
-  position: relative;
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
-  gap: 6px 12px;
-  align-content: center;
-  min-width: 0;
-  padding: 18px 16px;
-  border: 0;
-  border-bottom: 1px solid rgba(229, 255, 246, 0.12);
-  color: rgba(228, 250, 241, 0.58);
-  background: transparent;
-  text-align: left;
-  cursor: pointer;
-  transition: color 150ms ease, background-color 150ms ease, transform 180ms var(--ease-out);
-}
-
-.projectNav button:last-child {
-  border-bottom: 0;
-}
-
-.projectNav button:focus-visible,
-.projectNav .activeProject {
-  color: var(--foam);
-  background: rgba(217, 255, 243, 0.08);
-}
-
-.projectMarker {
-  position: absolute;
-  top: 14px;
-  bottom: 14px;
-  left: 0;
-  width: 3px;
-  border-radius: 999px;
-  background: var(--aqua);
-  box-shadow: 0 0 16px rgba(145, 238, 224, 0.48);
-}
-
-.projectNav span {
-  grid-row: 1 / 3;
-  color: var(--aqua);
-  font-size: 9px;
-  font-weight: 700;
-}
-
-.projectNav strong {
-  overflow: hidden;
-  font-size: 15px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.projectNav small {
-  color: rgba(223, 249, 240, 0.42);
-  font-size: 7px;
-  letter-spacing: 0.08em;
-}
-
-.projectPanel {
-  display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(330px, 0.75fr);
-  min-width: 0;
-  min-height: 570px;
-}
-
-.projectStage {
-  display: grid;
-  min-width: 0;
-}
-
-.projectStage > .projectPanel {
-  grid-area: 1 / 1;
-}
-
-.projectVisual {
-  min-width: 0;
-  overflow: hidden;
-}
-
-.projectVisual > .projectMedia {
-  height: 100%;
-}
-
-.projectMedia {
-  position: relative;
-  min-height: 570px;
-  overflow: hidden;
-  background: #092b2b;
-}
-
-.projectMedia::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(180deg, transparent 54%, rgba(0, 19, 19, 0.5));
-}
-
-.projectMedia > img {
-  object-fit: cover;
-}
-
-.mediarakazoandroid {
-  display: grid;
-  grid-template-columns: minmax(220px, 0.8fr) minmax(250px, 1.2fr);
-  gap: 9%;
-  align-items: center;
-  padding: 8%;
-  background: radial-gradient(circle at 50% 45%, #25433f, #071817 75%);
-}
-
-.rakazoIdentity {
-  display: grid;
-  gap: 18px;
-}
-
-.rakazoIdentity > img {
-  width: 104px;
-  height: 104px;
-  border: 1px solid rgba(238, 255, 248, 0.28);
-  border-radius: 24px;
-  background: #070707;
-  box-shadow: 0 22px 44px rgba(0, 0, 0, 0.28);
-}
-
-.rakazoIdentity > span {
-  display: grid;
-  gap: 5px;
-}
-
-.rakazoIdentity strong {
-  font-size: clamp(2.6rem, 4.3vw, 4.8rem);
-  font-weight: 400;
-  letter-spacing: -0.055em;
-  line-height: 0.9;
-}
-
-.rakazoIdentity small,
-.rakazoSignals {
-  font-family: var(--font-space-mono), "Space Mono", monospace;
-  text-transform: uppercase;
-}
-
-.rakazoIdentity small {
-  color: rgba(228, 252, 243, 0.56);
-  font-size: 8px;
-  letter-spacing: 0.08em;
-}
-
-.rakazoSignals {
-  border-top: 1px solid rgba(232, 255, 247, 0.26);
-  color: rgba(235, 255, 248, 0.78);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-}
-
-.rakazoSignals span {
-  display: block;
-  padding: 16px 3px;
-  border-bottom: 1px solid rgba(232, 255, 247, 0.26);
-}
-
-.medialinuxsonar > img,
-.mediahomebot > img {
-  object-position: center;
-}
-
-.mediaCaption {
-  position: absolute;
-  right: 18px;
-  bottom: 18px;
-  z-index: 2;
-  padding: 9px 11px;
-  border: 1px solid rgba(236, 255, 247, 0.34);
-  border-radius: 8px;
-  color: rgba(239, 255, 249, 0.82);
-  background: rgba(2, 21, 21, 0.68);
-  font-size: 7px;
-  font-weight: 700;
-  letter-spacing: 0.09em;
-  backdrop-filter: blur(9px);
-}
-
-.projectCopy {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-width: 0;
-  padding: 42px 36px;
-  border-left: 1px solid rgba(229, 255, 246, 0.16);
-  background: rgba(221, 246, 237, 0.9);
-  color: var(--ink);
-}
-
-.projectEyebrow {
-  color: #35665f;
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.09em;
-}
-
-.projectCopy h3 {
-  margin-top: 17px;
-  font-size: clamp(3.2rem, 5vw, 5.7rem);
-  line-height: 0.88;
-}
-
-.projectSummary {
-  margin: 24px 0 0;
-  color: #123e3b;
-  font-size: 18px;
-  font-weight: 600;
-  line-height: 1.38;
-}
-
-.projectDetail {
-  margin: 15px 0 0;
-  color: rgba(7, 40, 38, 0.67);
-  font-size: 14px;
-  line-height: 1.58;
-}
-
-.proofRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-  margin-top: 24px;
-}
-
-.proofRow span {
-  padding: 7px 9px;
-  border: 1px solid rgba(7, 57, 53, 0.18);
-  border-radius: 7px;
-  color: rgba(5, 51, 48, 0.76);
-  background: rgba(255, 255, 255, 0.28);
-  font-size: 7px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-}
-
-.projectActions {
-  margin-top: 27px;
-}
-
-.projectActions a {
-  min-height: 44px;
-  padding: 11px 13px;
-  border-color: rgba(6, 47, 44, 0.25);
-  color: var(--foam);
-  background: var(--ink-soft);
-  box-shadow: none;
-}
-
-.projectActions a:nth-child(2) {
-  color: var(--ink);
-  background: transparent;
-}
-
 .aboutSection {
   position: relative;
   z-index: 5;
@@ -746,6 +317,10 @@
   width: min(calc(100% - 64px), 1380px);
   margin-inline: auto;
   padding: 142px 24px 126px;
+}
+
+.aboutSection > * {
+  min-width: 0;
 }
 
 .aboutLead h2 {
@@ -763,36 +338,6 @@
   font-size: 17px;
   line-height: 1.65;
   text-shadow: 0 2px 17px rgba(0, 24, 23, 0.5);
-}
-
-.profileLine {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  width: fit-content;
-  margin-top: 35px;
-  padding: 11px 15px 11px 11px;
-  border: 1px solid rgba(235, 255, 247, 0.34);
-  border-radius: 14px;
-  background: rgba(4, 29, 28, 0.55);
-  backdrop-filter: blur(12px);
-}
-
-.profileLine > img {
-  border: 1px solid rgba(255, 255, 255, 0.65);
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.profileLine strong {
-  font-size: 16px;
-}
-
-.profileLine small {
-  color: var(--muted);
-  font-family: var(--font-space-mono), "Space Mono", monospace;
-  font-size: 8px;
-  text-transform: uppercase;
 }
 
 .iniuriaCard {
@@ -826,9 +371,16 @@
   display: grid;
   grid-template-columns: 0.65fr 1.35fr;
   gap: 6vw;
+  align-items: center;
   margin-top: 74px;
-  padding-top: 60px;
-  border-top: 1px solid rgba(230, 255, 247, 0.34);
+  padding: 48px;
+  overflow: hidden;
+  border: 1px solid rgba(230, 255, 247, 0.28);
+  border-radius: 24px;
+  background: linear-gradient(125deg, rgba(2, 31, 30, 0.82), rgba(4, 54, 50, 0.58));
+  box-shadow: 0 28px 72px rgba(0, 21, 20, 0.28), inset 0 1px 0 rgba(241, 255, 250, 0.13);
+  -webkit-backdrop-filter: blur(20px) saturate(118%);
+  backdrop-filter: blur(20px) saturate(118%);
 }
 
 .moreWork h3 {
@@ -877,9 +429,9 @@
   position: relative;
   z-index: 5;
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 20px 40px;
-  align-items: end;
+  grid-template-columns: minmax(0, 1.12fr) minmax(380px, 0.88fr);
+  gap: 0 64px;
+  align-items: stretch;
   width: min(calc(100% - 64px), 1380px);
   margin: 0 auto 82px;
   padding: 64px;
@@ -892,35 +444,92 @@
 }
 
 .contactSection .eyebrow {
-  grid-column: 1 / -1;
   width: fit-content;
   border-color: rgba(8, 62, 57, 0.26);
   color: rgba(5, 50, 46, 0.68);
 }
 
-.contactSection h2 {
+.contactIntro {
+  align-self: center;
+  min-width: 0;
+}
+
+.contactIntro h2 {
+  margin-top: 30px;
   font-size: clamp(4rem, 7vw, 7rem);
   line-height: 0.88;
 }
 
-.contactSection p {
-  grid-column: 1;
+.contactIntro p {
   max-width: 700px;
-  margin: 0;
+  margin: 24px 0 0;
   color: rgba(5, 48, 44, 0.68);
   font-size: 15px;
   line-height: 1.55;
 }
 
-.contactSection > a {
-  grid-row: 2 / 4;
-  grid-column: 2;
-  align-self: center;
+.contactBooking {
+  display: grid;
+  align-content: center;
+  min-width: 0;
+  padding-left: 64px;
+  border-left: 1px solid rgba(8, 76, 70, 0.24);
+}
+
+.contactLabel,
+.contactFacts,
+.contactCta {
+  font-family: var(--font-space-mono), "Space Mono", monospace;
+  text-transform: uppercase;
+}
+
+.contactLabel {
+  color: rgba(5, 50, 46, 0.72);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+}
+
+.contactBooking h3 {
+  margin: 26px 0 0;
+  color: var(--ink);
+  font-size: clamp(2rem, 3.1vw, 3.1rem);
+  font-weight: 400;
+  line-height: 1.02;
+  letter-spacing: -0.045em;
+}
+
+.contactFacts {
+  display: grid;
+  margin-top: 28px;
+  border-top: 1px solid rgba(8, 76, 70, 0.2);
+  color: rgba(5, 50, 46, 0.72);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.contactFacts > span {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 54px;
+  border-bottom: 1px solid rgba(8, 76, 70, 0.2);
+}
+
+.contactFacts svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 1.55;
+}
+
+.contactCta {
+  width: 100%;
+  min-height: 58px;
+  margin-top: 26px;
   color: var(--foam);
   background: var(--ink-soft);
   box-shadow: none;
-  font-family: var(--font-space-mono), "Space Mono", monospace;
-  text-transform: uppercase;
 }
 
 .footer {
@@ -934,7 +543,7 @@
   margin-inline: auto;
   border-top: 1px solid rgba(231, 255, 247, 0.3);
   color: rgba(230, 253, 245, 0.64);
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.07em;
 }
@@ -951,56 +560,29 @@
   transition: color 150ms ease;
 }
 
-@keyframes glint {
-  0% { opacity: 0.36; transform: translate3d(-4px, -2px, 0) scale(1.01); }
-  55% { opacity: 0.7; }
-  100% { opacity: 0.46; transform: translate3d(7px, 5px, 0) scale(1.035); }
-}
-
 @keyframes waterDrift {
   0% { transform: translate3d(-1.5%, -1%, 0) rotate(-0.4deg); }
   100% { transform: translate3d(2%, 1.5%, 0) rotate(0.5deg); }
 }
 
-@keyframes statusPulse {
-  50% { box-shadow: 0 0 0 7px rgba(105, 207, 115, 0.05); }
-}
-
-@keyframes koiOne {
-  0% { transform: translate3d(-4vw, 4vh, 0) rotate(18deg); }
-  42% { transform: translate3d(8vw, 25vh, 0) rotate(42deg); }
-  75% { transform: translate3d(-1vw, 42vh, 0) rotate(-12deg); }
-  100% { transform: translate3d(-10vw, 58vh, 0) rotate(-34deg); }
-}
-
-@keyframes koiTwo {
-  0% { transform: translate3d(-5vw, 1vh, 0) rotate(-22deg); }
-  50% { transform: translate3d(12vw, -24vh, 0) rotate(17deg); }
-  100% { transform: translate3d(22vw, -45vh, 0) rotate(38deg); }
-}
-
 @media (hover: hover) and (pointer: fine) {
   .header nav a:hover {
-    color: white;
-    background: rgba(5, 48, 46, 0.84);
+    color: var(--ink);
+    background: rgba(8, 76, 70, 0.07);
+  }
+
+  .header nav a:hover::before {
+    transform: scaleX(1);
   }
 
   .heroActions a:hover,
-  .projectActions a:hover,
-  .contactSection > a:hover {
+  .contactCta:hover {
     transform: translateY(-2px);
   }
 
   .heroActions a:hover svg,
-  .projectActions a:hover svg,
-  .contactSection > a:hover svg {
+  .contactCta:hover svg {
     transform: translate3d(2px, -2px, 0);
-  }
-
-  .projectNav button:hover {
-    color: var(--foam);
-    background: rgba(217, 255, 243, 0.08);
-    transform: translateX(3px);
   }
 
   .moreGrid a:hover {
@@ -1018,47 +600,33 @@
 }
 
 @media (max-width: 1080px) {
-  .projectExplorer {
-    grid-template-columns: 220px minmax(0, 1fr);
-  }
-
-  .projectPanel {
-    grid-template-columns: minmax(0, 1.1fr) minmax(300px, 0.9fr);
-  }
-
-  .projectCopy {
-    padding: 34px 28px;
-  }
-
   .aboutSection {
     gap: 38px 5vw;
   }
 
   .contactSection {
     padding: 52px;
+    gap: 0 42px;
   }
+
+  .contactBooking { padding-left: 42px; }
 }
 
 @media (max-width: 820px) {
   .header {
     top: max(10px, calc(env(safe-area-inset-top) + 6px));
-    grid-template-columns: 1fr auto;
-    width: calc(100% - 20px - env(safe-area-inset-left) - env(safe-area-inset-right));
+    left: calc(env(safe-area-inset-left) + 10px);
+    grid-template-columns: 1fr;
+    width: fit-content;
+    max-width: calc(100% - 20px - env(safe-area-inset-left) - env(safe-area-inset-right));
     min-height: 58px;
+    padding-right: 18px;
     border-radius: 15px;
+    transform: none;
   }
 
   .header nav {
     display: none;
-  }
-
-  .availability {
-    font-size: 0;
-  }
-
-  .availability i {
-    width: 9px;
-    height: 9px;
   }
 
   .hero {
@@ -1091,26 +659,6 @@
     width: 100%;
   }
 
-  .koiOne {
-    top: 7%;
-    left: 72%;
-    width: 82px;
-    opacity: 0.48;
-  }
-
-  .koiTwo {
-    right: 70%;
-    bottom: 5%;
-    width: 68px;
-    opacity: 0.38;
-  }
-
-  .tabby {
-    right: -2%;
-    bottom: 3%;
-    width: 112px;
-  }
-
   .workSection {
     padding: 88px max(14px, env(safe-area-inset-right)) 96px max(14px, env(safe-area-inset-left));
   }
@@ -1129,109 +677,6 @@
     margin-top: 22px;
   }
 
-  .projectExplorer {
-    grid-template-columns: 1fr;
-    border-radius: 18px;
-  }
-
-  .projectNav {
-    grid-template: repeat(2, minmax(84px, auto)) / repeat(2, minmax(0, 1fr));
-    padding: 8px;
-    border-right: 0;
-    border-bottom: 1px solid rgba(230, 255, 246, 0.16);
-  }
-
-  .projectNav button,
-  .projectNav button:last-child {
-    min-height: 84px;
-    padding: 13px 11px;
-    border-right: 1px solid rgba(229, 255, 246, 0.12);
-    border-bottom: 1px solid rgba(229, 255, 246, 0.12);
-  }
-
-  .projectNav button:nth-child(2n) {
-    border-right: 0;
-  }
-
-  .projectNav button:nth-child(n + 3) {
-    border-bottom: 0;
-  }
-
-  .projectNav .activeProject {
-    box-shadow: none;
-  }
-
-  .projectMarker {
-    inset: 0 12px auto;
-    width: auto;
-    height: 3px;
-  }
-
-  .projectNav button:hover {
-    transform: none;
-  }
-
-  .projectPanel {
-    grid-template-columns: 1fr;
-    min-height: 0;
-  }
-
-  .projectMedia {
-    min-height: 290px;
-  }
-
-  .mediarakazoandroid {
-    grid-template-columns: 0.8fr 1.2fr;
-    gap: 22px;
-    padding: 28px;
-  }
-
-  .rakazoIdentity {
-    gap: 12px;
-  }
-
-  .rakazoIdentity > img {
-    width: 72px;
-    height: 72px;
-    border-radius: 18px;
-  }
-
-  .rakazoIdentity strong {
-    font-size: 2rem;
-  }
-
-  .rakazoIdentity small,
-  .rakazoSignals {
-    font-size: 6px;
-  }
-
-  .rakazoSignals span {
-    padding: 11px 2px;
-  }
-
-  .projectCopy {
-    min-height: 0;
-    padding: 34px 25px 38px;
-    border-top: 1px solid rgba(3, 49, 46, 0.14);
-    border-left: 0;
-  }
-
-  .projectCopy h3 {
-    font-size: clamp(3.2rem, 14vw, 4.8rem);
-  }
-
-  .projectSummary {
-    font-size: 16px;
-  }
-
-  .projectActions {
-    display: grid;
-  }
-
-  .projectActions a {
-    width: 100%;
-  }
-
   .aboutSection {
     grid-template-columns: 1fr;
     width: min(calc(100% - 28px - env(safe-area-inset-left) - env(safe-area-inset-right)), 620px);
@@ -1247,6 +692,8 @@
   }
 
   .iniuriaCard {
+    width: 100%;
+    min-width: 0;
     margin-top: 30px;
     padding: 36px 27px;
     border-radius: 17px;
@@ -1259,8 +706,11 @@
   .moreWork {
     grid-column: auto;
     grid-template-columns: 1fr;
-    margin-top: 45px;
-    padding-top: 54px;
+    width: 100%;
+    min-width: 0;
+    margin-top: 48px;
+    padding: 32px 24px;
+    border-radius: 18px;
   }
 
   .moreWork h3 {
@@ -1283,12 +733,16 @@
     font-size: clamp(3.8rem, 17vw, 5.8rem);
   }
 
-  .contactSection > a {
-    grid-row: auto;
-    grid-column: auto;
-    width: 100%;
-    margin-top: 8px;
+  .contactBooking {
+    margin-top: 34px;
+    padding: 30px 0 0;
+    border-top: 1px solid rgba(8, 76, 70, 0.24);
+    border-left: 0;
   }
+
+  .contactBooking h3 { margin-top: 20px; font-size: clamp(2rem, 10vw, 3rem); }
+  .contactFacts { margin-top: 22px; }
+  .contactCta { margin-top: 24px; }
 
   .footer {
     display: grid;
@@ -1308,21 +762,10 @@
     min-height: 830px;
   }
 
-  .brand > span {
-    gap: 0;
-  }
-
   .hero h1 {
     font-size: clamp(3.7rem, 16.5vw, 4.6rem);
   }
 
-  .projectNav strong {
-    font-size: 13px;
-  }
-
-  .projectMedia {
-    min-height: 250px;
-  }
 }
 
 @media (min-width: 600px) and (max-width: 820px) {
@@ -1332,22 +775,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .surfaceLight,
-  .surfaceLight::before,
-  .availability i,
-  .koi {
+  .availability i {
     animation: none;
-  }
-
-  .koiOne {
-    transform: translate3d(-2vw, 18vh, 0) rotate(24deg);
-  }
-
-  .koiTwo {
-    transform: translate3d(12vw, -24vh, 0) rotate(18deg);
   }
 
   .page :where(a, button) {
     transition: none;
   }
+
 }
