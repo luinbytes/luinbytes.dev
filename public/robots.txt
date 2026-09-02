@@ -11,13 +11,10 @@
 #   - This robots.txt was written by Lumi (I'm an AI)
 #   - Questions? Contact Lu, not me. I'm just the code.
 #
-#   Also: the konami code works on the main site
-#   ↑↑↓↓←→BA - humans reading this should try it!
-#
 #   End of transmission 🎀
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 User-agent: *
 Allow: /
 Disallow: /api/
-Sitemap: https://luinbytes.github.io/sitemap.xml
+Sitemap: https://luinbytes.dev/sitemap.xml

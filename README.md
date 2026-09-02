@@ -1,31 +1,20 @@
 # luinbytes.dev
 
-Lu's personal portfolio: software built from annoying gaps, shipped as useful tools.
+Lu's interactive personal portfolio, built around the living pixel pond version of Signal Desk.
 
-The homepage keeps the personal intro up front, then gives [HomeBot](https://github.com/luinbytes/HomeBot) its own feature section. The rest of the work stays in the build index and dedicated case pages.
+The homepage focuses on Lu's current work at [Orchid.ai](https://orchid.ai), selected public projects, and an interactive procedural pond rather than a catalogue of product pages.
 
-## What is featured
+The site intentionally has one public route: `/`. Retired concept and product URLs resolve to the pond-themed 404 instead of preserving stale copies of older portfolios.
 
-HomeBot is an open-source Rust desktop, server, and Android home for persistent AI teammates. It keeps authenticated chats, tools, routines, and repository workspaces server-owned while native desktop and Android clients share the same state.
-
-- [Source repository](https://github.com/luinbytes/HomeBot)
-- Current status: pre-v1 development
-
-The homepage's retained build index also covers:
-
-- [Linux Sonar](https://github.com/luinbytes/linux-sonar) — per-app PipeWire routing, ChatMix, and mic effects for Linux.
-- Meteor — local-first Android tasks and habits.
-- Sleepr — cycle-aware wake guidance and on-device sleep rhythm learning.
-- Game Systems — overlays, hooks, trainers, and runtime instrumentation.
-
-Dedicated case pages cover BallHammer, Risk of Anticheat, BrcTrainer, DaggerFall, and SuperHackerGolf.
+The portfolio features [HomeBot](https://github.com/luinbytes/HomeBot), [rakazo-android](https://github.com/luinbytes/rakazo-android), [Linux Sonar](https://github.com/luinbytes/linux-sonar), [bongocat](https://github.com/luinbytes/bongocat), and [cursor-barrier](https://github.com/luinbytes/cursor-barrier).
 
 ## Stack
 
 - Next.js 16 with static export for GitHub Pages
 - React 19 and TypeScript
 - Tailwind CSS v4
-- Framer Motion and GSAP for motion
+- Framer Motion for interface motion
+- PixiJS and Yuka for the procedural pond ecosystem
 - Lucide React for interface icons
 
 ## Development

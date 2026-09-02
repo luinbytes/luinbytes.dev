@@ -9,27 +9,25 @@
     "start": "next start",
     "lint": "eslint",
     "test:e2e:setup": "python3 -m pip install -r requirements-test.txt && python3 -m playwright install chromium",
-    "test:e2e": "python3 -m unittest discover -s tests/browser -p '*_test.py' -v"
+    "test:e2e": "python3 -m unittest discover -s tests/browser -p '*_test.py' -v",
+    "test:pond": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test tests/pond-world.test.mts"
   },
   "dependencies": {
-    "clsx": "^2.1.1",
-    "cmdk": "^1.1.1",
-    "date-fns": "^4.1.0",
     "framer-motion": "^12.23.26",
-    "gsap": "^3.15.0",
-    "isomorphic-dompurify": "^3.19.0",
     "lucide-react": "^0.560.0",
     "next": "^16.2.10",
+    "pixi-filters": "6.1.5",
+    "pixi.js": "8.20.0",
     "react": "19.2.1",
-    "react-activity-calendar": "^3.0.1",
     "react-dom": "19.2.1",
-    "tailwind-merge": "^3.4.0"
+    "yuka": "^0.7.8"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/yuka": "^0.7.4",
     "eslint": "^9",
     "eslint-config-next": "^16.2.10",
     "tailwindcss": "^4",

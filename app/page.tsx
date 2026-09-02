@@ -1,5 +1,5 @@
-import { AnomalyHome } from "@/components/sections/anomaly-home";
+import { SignalDesk } from "@/components/concepts/signal-desk/signal-desk";
 
 export default function Home() {
-  return <AnomalyHome />;
+  return <SignalDesk />;
 }
