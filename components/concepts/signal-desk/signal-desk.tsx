@@ -33,6 +33,10 @@ const HERO_REVEAL = {
   hidden: { opacity: 0, y: 22, clipPath: "inset(0 0 20% 0)" },
   visible: { opacity: 1, y: 0, clipPath: "inset(0 0 0% 0)", transitionEnd: { clipPath: "none" } },
 };
+const HERO_HEADING_REVEAL = {
+  hidden: { opacity: 0, y: 22 },
+  visible: { opacity: 1, y: 0 },
+};
 
 function ProjectArtwork({ project }: { project: PortfolioProject }) {
   const signals = PROJECT_SIGNALS[project.id as keyof typeof PROJECT_SIGNALS];
@@ -239,7 +243,7 @@ export function SignalDesk() {
             animate="visible"
           >
             <motion.span variants={HERO_REVEAL} transition={{ duration: reducedMotion ? 0 : 0.62, ease: EASE_OUT }} className={styles.eyebrow}><Sparkles aria-hidden="true" /> Lu / software engineer</motion.span>
-            <motion.h1 variants={HERO_REVEAL} transition={{ duration: reducedMotion ? 0 : 0.62, ease: EASE_OUT }} id="hero-title">I make stubborn software <em>behave.</em></motion.h1>
+            <motion.h1 variants={HERO_HEADING_REVEAL} transition={{ duration: reducedMotion ? 0 : 0.62, ease: EASE_OUT }} id="hero-title">I make stubborn software <em>behave.</em></motion.h1>
             <motion.p variants={HERO_REVEAL} transition={{ duration: reducedMotion ? 0 : 0.62, ease: EASE_OUT }}>I build Orchid.ai’s native Android app, agent systems, and Linux tools that do the useful part without making a fuss.</motion.p>
             <motion.div variants={HERO_REVEAL} transition={{ duration: reducedMotion ? 0 : 0.62, ease: EASE_OUT }} className={styles.heroActions}>
               <a href="#work">See the work <ArrowDown aria-hidden="true" /></a>

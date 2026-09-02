@@ -279,6 +279,12 @@ class PortfolioTests(BrowserTestCase):
                         "heading", name="I make stubborn software behave."
                     ).is_visible()
                 )
+                self.assertEqual(
+                    page.locator("#hero-title").evaluate(
+                        "element => getComputedStyle(element).clipPath"
+                    ),
+                    "none",
+                )
                 for project in ("Orchid.ai", "Rakazo", "linux-sonar", "HomeBot"):
                     self.assertTrue(
                         page.get_by_role("button", name=re.compile(project, re.I)).is_visible()
