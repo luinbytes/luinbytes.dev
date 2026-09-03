@@ -2,6 +2,7 @@ import * as YUKA from "yuka";
 
 import {
   createPondRandom,
+  pondAngleDelta,
   pondClamp,
   pondDistance,
   type FishFoodStateName,
@@ -132,10 +133,6 @@ const OPEN_ROUTES: readonly PondPoint[] = [
   { x: 1050, y: 310 },
 ];
 
-function angleDelta(from: number, to: number) {
-  return Math.atan2(Math.sin(to - from), Math.cos(to - from));
-}
-
 class SeededWanderBehavior extends YUKA.SteeringBehavior {
   private readonly random: () => number;
   private angle: number;
@@ -156,7 +153,7 @@ class SeededWanderBehavior extends YUKA.SteeringBehavior {
       this.targetAngle = Math.atan2(vehicle.velocity.z, vehicle.velocity.x) + (this.random() - 0.5) * 1.45;
       this.turnIn = 0.9 + this.random() * 2.4;
     }
-    this.angle += angleDelta(this.angle, this.targetAngle) * Math.min(1, delta * 1.7);
+    this.angle += pondAngleDelta(this.angle, this.targetAngle) * Math.min(1, delta * 1.7);
     return force.set(Math.cos(this.angle) * 2.2, 0, Math.sin(this.angle) * 2.2);
   }
 }

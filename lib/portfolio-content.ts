@@ -1,11 +1,16 @@
+export type PortfolioProjectId =
+  | "orchid-android"
+  | "rakazo-android"
+  | "linux-sonar"
+  | "homebot";
+
 export type PortfolioProject = {
-  id: string;
+  id: PortfolioProjectId;
   name: string;
   category: string;
   eyebrow?: string;
   summary: string;
   detail: string;
-  stack: string[];
   href: string;
   image?: string;
   imageAlt?: string;
@@ -23,7 +28,6 @@ export const portfolioProjects: PortfolioProject[] = [
     summary: "Building the native Android home for an assistant that gets things done.",
     detail:
       "I am building Orchid's native Android app, bringing its message-first assistant into a platform-native experience that feels at home on the device.",
-    stack: ["Kotlin", "Jetpack Compose", "Android"],
     href: "https://orchid.ai",
     image: "/images/portfolio/orchid-desk.jpg",
     imageAlt: "Orchid's public campaign artwork showing a softly lit working desk",
@@ -39,7 +43,6 @@ export const portfolioProjects: PortfolioProject[] = [
     summary: "A native Android client, plus the upstream work needed to make it honest.",
     detail:
       "I built the community Android client and landed upstream fixes for delegated replies, Android parity, scheduled group work, and long-chat performance.",
-    stack: ["Kotlin", "Compose", "TypeScript"],
     href: "https://github.com/luinbytes/rakazo-android",
     image: "/images/portfolio/rakazo-icon.png",
     imageAlt: "Rakazo Android application icon",
@@ -55,7 +58,6 @@ export const portfolioProjects: PortfolioProject[] = [
     summary: "Per-app audio routing, ChatMix, and microphone effects for Linux.",
     detail:
       "A GTK control surface over PipeWire and WirePlumber, with five virtual channels, hardware ChatMix, microphone effects, and systemd lifecycle management.",
-    stack: ["Python", "PipeWire", "GTK4"],
     href: "https://github.com/luinbytes/linux-sonar",
     proof: ["5 virtual channels", "USB-HID ChatMix", "PipeWire + WirePlumber"],
   },
@@ -67,7 +69,6 @@ export const portfolioProjects: PortfolioProject[] = [
     summary: "An open-source home for persistent AI teammates.",
     detail:
       "A Rust server, native desktop client, and Android app built around durable conversations, tools, routines, permissions, checkpoints, and user-owned state.",
-    stack: ["Rust", "Kotlin", "WebSocket"],
     href: "https://github.com/luinbytes/HomeBot",
     image: "/images/portfolio/homebot-chat.png",
     imageAlt: "HomeBot native desktop chat interface",
@@ -76,10 +77,6 @@ export const portfolioProjects: PortfolioProject[] = [
 ];
 
 export const portfolioIdentity = {
-  name: "Lu",
-  role: "Native Android engineer at Orchid.ai",
-  location: "United Kingdom",
-  email: "mailto:0x6c75@protonmail.com",
   calendar: "https://cal.com/luinbytes",
   github: "https://github.com/luinbytes",
   x: "https://x.com/x6c75",

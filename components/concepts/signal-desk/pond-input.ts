@@ -13,6 +13,16 @@ type PondInputOptions = {
 
 type TouchTap = { x: number; y: number; time: number };
 
+function isCompletedTap(touch: { moved: boolean; started: number }, now: number, overWater: boolean) {
+  return !touch.moved && now - touch.started <= 430 && overWater;
+}
+
+function isDoubleTap(previous: TouchTap | null, current: PondPoint, now: number) {
+  if (!previous) return false;
+  const elapsed = now - previous.time;
+  return elapsed >= 70 && elapsed <= 430 && Math.hypot(current.x - previous.x, current.y - previous.y) <= 34;
+}
+
 export function installPondInput(options: PondInputOptions) {
   const { interaction } = options;
   let previousPointer = { x: 0, y: 0, time: 0 };
@@ -94,16 +104,10 @@ export function installPondInput(options: PondInputOptions) {
     if (interaction.hasPointerCapture(event.pointerId)) interaction.releasePointerCapture(event.pointerId);
     const now = performance.now();
     const screen = point(event);
-    const tapDuration = now - touch.started;
-    if (touch.moved || tapDuration > 430 || !validWater(screen)) return;
+    if (!isCompletedTap(touch, now, validWater(screen))) return;
 
     const previous = lastTouchTap;
-    if (
-      previous &&
-      now - previous.time >= 70 &&
-      now - previous.time <= 430 &&
-      Math.hypot(screen.x - previous.x, screen.y - previous.y) <= 34
-    ) {
+    if (isDoubleTap(previous, screen, now)) {
       clearPendingTap();
       if (dropFood(screen) && event.cancelable) event.preventDefault();
       return;

@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Pixelify_Sans, Space_Grotesk, Space_Mono } from "next/font/google";
 import "./globals.css";
-import { siteUrl } from "@/site.config";
+import siteConfig from "@/site.config.json";
+
+const { siteUrl } = siteConfig;
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -83,19 +85,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="scroll-smooth">
-      {/*
-        ╔═══════════════════════════════════════════════════════════╗
-        ║                                                           ║
-        ║   If you're reading this, you're either:                  ║
-        ║   a) A curious developer (hi!)                            ║
-        ║   b) Lu debugging something I broke (sorry)               ║
-        ║   c) A recruiter snooping for code quality (it's good!)   ║
-        ║                                                           ║
-        ║   Welcome to the aquarium. Please do not tap the glass.      ║
-        ║   The fish are unionised and have excellent lawyers.         ║
-        ║                                                           ║
-        ╚═══════════════════════════════════════════════════════════╝
-      */}
       <body
         className={`${spaceGrotesk.variable} ${pixelify.variable} ${spaceMono.variable} font-body bg-nd-black text-nd-text-primary antialiased`}
       >
