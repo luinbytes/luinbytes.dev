@@ -424,14 +424,14 @@ class PortfolioTests(BrowserTestCase):
             time.sleep(0.7)
             route.continue_()
 
-        page.route("**/pixel-koi-atlas.png", delay_koi_atlas)
+        page.route("**/pixel-koi-atlas.webp", delay_koi_atlas)
         page.goto(f"{self.base_url}/?pond-seed=e2e-loading", wait_until="domcontentloaded")
         pond = page.locator("[data-renderer]")
         host = page.locator("[data-pixi-state]")
         self.assertEqual(pond.get_attribute("data-renderer"), "fallback")
         self.assertEqual(host.locator("canvas").count(), 0)
         self.assertIn(
-            "pixel-pond-world.png",
+            "pixel-pond-world.webp",
             pond.locator(":scope > div").first.evaluate(
                 "element => getComputedStyle(element).backgroundImage"
             ),

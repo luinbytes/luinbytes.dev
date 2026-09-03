@@ -285,6 +285,10 @@ export function pondSmoothstep(value: number) {
   return clamped * clamped * (3 - 2 * clamped);
 }
 
+export function pondAngleDelta(from: number, to: number) {
+  return Math.atan2(Math.sin(to - from), Math.cos(to - from));
+}
+
 export function pondHashSeed(value: string | number) {
   if (typeof value === "number") return value >>> 0;
   let hash = 2166136261;

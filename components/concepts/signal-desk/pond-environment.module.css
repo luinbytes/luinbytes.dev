@@ -24,7 +24,7 @@
 
 .pondImage {
   z-index: 0;
-  background-image: url("/images/portfolio/pixel-pond-world.png");
+  background-image: url("/images/portfolio/pixel-pond-world.webp");
   background-position: center;
   background-size: cover;
   transform: scale(1.015);

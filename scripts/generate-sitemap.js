@@ -2,21 +2,24 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
+const { siteUrl } = require('../site.config.json');
 
-// Keep in sync with site.config.ts
-const siteUrl = 'https://luinbytes.dev';
 const projectRoot = path.join(__dirname, '..');
 const outputPath = path.join(projectRoot, 'public/sitemap.xml');
 
 const staticPages = [''];
 
 function generateSitemap() {
-  const today = new Date().toISOString().split('T')[0];
+  const lastModified = execFileSync('git', ['log', '-1', '--format=%cs'], {
+    cwd: projectRoot,
+    encoding: 'utf8',
+  }).trim();
 
   const urlElements = staticPages.map(url => {
     return `  <url>
     <loc>${siteUrl}${url}</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>${lastModified}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>`;
@@ -28,7 +31,6 @@ ${urlElements}
 </urlset>`;
 }
 
-// Generate and write sitemap
 const sitemap = generateSitemap();
 fs.writeFileSync(outputPath, sitemap);
 

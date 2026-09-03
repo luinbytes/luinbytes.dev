@@ -5,6 +5,7 @@ import { installPondInput } from "./pond-input.ts";
 import {
   ROCK_ANCHORS,
   createPondRandom,
+  pondAngleDelta,
   type CatWorldState,
   type PondPoint,
 } from "./pond-model.ts";
@@ -45,10 +46,6 @@ const CAT_FRAME_CONTACT_Y = [
 const CAT_TURN_CONTACT_Y = 255 / 320;
 const CAT_TURN_DURATION = 420;
 
-function angleDelta(from: number, to: number) {
-  return Math.atan2(Math.sin(to - from), Math.cos(to - from));
-}
-
 export async function startPondRenderer(options: StartOptions) {
   const { pond, host, interaction, reduced } = options;
   if (options.signal.aborted) return () => {};
@@ -75,13 +72,13 @@ export async function startPondRenderer(options: StartOptions) {
   ]);
   if (options.signal.aborted) return () => {};
   const [pondTexture, waterTexture, koiAtlas, foregroundTexture, pondWaterTexture, catAtlas, catTurnAtlas] = await Promise.all([
-    PIXI.Assets.load("/images/portfolio/pixel-pond-world.png"),
+    PIXI.Assets.load("/images/portfolio/pixel-pond-world.webp"),
     PIXI.Assets.load("/images/portfolio/water-displacement.jpg"),
-    PIXI.Assets.load("/images/portfolio/pixel-koi-atlas.png"),
-    PIXI.Assets.load("/images/portfolio/pixel-pond-foreground.png"),
-    PIXI.Assets.load("/images/portfolio/pixel-pond-water-layer.png"),
-    PIXI.Assets.load("/images/portfolio/pixel-tabby-atlas.png"),
-    PIXI.Assets.load("/images/portfolio/pixel-tabby-turn-atlas.png"),
+    PIXI.Assets.load("/images/portfolio/pixel-koi-atlas.webp"),
+    PIXI.Assets.load("/images/portfolio/pixel-pond-foreground.webp"),
+    PIXI.Assets.load("/images/portfolio/pixel-pond-water-layer.webp"),
+    PIXI.Assets.load("/images/portfolio/pixel-tabby-atlas.webp"),
+    PIXI.Assets.load("/images/portfolio/pixel-tabby-turn-atlas.webp"),
   ]);
   if (options.signal.aborted) return () => {};
   for (const texture of [pondTexture, koiAtlas, foregroundTexture, pondWaterTexture, catAtlas, catTurnAtlas]) {
@@ -576,7 +573,7 @@ export async function startPondRenderer(options: StartOptions) {
       : 0;
     catScreen = contact;
     catContainer.position.set(Math.round(contact.x), Math.round(contact.y - lift));
-    catContainer.rotation += angleDelta(catContainer.rotation, next.cat.surfaceAngle + aimLean) * Math.min(1, delta * 12);
+    catContainer.rotation += pondAngleDelta(catContainer.rotation, next.cat.surfaceAngle + aimLean) * Math.min(1, delta * 12);
     catSprite.scale.set(catBaseScale.x * renderedFacing * next.cat.squashX, catBaseScale.y * next.cat.squashY);
     catTurnSprite.scale.set(catTurnScale.x * next.cat.squashX, catTurnScale.y * next.cat.squashY);
     catShadow.position.set(Math.round(contact.x), Math.round(contact.y));
@@ -713,7 +710,7 @@ export async function startPondRenderer(options: StartOptions) {
       if (!visual) continue;
       const point = worldToScreen(fly.position);
       visual.container.position.set(Math.round(point.x), Math.round(point.y));
-      visual.container.rotation += angleDelta(visual.container.rotation, fly.heading) * Math.min(1, delta * 5);
+      visual.container.rotation += pondAngleDelta(visual.container.rotation, fly.heading) * Math.min(1, delta * 5);
       visual.wings.scale.y = 0.45 + Math.abs(Math.sin(fly.wingPhase)) * (fly.reacting ? 1.1 : 0.75);
     }
 
@@ -723,7 +720,7 @@ export async function startPondRenderer(options: StartOptions) {
       const point = worldToScreen(fish.position);
       visual.container.position.set(Math.round(point.x), Math.round(point.y));
       visual.container.zIndex = point.y;
-      visual.container.rotation += angleDelta(visual.container.rotation, fish.heading + Math.PI / 2) * Math.min(1, delta * (fish.reacting ? 8 : fish.goal ? 4.5 : 2.2));
+      visual.container.rotation += pondAngleDelta(visual.container.rotation, fish.heading + Math.PI / 2) * Math.min(1, delta * (fish.reacting ? 8 : fish.goal ? 4.5 : 2.2));
       visual.sprite.animationSpeed = 0.032 + Math.min(0.026, Math.hypot(fish.velocity.x, fish.velocity.y) / 13 * 0.014);
       const depthAlpha = fish.state === "feeding" ? 0.98 : fish.state === "circling" ? 0.93 : fish.alpha;
       visual.container.alpha += (depthAlpha - visual.container.alpha) * Math.min(1, delta * 4);
