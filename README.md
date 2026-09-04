@@ -50,5 +50,4 @@ Pushes to `master` build and deploy the static export to [luinbytes.dev](https:/
 ## Credits
 
 - Built by Lu
-- Debugging by Lumi
 - Powered by caffeine and spite

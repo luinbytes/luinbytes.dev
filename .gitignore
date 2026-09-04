@@ -30,10 +30,6 @@ __pycache__/
 # misc
 .DS_Store
 *.pem
-/CONTRIBUTING.md
-/CONTEXT.md
-/AGENTS.md
-/.agent/CONTINUITY.md
 
 # debug
 npm-debug.log*
@@ -47,13 +43,8 @@ yarn-error.log*
 # vercel
 .vercel
 
-# claude
-CLAUDE.md
-.claude/
-
-# local brainstorming mockups
-.superpowers/
-
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/.next-e2e/

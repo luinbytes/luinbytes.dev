@@ -76,8 +76,6 @@ export const metadata: Metadata = {
   ],
 };
 
-import { ConsoleEgg } from "@/components/easter-eggs/console-egg";
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -88,7 +86,6 @@ export default function RootLayout({
       <body
         className={`${spaceGrotesk.variable} ${pixelify.variable} ${spaceMono.variable} font-body bg-nd-black text-nd-text-primary antialiased`}
       >
-        <ConsoleEgg />
         <a
           href="#main"
           className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[200] focus:border-2 focus:border-dark-brown focus:bg-paper focus:px-4 focus:py-3 focus:font-mono focus:text-[12px] focus:font-bold focus:uppercase focus:tracking-[0.08em] focus:text-dark-brown focus:outline focus:outline-3 focus:outline-paper focus:outline-offset-3"
