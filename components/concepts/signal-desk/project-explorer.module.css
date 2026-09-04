@@ -303,15 +303,56 @@
 .projectActions a:active { transform: scale(0.98); }
 .projectActions svg { width: 15px; height: 15px; transition: transform 150ms var(--ease-out); }
 
+.noScriptProjects {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid rgba(224, 255, 244, 0.35);
+  border-radius: 14px;
+  background: rgba(4, 31, 30, 0.72);
+}
+
+.noScriptProjects a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(229, 255, 246, 0.16);
+  border-radius: 9px;
+  color: var(--foam);
+  font-family: var(--font-space-mono), "Space Mono", monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+}
+
+.noScriptProjects svg { width: 15px; height: 15px; flex: 0 0 auto; }
+
 @media (hover: hover) and (pointer: fine) {
   .projectNav button:hover { color: var(--foam); background: rgba(217, 255, 243, 0.08); transform: translateX(3px); }
   .projectActions a:hover { transform: translateY(-2px); }
   .projectActions a:hover svg { transform: translate3d(2px, -2px, 0); }
 }
 
+@media (max-width: 1366px) {
+  .mediarakazoandroid { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); }
+}
+
+@media (min-width: 821px) and (max-width: 1320px) {
+  .projectStage { height: auto; }
+  .projectPanel { grid-template-columns: 1fr; height: auto; }
+  .projectVisual { min-height: clamp(340px, 32vw, 420px); }
+  .mediarakazoandroid { gap: clamp(20px, 3vw, 32px); padding: clamp(32px, 5vw, 56px) clamp(32px, 5vw, 56px) 68px; }
+  .projectCopy { border-top: 1px solid rgba(3, 49, 46, 0.14); border-left: 0; }
+}
+
 @media (max-width: 1080px) {
   .projectExplorer { grid-template-columns: 220px minmax(0, 1fr); }
-  .projectPanel { grid-template-columns: minmax(0, 1.1fr) minmax(300px, 0.9fr); }
   .projectCopy { padding: 34px 28px; }
 }
 
@@ -346,6 +387,8 @@
 }
 
 @media (max-width: 430px) {
+  .noScriptProjects { grid-template-columns: 1fr; }
+
   .projectNav button,
   .projectNav button:last-child {
     grid-template-columns: 20px minmax(0, 1fr);

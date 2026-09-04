@@ -104,7 +104,7 @@ export function installPondInput(options: PondInputOptions) {
     if (interaction.hasPointerCapture(event.pointerId)) interaction.releasePointerCapture(event.pointerId);
     const now = performance.now();
     const screen = point(event);
-    if (!isCompletedTap(touch, now, validWater(screen))) return;
+    if (!validWater(touch) || !isCompletedTap(touch, now, validWater(screen))) return;
 
     const previous = lastTouchTap;
     if (isDoubleTap(previous, screen, now)) {

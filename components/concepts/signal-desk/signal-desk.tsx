@@ -56,31 +56,25 @@ function motionVariants(reduced: boolean) {
 }
 
 function useReducedMotionPreference() {
-  const [reduced, setReduced] = useState(false);
+  const [preference, setPreference] = useState({ ready: false, reduced: true });
 
   useEffect(() => {
-    const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const sync = () => setReduced(preference.matches);
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setPreference({ ready: true, reduced: media.matches });
     sync();
-    preference.addEventListener("change", sync);
-    return () => preference.removeEventListener("change", sync);
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
   }, []);
 
-  return reduced;
+  return preference;
 }
 
 function useScrolledHeader() {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    let current = window.scrollY > 36;
-    const sync = () => {
-      const next = window.scrollY > 36;
-      if (next !== current) {
-        current = next;
-        setScrolled(next);
-      }
-    };
+    const sync = () => setScrolled(window.scrollY > 36);
+    sync();
     window.addEventListener("scroll", sync, { passive: true });
     return () => window.removeEventListener("scroll", sync);
   }, []);
@@ -88,11 +82,12 @@ function useScrolledHeader() {
   return scrolled;
 }
 
-function SiteFooter({ reduced }: { reduced: boolean }) {
+function SiteFooter({ reduced, entrance, ready }: { reduced: boolean; entrance: boolean; ready: boolean }) {
   return (
     <motion.footer
+      key={ready ? "footer-ready" : "footer-server"}
       className={styles.footer}
-      initial={{ opacity: 0 }}
+      initial={entrance ? { opacity: 0 } : false}
       whileInView={{ opacity: 1 }}
       viewport={{ once: true, amount: 0.7 }}
       transition={{ duration: motionValue(reduced, 0.42), ease: EASE_OUT }}
@@ -240,7 +235,7 @@ function ProjectPanel({ project, reduced }: { project: PortfolioProject; reduced
   );
 }
 
-function ProjectExplorer({ reduced }: { reduced: boolean }) {
+function ProjectExplorer({ reduced, entrance, ready }: { reduced: boolean; entrance: boolean; ready: boolean }) {
   const [activeId, setActiveId] = useState(portfolioProjects[0]?.id ?? "orchid-android");
   const activeIndex = Math.max(0, portfolioProjects.findIndex((project) => project.id === activeId));
   const activeProject = portfolioProjects[activeIndex] ?? portfolioProjects[0];
@@ -250,8 +245,9 @@ function ProjectExplorer({ reduced }: { reduced: boolean }) {
   return (
     <section className={styles.workSection} id="work" aria-labelledby="work-title">
       <motion.div
+        key={ready ? "work-intro-ready" : "work-intro-server"}
         className={styles.sectionIntro}
-        initial={{ opacity: 0, clipPath: "inset(0 0 18% 0)", y: 26 }}
+        initial={entrance ? { opacity: 0, clipPath: "inset(0 0 18% 0)", y: 26 } : false}
         whileInView={{ opacity: 1, clipPath: "inset(0 0 0% 0)", y: 0 }}
         viewport={{ once: true, amount: 0.35 }}
         transition={{ duration: reduced ? 0 : 0.62, ease: EASE_OUT }}
@@ -262,9 +258,10 @@ function ProjectExplorer({ reduced }: { reduced: boolean }) {
       </motion.div>
 
       <motion.div
+        key={ready ? "project-explorer-ready" : "project-explorer-server"}
         className={projectStyles.projectExplorer}
         layout="size"
-        initial={{ opacity: 0, scale: 0.985, y: 22 }}
+        initial={entrance ? { opacity: 0, scale: 0.985, y: 22 } : false}
         whileInView={{ opacity: 1, scale: 1, y: 0 }}
         viewport={{ once: true, amount: 0.12 }}
         transition={{ duration: reduced ? 0 : 0.56, ease: EASE_OUT, layout: { duration: reduced ? 0 : 0.42, ease: EASE_OUT } }}
@@ -272,27 +269,38 @@ function ProjectExplorer({ reduced }: { reduced: boolean }) {
         <ProjectNavigation activeId={activeProject.id} reduced={reduced} onSelect={setActiveId} />
         <ProjectPanel project={activeProject} reduced={reduced} />
       </motion.div>
+
+      <noscript>
+        <nav className={projectStyles.noScriptProjects} aria-label="Project links">
+          {portfolioProjects.map((project) => (
+            <a key={project.id} href={project.href} target="_blank" rel="noreferrer">
+              {project.name} <ArrowUpRight aria-hidden="true" />
+            </a>
+          ))}
+        </nav>
+      </noscript>
     </section>
   );
 }
 
 export function SignalDesk() {
-  const reducedMotion = useReducedMotionPreference();
+  const { ready, reduced } = useReducedMotionPreference();
   const scrolled = useScrolledHeader();
+  const entrance = ready && !reduced;
 
   return (
     <div className={styles.page} id="top">
-      <PondEnvironment reduced={reducedMotion} />
+      <PondEnvironment reduced={reduced} />
       <p className={styles.srOnly}>The decorative pond responds to pointer movement. Right-click open water, or double-tap it on touch devices, to feed the fish.</p>
 
       <motion.header
         className={`${styles.header} ${scrolled ? styles.headerScrolled : ""}`}
-        initial={{ opacity: 0 }}
+        initial={false}
         animate={{ opacity: 1 }}
-        transition={{ duration: motionValue(reducedMotion, 0.42), ease: EASE_OUT }}
+        transition={{ duration: motionValue(reduced, 0.42), ease: EASE_OUT }}
       >
         <a className={styles.brand} href="#top" aria-label="Lu, back to top">
-          <ProfileCard reducedMotion={reducedMotion} compact />
+          <ProfileCard reducedMotion={reduced} compact />
         </a>
         <nav aria-label="Portfolio navigation">
           <a href="#work">Work</a>
@@ -304,30 +312,32 @@ export function SignalDesk() {
       <div className={styles.content}>
         <section className={styles.hero} aria-labelledby="hero-title">
           <motion.div
+            key={ready ? "hero-ready" : "hero-server"}
             className={styles.heroCopy}
-            variants={motionVariants(reducedMotion)}
-            initial="hidden"
+            variants={motionVariants(reduced)}
+            initial={entrance ? "hidden" : false}
             animate="visible"
           >
-            <motion.span variants={HERO_REVEAL} transition={{ duration: motionValue(reducedMotion, 0.62), ease: EASE_OUT }} className={styles.eyebrow}><Sparkles aria-hidden="true" /> Lu / software engineer</motion.span>
-            <motion.h1 variants={HERO_HEADING_REVEAL} transition={{ duration: motionValue(reducedMotion, 0.62), ease: EASE_OUT }} id="hero-title">I make stubborn software <em>behave.</em></motion.h1>
-            <motion.p variants={HERO_REVEAL} transition={{ duration: motionValue(reducedMotion, 0.62), ease: EASE_OUT }}>I build Orchid.ai’s native Android app, agent systems, and Linux tools that do the useful part without making a fuss.</motion.p>
-            <motion.div variants={HERO_REVEAL} transition={{ duration: motionValue(reducedMotion, 0.62), ease: EASE_OUT }} className={styles.heroActions}>
+            <motion.span variants={HERO_REVEAL} transition={{ duration: motionValue(reduced, 0.62), ease: EASE_OUT }} className={styles.eyebrow}><Sparkles aria-hidden="true" /> Lu / software engineer</motion.span>
+            <motion.h1 variants={HERO_HEADING_REVEAL} transition={{ duration: motionValue(reduced, 0.62), ease: EASE_OUT }} id="hero-title">I make stubborn software <em>behave.</em></motion.h1>
+            <motion.p variants={HERO_REVEAL} transition={{ duration: motionValue(reduced, 0.62), ease: EASE_OUT }}>I build Orchid.ai’s native Android app, agent systems, and Linux tools that do the useful part without making a fuss.</motion.p>
+            <motion.div variants={HERO_REVEAL} transition={{ duration: motionValue(reduced, 0.62), ease: EASE_OUT }} className={styles.heroActions}>
               <a href="#work">See the work <ArrowDown aria-hidden="true" /></a>
               <a href={portfolioIdentity.calendar}>Start a conversation <Mail aria-hidden="true" /></a>
             </motion.div>
           </motion.div>
         </section>
 
-        <ProjectExplorer reduced={reducedMotion} />
+        <ProjectExplorer reduced={reduced} entrance={entrance} ready={ready} />
 
         <section className={styles.aboutSection} id="about" aria-labelledby="about-title">
           <motion.div
+            key={ready ? "about-lead-ready" : "about-lead-server"}
             className={styles.aboutLead}
-            initial={{ opacity: 0, clipPath: "inset(0 0 16% 0)", y: 28 }}
+            initial={entrance ? { opacity: 0, clipPath: "inset(0 0 16% 0)", y: 28 } : false}
             whileInView={{ opacity: 1, clipPath: "inset(0 0 0% 0)", y: 0 }}
             viewport={{ once: true, amount: 0.28 }}
-            transition={{ duration: motionValue(reducedMotion, 0.62), ease: EASE_OUT }}
+            transition={{ duration: motionValue(reduced, 0.62), ease: EASE_OUT }}
           >
             <span className={styles.eyebrow}>About / how I work</span>
             <h2 id="about-title">Practical systems. Properly finished.</h2>
@@ -335,11 +345,12 @@ export function SignalDesk() {
           </motion.div>
 
           <motion.article
+            key={ready ? "iniuria-ready" : "iniuria-server"}
             className={styles.iniuriaCard}
-            initial={{ opacity: 0, scale: 0.965, y: 24 }}
+            initial={entrance ? { opacity: 0, scale: 0.965, y: 24 } : false}
             whileInView={{ opacity: 1, scale: 1, y: 0 }}
             viewport={{ once: true, amount: 0.32 }}
-            transition={{ duration: motionValue(reducedMotion, 0.56), ease: EASE_OUT }}
+            transition={{ duration: motionValue(reduced, 0.56), ease: EASE_OUT }}
           >
             <span className={projectStyles.projectEyebrow}>Independent work / Iniuria.us</span>
             <h3>Automation with an actual job to do.</h3>
@@ -348,11 +359,12 @@ export function SignalDesk() {
           </motion.article>
 
           <motion.div
+            key={ready ? "more-work-ready" : "more-work-server"}
             className={styles.moreWork}
-            initial={{ opacity: 0, clipPath: "inset(0 0 0 8%)" }}
+            initial={entrance ? { opacity: 0, clipPath: "inset(0 0 0 8%)" } : false}
             whileInView={{ opacity: 1, clipPath: "inset(0 0 0 0%)" }}
             viewport={{ once: true, amount: 0.18 }}
-            transition={{ duration: motionValue(reducedMotion, 0.58), ease: EASE_OUT }}
+            transition={{ duration: motionValue(reduced, 0.58), ease: EASE_OUT }}
           >
             <div>
               <span className={styles.eyebrow}><Github aria-hidden="true" /> More open source</span>
@@ -370,13 +382,14 @@ export function SignalDesk() {
         </section>
 
         <motion.section
+          key={ready ? "contact-ready" : "contact-server"}
           className={styles.contactSection}
           id="contact"
           aria-labelledby="contact-title"
-          initial={{ opacity: 0, scale: 0.975, y: 24 }}
+          initial={entrance ? { opacity: 0, scale: 0.975, y: 24 } : false}
           whileInView={{ opacity: 1, scale: 1, y: 0 }}
           viewport={{ once: true, amount: 0.28 }}
-          transition={{ duration: motionValue(reducedMotion, 0.56), ease: EASE_OUT }}
+          transition={{ duration: motionValue(reduced, 0.56), ease: EASE_OUT }}
         >
           <div className={styles.contactIntro}>
             <span className={styles.eyebrow}>Open channel</span>
@@ -395,7 +408,7 @@ export function SignalDesk() {
         </motion.section>
       </div>
 
-      <SiteFooter reduced={reducedMotion} />
+      <SiteFooter reduced={reduced} entrance={entrance} ready={ready} />
     </div>
   );
 }
