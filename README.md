@@ -47,6 +47,32 @@ npm run test:e2e
 
 Pushes to `master` build and deploy the static export to [luinbytes.dev](https://luinbytes.dev/) through GitHub Pages.
 
+## Social preview
+
+Open Graph and Twitter large-image cards share the checked-in
+`public/share-cards/luinbytes-dev-pond.png` (1200 x 630). The versioned filename
+avoids reusing the old pink card's cached image URL. The old PNG remains available
+for existing links, but no current metadata references it.
+
+The editable layout is `scripts/share-card.html`. It preserves the original
+card's wording exactly and uses the homepage's pond artwork, koi/tabby sprites,
+colours, Space Grotesk and Space Mono. To regenerate after an intentional design
+edit, use the browser-test setup above, then:
+
+```bash
+npm run build
+python3 scripts/generate-share-card.py
+python3 -m unittest discover -s tests/browser -p '*_test.py' -k ShareCardStaticExportTests -v
+```
+
+The generator embeds fonts from the built site and local images, renders offline,
+and checks unchanged copy, loaded fonts and a 32px text-safe inset. Review the PNG
+at full size and at typical embed size before updating the expected SHA-256 in
+`ShareCardStaticExportTests` to the generator's printed value. The static-export
+test rebuilds and checks the metadata, asset dimensions/hash and absence of old
+image references in exported HTML. Normal Pages builds need no Python, browser,
+image service or runtime route: Next.js simply exports the checked-in PNG.
+
 ## Credits
 
 - Built by Lu

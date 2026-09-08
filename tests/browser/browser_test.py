@@ -145,12 +145,30 @@ class MetadataParser(HTMLParser):
 
 
 class ShareCardStaticExportTests(unittest.TestCase):
+    preserved_copy = (
+        "INDEPENDENT SOFTWARE / FIELD NOTES",
+        "ROOT / 01",
+        "luinbytes.dev",
+        "I get annoyed, then I build the missing thing.",
+        "ANDROID APPS · LINUX TOOLS · GAME SYSTEMS · AUTOMATION",
+        "6c75",
+        "LU / SOFTWARE ENGINEER",
+        "BUILD / VERIFY / SHIP",
+    )
     route_cards = {
-        "/": "/share-cards/luinbytes-dev-pink-print.png",
+        "/": "/share-cards/luinbytes-dev-pond.png",
     }
     expected_sha256 = {
-        "/share-cards/luinbytes-dev-pink-print.png": "06bab5ee959d737dae537d7440c39a516c23e17ce976391dcbc68a7fe3a93548",
+        "/share-cards/luinbytes-dev-pond.png": "60bddd42c8ecc43ac42f94933f15af50cb71c7039574b4d203be4fb2dc46b811",
     }
+
+    def test_editable_source_contains_the_original_card_copy(self) -> None:
+        source = re.sub(r"\s+", " ", Path("scripts/share-card.html").read_text())
+        for text in self.preserved_copy:
+            with self.subTest(text=text):
+                self.assertIn(text, source)
+        self.assertNotIn("I build tools that make stubborn systems behave.", source)
+        self.assertNotIn("ORCHID.AI // MOBILE DEVELOPER", source)
 
     def test_every_scoped_route_exports_a_production_large_image_card(self) -> None:
         build = subprocess.run(["npm", "run", "build"], check=False)
@@ -177,8 +195,15 @@ class ShareCardStaticExportTests(unittest.TestCase):
                 self.assertEqual(properties.get("og:image"), card_url)
                 self.assertEqual(properties.get("og:image:width"), "1200")
                 self.assertEqual(properties.get("og:image:height"), "630")
+                self.assertEqual(properties.get("og:image:type"), "image/png")
+                self.assertEqual(properties.get("og:image:alt"), "Lu | Software Engineer")
                 self.assertEqual(names.get("twitter:card"), "summary_large_image")
                 self.assertEqual(names.get("twitter:image"), card_url)
+                self.assertEqual(names.get("twitter:image:alt"), "Lu | Software Engineer")
+                for attribute, key in (("property", "og:image"), ("name", "twitter:image")):
+                    self.assertEqual(
+                        sum(item.get(attribute) == key for item in parser.metadata), 1
+                    )
 
                 png = (export_root / card_path.lstrip("/")).read_bytes()
                 self.assertEqual(png[:8], b"\x89PNG\r\n\x1a\n")
@@ -193,6 +218,11 @@ class ShareCardStaticExportTests(unittest.TestCase):
                     ),
                     (1200, 630),
                 )
+                self.assertLess(len(png), 5 * 1024 * 1024)
+
+        for exported_html in export_root.rglob("*.html"):
+            with self.subTest(no_stale_card=exported_html):
+                self.assertNotIn("luinbytes-dev-pink-print.png", exported_html.read_text())
 
         self.assertTrue((export_root / "404.html").is_file())
         for route in LEGACY_ROUTES:

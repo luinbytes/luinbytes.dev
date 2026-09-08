@@ -4,6 +4,7 @@ import "./globals.css";
 import siteConfig from "@/site.config.json";
 
 const { siteUrl } = siteConfig;
+const shareCardUrl = `${siteUrl}/share-cards/luinbytes-dev-pond.png`;
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -40,7 +41,7 @@ export const metadata: Metadata = {
     description:
       "I make stubborn software behave. Native Android, agent systems, Linux tools, and practical software.",
     creator: "@x6c75",
-    images: `${siteUrl}/share-cards/luinbytes-dev-pink-print.png`,
+    images: [{ url: shareCardUrl, alt: "Lu | Software Engineer" }],
   },
   openGraph: {
     type: "website",
@@ -52,9 +53,10 @@ export const metadata: Metadata = {
     siteName: "Luinbytes",
     images: [
       {
-        url: `${siteUrl}/share-cards/luinbytes-dev-pink-print.png`,
+        url: shareCardUrl,
         width: 1200,
         height: 630,
+        type: "image/png",
         alt: "Lu | Software Engineer",
       },
     ],
