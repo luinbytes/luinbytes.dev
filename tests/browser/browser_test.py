@@ -1,3 +1,4 @@
+import base64
 import hashlib
 import json
 import os
@@ -13,6 +14,7 @@ import urllib.request
 import xml.etree.ElementTree as ET
 from html.parser import HTMLParser
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError, sync_playwright
 
@@ -120,7 +122,7 @@ class ServerStartupTests(unittest.TestCase):
 
 
 class GeneratedArtifactTests(unittest.TestCase):
-    def test_sitemap_exposes_only_the_portfolio(self) -> None:
+    def test_sitemap_exposes_the_portfolio_and_pip(self) -> None:
         root = ET.parse("public/sitemap.xml").getroot()
         locations = [
             location.text
@@ -130,7 +132,7 @@ class GeneratedArtifactTests(unittest.TestCase):
             )
         ]
 
-        self.assertEqual(locations, ["https://luinbytes.dev"])
+        self.assertEqual(locations, ["https://luinbytes.dev", "https://luinbytes.dev/pip"])
 
 
 class MetadataParser(HTMLParser):
@@ -157,6 +159,7 @@ class ShareCardStaticExportTests(unittest.TestCase):
     )
     route_cards = {
         "/": "/share-cards/luinbytes-dev-pond.png",
+        "/pip": "/share-cards/luinbytes-dev-pond.png",
     }
     expected_sha256 = {
         "/share-cards/luinbytes-dev-pond.png": "60bddd42c8ecc43ac42f94933f15af50cb71c7039574b4d203be4fb2dc46b811",
@@ -177,8 +180,17 @@ class ShareCardStaticExportTests(unittest.TestCase):
 
         for route, card_path in self.route_cards.items():
             with self.subTest(route=route):
-                exported_html = export_root / (
-                    "index.html" if route == "/" else f"{route.lstrip('/')}.html"
+                candidates = (
+                    (export_root / "index.html",)
+                    if route == "/"
+                    else (
+                        export_root / route.lstrip("/") / "index.html",
+                        export_root / f"{route.lstrip('/')}.html",
+                    )
+                )
+                exported_html = next(
+                    (candidate for candidate in candidates if candidate.is_file()),
+                    candidates[0],
                 )
                 html = exported_html.read_text()
                 parser = MetadataParser()
@@ -200,6 +212,36 @@ class ShareCardStaticExportTests(unittest.TestCase):
                 self.assertEqual(names.get("twitter:card"), "summary_large_image")
                 self.assertEqual(names.get("twitter:image"), card_url)
                 self.assertEqual(names.get("twitter:image:alt"), "Lu | Software Engineer")
+
+                if route == "/pip":
+                    self.assertIn(
+                        "<title>Pip — Your Telegram mate | Lu</title>",
+                        html,
+                    )
+                    self.assertEqual(
+                        properties.get("og:title"),
+                        "Pip — Your Telegram mate",
+                    )
+                    self.assertEqual(
+                        properties.get("og:description"),
+                        "A little help, one message away. Pip is your warm, easygoing Telegram agent for questions, web searches, reminders, and everyday life. Built on Keiki.",
+                    )
+                    self.assertEqual(
+                        properties.get("og:url"),
+                        "https://luinbytes.dev/pip",
+                    )
+                    self.assertEqual(
+                        names.get("description"),
+                        "A little help, one message away. Pip is your warm, easygoing Telegram agent for questions, web searches, reminders, and everyday life. Built on Keiki.",
+                    )
+                    self.assertEqual(
+                        next(
+                            item.get("href")
+                            for item in parser.metadata
+                            if item.get("rel") == "canonical"
+                        ),
+                        "https://luinbytes.dev/pip",
+                    )
                 for attribute, key in (("property", "og:image"), ("name", "twitter:image")):
                     self.assertEqual(
                         sum(item.get(attribute) == key for item in parser.metadata), 1
@@ -291,6 +333,217 @@ class BrowserTestCase(unittest.TestCase):
         if cls.playwright is not None:
             cls.playwright.stop()
         cls.stop_server()
+
+
+class PipRouteTests(BrowserTestCase):
+    def test_pip_page_has_static_content_and_configured_telegram_contact(self) -> None:
+        browser = self.playwright.chromium.launch()
+        page = browser.new_page(viewport={"width": 1440, "height": 900})
+        response = page.goto(f"{self.base_url}/pip", wait_until="networkidle")
+        self.assertIsNotNone(response)
+        self.assertEqual(response.status, 200)
+        self.assertEqual(page.title(), "Pip — Your Telegram mate | Lu")
+        self.assertTrue(
+            page.get_by_role(
+                "heading", name=re.compile(r"A little help\.\s*A little banter\.")
+            ).is_visible()
+        )
+        self.assertTrue(page.get_by_role("figure", name="Example conversation").is_visible())
+        contact = page.locator("#text-pip")
+        self.assertTrue(contact.is_visible())
+        self.assertTrue(page.get_by_role("heading", name="Say hey to Pip.").is_visible())
+        self.assertTrue(contact.get_by_text("PIP’S TELEGRAM HANDLE", exact=True).is_visible())
+        self.assertTrue(contact.get_by_text("@PIPSOFTWARE_BOT", exact=True).is_visible())
+        self.assertTrue(contact.get_by_text("Opens Pip in Telegram.", exact=True).is_visible())
+        self.assertTrue(page.get_by_text("Built on Keiki", exact=False).is_visible())
+
+        self.assertGreaterEqual(
+            page.get_by_role("link", name="Message Pip", exact=True).count(), 2
+        )
+        message_link = contact.get_by_role("link", name="Message Pip", exact=True)
+        self.assertEqual(message_link.get_attribute("href"), "https://t.me/PIPSOFTWARE_BOT")
+        copy_button = contact.get_by_role("button", name="Copy handle", exact=True)
+        qr_button = contact.get_by_role("button", name="Show QR code", exact=True)
+        self.assertFalse(copy_button.is_disabled())
+        self.assertFalse(qr_button.is_disabled())
+        self.assertEqual(qr_button.get_attribute("aria-expanded"), "false")
+        page.screenshot(path=SCREENSHOTS / "pip-final-1440.png", full_page=True)
+
+        browser.close()
+
+    def test_telegram_contact_copy_reports_success_and_failure(self) -> None:
+        browser = self.playwright.chromium.launch()
+
+        success_context = browser.new_context(
+            viewport={"width": 390, "height": 844},
+            permissions=["clipboard-read", "clipboard-write"],
+        )
+        success_context.add_init_script(
+            """window.__pipClipboardCalls = [];
+            Object.defineProperty(navigator, 'clipboard', {
+                configurable: true,
+                value: { writeText: async value => window.__pipClipboardCalls.push(value) },
+            });"""
+        )
+        success_page = success_context.new_page()
+        success_page.goto(f"{self.base_url}/pip", wait_until="networkidle")
+        success_page.locator("#text-pip").get_by_role(
+            "button", name="Copy handle", exact=True
+        ).click()
+        success_page.get_by_text("Handle copied.", exact=True).wait_for(state="visible")
+        self.assertTrue(success_page.get_by_text("Handle copied.", exact=True).is_visible())
+        self.assertEqual(
+            success_page.evaluate("window.__pipClipboardCalls"),
+            ["@PIPSOFTWARE_BOT"],
+        )
+        success_context.close()
+
+        failure_context = browser.new_context(viewport={"width": 390, "height": 844})
+        failure_context.add_init_script(
+            """Object.defineProperty(navigator, 'clipboard', {
+                configurable: true,
+                value: { writeText: async () => { throw new Error('blocked') } },
+            });"""
+        )
+        failure_page = failure_context.new_page()
+        failure_page.goto(f"{self.base_url}/pip", wait_until="networkidle")
+        failure_page.locator("#text-pip").get_by_role(
+            "button", name="Copy handle", exact=True
+        ).click()
+        failure_page.get_by_text(
+            "Couldn’t copy. Select the handle above and copy it manually.", exact=True
+        ).wait_for(state="visible")
+        self.assertTrue(
+            failure_page.get_by_text(
+                "Couldn’t copy. Select the handle above and copy it manually.", exact=True
+            ).is_visible()
+        )
+        failure_context.close()
+        browser.close()
+
+    def test_telegram_qr_uses_the_same_target_and_reports_remote_failure(self) -> None:
+        browser = self.playwright.chromium.launch()
+        transparent_png = base64.b64decode(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+        )
+        qr_data = []
+        fulfilled_context = browser.new_context(viewport={"width": 390, "height": 844})
+        fulfilled_page = fulfilled_context.new_page()
+
+        def fulfill_qr(route) -> None:
+            qr_data.append(
+                parse_qs(urlparse(route.request.url).query).get("data", [None])[0]
+            )
+            route.fulfill(status=200, content_type="image/png", body=transparent_png)
+
+        fulfilled_page.route("https://api.qrserver.com/**", fulfill_qr)
+        fulfilled_page.goto(f"{self.base_url}/pip", wait_until="networkidle")
+        self.assertEqual(qr_data, [])
+        contact = fulfilled_page.locator("#text-pip")
+        qr_button = contact.get_by_role("button", name="Show QR code", exact=True)
+        qr_button.click()
+        image = contact.get_by_alt_text("Scan to message Pip on Telegram")
+        image.wait_for(state="visible")
+        self.assertEqual(
+            contact.locator("button[aria-controls='pip-qr']").get_attribute("aria-expanded"),
+            "true",
+        )
+        self.assertTrue(image.is_visible())
+        self.assertEqual(qr_data, ["https://t.me/PIPSOFTWARE_BOT"])
+        fulfilled_context.close()
+
+        aborted_context = browser.new_context(viewport={"width": 390, "height": 844})
+        aborted_page = aborted_context.new_page()
+        aborted_page.route("https://api.qrserver.com/**", lambda route: route.abort())
+        aborted_page.goto(f"{self.base_url}/pip", wait_until="networkidle")
+        aborted_page.locator("#text-pip").get_by_role(
+            "button", name="Show QR code", exact=True
+        ).click()
+        qr_failure = aborted_page.get_by_text(
+            re.compile(r"QR code.*couldn.t load", re.IGNORECASE)
+        )
+        qr_failure.wait_for(state="visible")
+        self.assertTrue(qr_failure.is_visible())
+        aborted_context.close()
+        browser.close()
+
+    def test_pip_page_fits_mobile_viewports_and_exposes_keyboard_skip_and_nav(self) -> None:
+        browser = self.playwright.chromium.launch()
+        page = browser.new_page(viewport={"width": 390, "height": 844})
+        page.goto(f"{self.base_url}/pip", wait_until="networkidle")
+
+        for width in (320, 390, 430):
+            with self.subTest(viewport=width):
+                page.set_viewport_size({"width": width, "height": 844})
+                page.wait_for_timeout(80)
+                self.assertLessEqual(
+                    page.evaluate("document.documentElement.scrollWidth"), width
+                )
+                self.assertLessEqual(
+                    page.evaluate("document.body.scrollWidth"), width
+                )
+                bounds = page.locator("#text-pip").bounding_box()
+                self.assertIsNotNone(bounds)
+                self.assertGreaterEqual(bounds["x"], -1)
+                self.assertLessEqual(bounds["x"] + bounds["width"], width + 1)
+                if width in (320, 390):
+                    page.screenshot(
+                        path=SCREENSHOTS / f"pip-final-{width}.png",
+                        full_page=True,
+                    )
+
+        page.set_viewport_size({"width": 390, "height": 844})
+        page.keyboard.press("Tab")
+        self.assertEqual(
+            page.evaluate(
+                """() => ({
+                    href: document.activeElement?.getAttribute('href'),
+                    text: document.activeElement?.textContent?.trim(),
+                })"""
+            ),
+            {"href": "#main", "text": "Skip to content"},
+        )
+        page.keyboard.press("Enter")
+        self.assertEqual(page.evaluate("document.activeElement?.id"), "main")
+
+        navigation = page.locator("header")
+        self.assertTrue(navigation.is_visible())
+        links = navigation.get_by_role("link")
+        self.assertGreaterEqual(links.count(), 2)
+        for index in range(links.count()):
+            with self.subTest(nav_link=index):
+                link = links.nth(index)
+                link.focus()
+                self.assertTrue(link.evaluate("element => document.activeElement === element"))
+
+        browser.close()
+
+    def test_pip_page_remains_readable_without_javascript(self) -> None:
+        browser = self.playwright.chromium.launch()
+        context = browser.new_context(
+            java_script_enabled=False,
+            viewport={"width": 390, "height": 844},
+        )
+        page = context.new_page()
+        response = page.goto(f"{self.base_url}/pip", wait_until="domcontentloaded")
+        self.assertIsNotNone(response)
+        self.assertEqual(response.status, 200)
+        self.assertTrue(
+            page.get_by_role(
+                "heading", name=re.compile(r"A little help\.\s*A little banter\.")
+            ).is_visible()
+        )
+        self.assertTrue(page.get_by_role("figure", name="Example conversation").is_visible())
+        self.assertTrue(page.get_by_role("heading", name="Say hey to Pip.").is_visible())
+        self.assertTrue(page.get_by_text("@PIPSOFTWARE_BOT", exact=True).is_visible())
+        self.assertTrue(page.get_by_text("Opens Pip in Telegram.", exact=True).is_visible())
+        self.assertGreaterEqual(
+            page.get_by_role("link", name="Message Pip", exact=True).count(), 2
+        )
+        self.assertTrue(page.locator("#text-pip").is_visible())
+        self.assertLessEqual(page.evaluate("document.documentElement.scrollWidth"), 390)
+        context.close()
+        browser.close()
 
 
 class PortfolioTests(BrowserTestCase):

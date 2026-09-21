@@ -4,7 +4,7 @@ Lu's interactive personal portfolio, built around the living pixel pond version 
 
 The homepage focuses on Lu's current work at [Orchid.ai](https://orchid.ai), selected public projects, and an interactive procedural pond rather than a catalogue of product pages.
 
-The site intentionally has one public route: `/`. Retired concept and product URLs resolve to the pond-themed 404 instead of preserving stale copies of older portfolios.
+The site has two public routes: `/`, the interactive portfolio, and `/pip`, a static product page for Pip, Lu's warm, easygoing Telegram agent. The Pip page is a deliberate standalone exception to the portfolio's homepage-first structure. Retired concept and product URLs resolve to the pond-themed 404 instead of preserving stale copies of older portfolios.
 
 The portfolio features [HomeBot](https://github.com/luinbytes/HomeBot), [rakazo-android](https://github.com/luinbytes/rakazo-android), [Linux Sonar](https://github.com/luinbytes/linux-sonar), [bongocat](https://github.com/luinbytes/bongocat), and [cursor-barrier](https://github.com/luinbytes/cursor-barrier).
 
@@ -31,6 +31,7 @@ Run the production checks:
 ```bash
 npm run lint
 npm run build
+npm run test:pip
 ```
 
 The browser suite uses Python Playwright. Install its dependency and Chromium once, then run:
@@ -42,6 +43,16 @@ npm run test:e2e
 ```
 
 `npm run test:e2e:setup` runs both setup commands. Set `E2E_PORT` to use a specific isolated test-server port; otherwise the harness allocates one.
+
+The `/pip` page is exported with the rest of the site and keeps its contact action
+available as static, readable HTML. Its Telegram target is defined in
+`PIP_TELEGRAM_HANDLE` in `lib/pip.ts`; rebuild after changing it so the
+configured Telegram handle and contact controls are rendered into the exported
+page. Message Pip and copy-handle fallback are available directly, while the
+remote QR image is requested from `api.qrserver.com` only after Show QR. The
+page's canonical URL is
+`https://luinbytes.dev/pip`, and it uses the same verified pond share card as the
+homepage.
 
 ## Deployment
 

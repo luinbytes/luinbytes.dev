@@ -10,6 +10,7 @@
     "lint": "eslint",
     "test:e2e:setup": "python3 -m pip install -r requirements-test.txt && python3 -m playwright install chromium",
     "test:e2e": "python3 -m unittest discover -s tests/browser -p '*_test.py' -v",
+    "test:pip": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test tests/pip-contact.test.mts",
     "test:pond": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test tests/pond-world.test.mts"
   },
   "dependencies": {
