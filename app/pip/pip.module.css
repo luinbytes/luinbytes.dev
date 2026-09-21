@@ -18,8 +18,6 @@
 .shell { width: min(1184px, 100%); margin-inline: auto; padding: 0 24px; }
 .header { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 28px 0; border-bottom: 1px solid #f5f2df20; }
 .wordmark { display: flex; align-items: center; gap: 10px; color: var(--sun); text-decoration: none; }
-.wordmark svg { width: 34px; height: 34px; }
-.wordmark span { font-family: var(--font-pixelify), sans-serif; font-size: 46px; line-height: 1; letter-spacing: -3px; }
 .homeLink, .label, .eyebrow, .chatTime, .chatSubline, .conversation figcaption, .interlude, .footer > a { font-family: var(--font-space-mono), monospace; font-size: 10px; line-height: 1.6; letter-spacing: .09em; }
 .homeLink { display: inline-flex; align-items: center; justify-content: flex-end; gap: 12px; max-width: 190px; min-height: 44px; text-align: right; color: var(--muted); text-decoration: none; }
 .homeLink svg { flex-shrink: 0; width: 16px; }

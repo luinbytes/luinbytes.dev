@@ -8,6 +8,10 @@ The site has two public routes: `/`, the interactive portfolio, and `/pip`, a st
 
 The portfolio features [HomeBot](https://github.com/luinbytes/HomeBot), [rakazo-android](https://github.com/luinbytes/rakazo-android), [Linux Sonar](https://github.com/luinbytes/linux-sonar), [bongocat](https://github.com/luinbytes/bongocat), and [cursor-barrier](https://github.com/luinbytes/cursor-barrier).
 
+Pip has a dedicated introduction below the homepage hero, a **Meet Pip** link to
+`/pip`, and a desktop navigation link. Both pages share the Pip speech-bubble
+logo and Pixelify wordmark from `components/pip/pip-logo.tsx`.
+
 ## Stack
 
 - Next.js 16 with static export for GitHub Pages

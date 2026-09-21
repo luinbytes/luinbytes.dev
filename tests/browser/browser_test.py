@@ -16,7 +16,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError, sync_playwright
+from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError, expect, sync_playwright
 
 
 SCREENSHOTS = Path("test-results")
@@ -554,6 +554,7 @@ class PortfolioTests(BrowserTestCase):
         ):
             with self.subTest(viewport=viewport_name):
                 browser = self.playwright.chromium.launch()
+                self.addCleanup(browser.close)
                 page = browser.new_page(viewport=viewport)
                 page.goto(self.base_url, wait_until="networkidle")
 
@@ -562,12 +563,7 @@ class PortfolioTests(BrowserTestCase):
                         "heading", name="I make stubborn software behave."
                     ).is_visible()
                 )
-                self.assertEqual(
-                    page.locator("#hero-title").evaluate(
-                        "element => getComputedStyle(element).clipPath"
-                    ),
-                    "none",
-                )
+                expect(page.locator("#hero-title")).to_have_css("clip-path", "none")
                 for project in ("Orchid.ai", "Rakazo", "linux-sonar", "HomeBot"):
                     self.assertTrue(
                         page.get_by_role("button", name=re.compile(project, re.I)).is_visible()
@@ -607,6 +603,163 @@ class PortfolioTests(BrowserTestCase):
                     full_page=True,
                 )
                 browser.close()
+
+    def test_homepage_pip_section_roundtrips_to_pip_and_back(self) -> None:
+        browser = self.playwright.chromium.launch()
+        try:
+            for viewport_name, viewport in (
+                ("desktop", {"width": 1440, "height": 900}),
+                ("mobile", {"width": 390, "height": 844}),
+            ):
+                with self.subTest(viewport=viewport_name):
+                    context = browser.new_context(viewport=viewport)
+                    page = context.new_page()
+                    console_issues = []
+                    page.on(
+                        "console",
+                        lambda message: record_console_issue(console_issues, message),
+                    )
+                    page.goto(
+                        f"{self.base_url}/?pond-seed=e2e-homepage-pip",
+                        wait_until="networkidle",
+                    )
+
+                    section = page.locator("#pip")
+                    self.assertTrue(section.is_visible())
+                    self.assertTrue(
+                        page.evaluate(
+                            """() => {
+                                const hero = document.querySelector('section[aria-labelledby="hero-title"]');
+                                const pip = document.querySelector('section#pip');
+                                const work = document.querySelector('section#work');
+                                return hero?.nextElementSibling === pip && pip?.nextElementSibling === work;
+                            }"""
+                        )
+                    )
+                    self.assertTrue(
+                        section.get_by_role(
+                            "heading",
+                            name=re.compile(r"A little help\.\s*A little banter\."),
+                        ).is_visible()
+                    )
+                    self.assertTrue(
+                        section.get_by_text(
+                            "Meet Pip, your AI mate on Telegram. Quick questions, useful reminders, and a little everyday company.",
+                            exact=True,
+                        ).is_visible()
+                    )
+
+                    meet_pip = section.get_by_role("link", name="Meet Pip", exact=True)
+                    self.assertTrue(meet_pip.is_visible())
+                    self.assertEqual(meet_pip.get_attribute("href"), "/pip")
+                    meet_bounds = meet_pip.bounding_box()
+                    self.assertIsNotNone(meet_bounds)
+                    self.assertGreaterEqual(meet_bounds["width"], 44)
+                    self.assertGreaterEqual(meet_bounds["height"], 44)
+
+                    section.scroll_into_view_if_needed()
+                    page.wait_for_timeout(120)
+                    page.screenshot(
+                        path=SCREENSHOTS / f"homepage-pip-{viewport['width']}.png",
+                        full_page=False,
+                    )
+
+                    if viewport["width"] > 820:
+                        navigation = page.locator("header nav a")
+                        self.assertEqual(navigation.count(), 4)
+                        for index in range(navigation.count()):
+                            link = navigation.nth(index)
+                            self.assertTrue(link.is_visible())
+                            bounds = link.bounding_box()
+                            self.assertIsNotNone(bounds)
+                            self.assertGreaterEqual(bounds["width"], 44)
+                            self.assertGreaterEqual(bounds["height"], 44)
+
+                    meet_pip.click()
+                    page.wait_for_url(re.compile(rf"^{re.escape(self.base_url)}/pip$"))
+                    self.assertEqual(urlparse(page.url).path, "/pip")
+
+                    home_link = page.locator("header a[href='/']")
+                    self.assertEqual(home_link.count(), 1)
+                    self.assertTrue(home_link.is_visible())
+                    home_bounds = home_link.bounding_box()
+                    self.assertIsNotNone(home_bounds)
+                    self.assertGreaterEqual(home_bounds["width"], 44)
+                    self.assertGreaterEqual(home_bounds["height"], 44)
+
+                    home_link.click()
+                    page.wait_for_url(re.compile(rf"^{re.escape(self.base_url)}/$"))
+                    self.assertEqual(urlparse(page.url).path, "/")
+                    self.assertEqual(console_issues, [])
+                    context.close()
+        finally:
+            browser.close()
+
+    def test_homepage_pip_link_works_without_javascript(self) -> None:
+        browser = self.playwright.chromium.launch()
+        context = browser.new_context(
+            java_script_enabled=False,
+            viewport={"width": 390, "height": 844},
+        )
+        page = context.new_page()
+        page.goto(f"{self.base_url}/", wait_until="domcontentloaded")
+
+        section = page.locator("#pip")
+        self.assertTrue(section.is_visible())
+        meet_pip = section.get_by_role("link", name="Meet Pip", exact=True)
+        self.assertTrue(meet_pip.is_visible())
+        self.assertEqual(meet_pip.get_attribute("href"), "/pip")
+        meet_pip.click()
+        page.wait_for_url(re.compile(rf"^{re.escape(self.base_url)}/pip$"))
+        self.assertEqual(urlparse(page.url).path, "/pip")
+        self.assertTrue(
+            page.get_by_role(
+                "heading", name=re.compile(r"A little help\.\s*A little banter\.")
+            ).is_visible()
+        )
+        self.assertLessEqual(page.evaluate("document.documentElement.scrollWidth"), 390)
+
+        context.close()
+        browser.close()
+
+    def test_homepage_pip_section_fits_320px_with_reduced_motion(self) -> None:
+        browser = self.playwright.chromium.launch()
+        context = browser.new_context(
+            reduced_motion="reduce",
+            viewport={"width": 320, "height": 568},
+        )
+        page = context.new_page()
+        page.goto(
+            f"{self.base_url}/?pond-seed=e2e-homepage-pip-reduced",
+            wait_until="networkidle",
+        )
+
+        section = page.locator("#pip")
+        self.assertTrue(section.is_visible())
+        self.assertTrue(
+            section.get_by_role(
+                "heading", name=re.compile(r"A little help\.\s*A little banter\.")
+            ).is_visible()
+        )
+        self.assertLessEqual(page.evaluate("document.documentElement.scrollWidth"), 320)
+        self.assertLessEqual(page.evaluate("document.body.scrollWidth"), 320)
+
+        section.scroll_into_view_if_needed()
+        page.wait_for_timeout(120)
+        section_bounds = section.bounding_box()
+        self.assertIsNotNone(section_bounds)
+        self.assertGreaterEqual(section_bounds["x"], -1)
+        self.assertLessEqual(section_bounds["x"] + section_bounds["width"], 321)
+        meet_pip = section.get_by_role("link", name="Meet Pip", exact=True)
+        self.assertTrue(meet_pip.is_visible())
+        meet_bounds = meet_pip.bounding_box()
+        self.assertIsNotNone(meet_bounds)
+        self.assertGreaterEqual(meet_bounds["width"], 44)
+        self.assertGreaterEqual(meet_bounds["height"], 44)
+        page.screenshot(path=SCREENSHOTS / "homepage-pip-320.png", full_page=False)
+
+        context.close()
+        browser.close()
 
     def test_homepage_preserves_layout_and_world_state_across_viewport_matrix(self) -> None:
         viewports = (
@@ -790,7 +943,14 @@ class PortfolioTests(BrowserTestCase):
         self.assertEqual(clipping_ancestors, [])
 
         self.assertEqual(page.get_by_text("Building at Orchid.ai", exact=True).count(), 0)
-        self.assertEqual(page.locator("header nav a").count(), 3)
+        navigation = page.locator("header nav a")
+        self.assertEqual(navigation.count(), 4)
+        self.assertEqual(
+            navigation.evaluate_all(
+                "elements => elements.map(element => [element.textContent.trim(), element.getAttribute('href')])"
+            ),
+            [["Work", "#work"], ["Pip", "/pip"], ["About", "#about"], ["Contact", "#contact"]],
+        )
         self.assertEqual(page.locator("header [class*='profileTilt']").count(), 1)
         self.assertEqual(page.locator("#about [class*='profileTilt']").count(), 0)
         self.assertTrue(
