@@ -36,6 +36,13 @@
 .copy p { max-width: 44ch; margin: 18px 0 0; color: var(--muted); font-size: 15px; line-height: 1.6; }
 .actions { display: grid; align-content: center; gap: 12px; }
 .actions > span { font-family: var(--font-space-mono), monospace; text-align: center; font-size: 8px; line-height: 1.7; color: var(--muted); }
+.actionContent {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  /* The lettering carries more visual weight than the thin trailing arrow. */
+  transform: translateX(2px);
+}
 
 @media (min-width: 821px) {
   .section { padding: 0 32px 64px; }

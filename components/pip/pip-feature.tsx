@@ -17,7 +17,9 @@ export function PipFeature() {
           <p>Meet Pip, your AI mate on Telegram. Quick questions, useful reminders, and a little everyday company.</p>
         </div>
         <div className={styles.actions}>
-          <Link href="/pip" className={deskStyles.primaryAction}>Meet Pip <ArrowUpRight aria-hidden="true" /></Link>
+          <Link href="/pip" className={deskStyles.primaryAction}>
+            <span className={styles.actionContent}>Meet Pip <ArrowUpRight aria-hidden="true" /></span>
+          </Link>
           <span>Built on Keiki. Made by Lu.</span>
         </div>
       </div>
