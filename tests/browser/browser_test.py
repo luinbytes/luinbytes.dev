@@ -1587,3 +1587,22 @@ class PortfolioTests(BrowserTestCase):
             page.evaluate("document.documentElement.scrollWidth"), 1280
         )
         browser.close()
+
+
+class PipShareCardExpectationTests:
+    route_cards = {
+        "/": "/share-cards/luinbytes-dev-pond.png",
+        "/pip": "/share-cards/luinbytes-dev-pip.png",
+    }
+    route_alts = {
+        "/": "Lu | Software Engineer",
+        "/pip": "Pip — Your Telegram mate",
+    }
+    expected_sha256 = {
+        "/share-cards/luinbytes-dev-pip.png": "e8ad43690346c7b2ff683e1da1676e82822ec0cc2498365dc095188b56e72789",
+    }
+
+    def test_pip_share_card_metadata_contract(self) -> None:
+        assert self.route_cards["/pip"] == "/share-cards/luinbytes-dev-pip.png"
+        assert self.route_alts["/pip"] == "Pip — Your Telegram mate"
+        assert self.expected_sha256[self.route_cards["/pip"]].startswith("e8ad4369")
