@@ -47,9 +47,11 @@
 @media (min-width: 821px) {
   .section { padding: 0 32px 64px; }
   .card { grid-template-columns: minmax(160px, .65fr) minmax(0, 1.35fr) auto; align-items: center; gap: 32px; width: min(100%, 1380px); padding: 40px; }
-  /* Align the primary shapes to the headline, independent of their captions. */
-  .identity, .actions { align-self: start; }
-  .actions { padding-top: calc((clamp(34px, 5vw, 48px) * 1.96 - 48px) / 2 - 2px); }
+  .identity { align-self: start; }
+  /* Equal outer rows center the button itself, with its caption below. */
+  .actions { align-self: stretch; grid-template-rows: 1fr auto 1fr; }
+  .actions::before { content: ""; }
+  .actions > span { align-self: start; }
   .copy p { font-size: 14px; }
 }
 
