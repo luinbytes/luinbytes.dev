@@ -8,7 +8,7 @@ const { siteUrl } = require('../site.config.json');
 const projectRoot = path.join(__dirname, '..');
 const outputPath = path.join(projectRoot, 'public/sitemap.xml');
 
-const staticPages = [''];
+const staticPages = ['', '/pip'];
 
 function generateSitemap() {
   const lastModified = execFileSync('git', ['log', '-1', '--format=%cs'], {
