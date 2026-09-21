@@ -11,11 +11,11 @@ const title = "Pip — Your Telegram mate";
 const description = "A little help, one message away. Pip is your warm, easygoing Telegram agent for questions, web searches, reminders, and everyday life. Built on Keiki.";
 const pageUrl = `${siteConfig.siteUrl}/pip`;
 const shareCard = {
-  url: `${siteConfig.siteUrl}/share-cards/luinbytes-dev-pond.png`,
+  url: `${siteConfig.siteUrl}/share-cards/luinbytes-dev-pip.png`,
   width: 1200,
   height: 630,
   type: "image/png",
-  alt: "Lu | Software Engineer",
+  alt: "Pip — Your Telegram mate",
 };
 
 export const metadata: Metadata = {
@@ -80,7 +80,7 @@ export default function PipPage() {
             <div className={styles.chatHeader}>
               <PipFace className={styles.avatar} />
               <div><span className={styles.chatName}>Pip</span><span className={styles.chatSubline}>a little help, one text away</span></div>
-              <span className={styles.chatSpark} aria-hidden="true">✳</span>
+              <span className={styles.chatSpark} aria-hidden="true">✧</span>
             </div>
             <div className={styles.messages}>
               <span className={styles.chatTime}>A PERFECTLY ORDINARY EVENING</span>
@@ -94,7 +94,7 @@ export default function PipPage() {
           </figure>
         </section>
 
-        <div className={styles.interlude}><span>CURIOUS BY NATURE</span><span aria-hidden="true">✳</span><span>GOOD COMPANY BY DESIGN</span></div>
+        <div className={styles.interlude}><span>CURIOUS BY NATURE</span><span aria-hidden="true">✧</span><span>GOOD COMPANY BY DESIGN</span></div>
 
         <section id="everyday" className={styles.everyday} aria-labelledby="everyday-title">
           <div className={styles.sectionHeading}>
