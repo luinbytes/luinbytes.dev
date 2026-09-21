@@ -159,10 +159,15 @@ class ShareCardStaticExportTests(unittest.TestCase):
     )
     route_cards = {
         "/": "/share-cards/luinbytes-dev-pond.png",
-        "/pip": "/share-cards/luinbytes-dev-pond.png",
+        "/pip": "/share-cards/luinbytes-dev-pip.png",
     }
     expected_sha256 = {
         "/share-cards/luinbytes-dev-pond.png": "60bddd42c8ecc43ac42f94933f15af50cb71c7039574b4d203be4fb2dc46b811",
+        "/share-cards/luinbytes-dev-pip.png": "e8ad43690346c7b2ff683e1da1676e82822ec0cc2498365dc095188b56e72789",
+    }
+    route_alts = {
+        "/": "Lu | Software Engineer",
+        "/pip": "Pip — Your Telegram mate",
     }
 
     def test_editable_source_contains_the_original_card_copy(self) -> None:
@@ -208,10 +213,10 @@ class ShareCardStaticExportTests(unittest.TestCase):
                 self.assertEqual(properties.get("og:image:width"), "1200")
                 self.assertEqual(properties.get("og:image:height"), "630")
                 self.assertEqual(properties.get("og:image:type"), "image/png")
-                self.assertEqual(properties.get("og:image:alt"), "Lu | Software Engineer")
+                self.assertEqual(properties.get("og:image:alt"), self.route_alts[route])
                 self.assertEqual(names.get("twitter:card"), "summary_large_image")
                 self.assertEqual(names.get("twitter:image"), card_url)
-                self.assertEqual(names.get("twitter:image:alt"), "Lu | Software Engineer")
+                self.assertEqual(names.get("twitter:image:alt"), self.route_alts[route])
 
                 if route == "/pip":
                     self.assertIn(
@@ -1587,22 +1592,3 @@ class PortfolioTests(BrowserTestCase):
             page.evaluate("document.documentElement.scrollWidth"), 1280
         )
         browser.close()
-
-
-class PipShareCardExpectationTests:
-    route_cards = {
-        "/": "/share-cards/luinbytes-dev-pond.png",
-        "/pip": "/share-cards/luinbytes-dev-pip.png",
-    }
-    route_alts = {
-        "/": "Lu | Software Engineer",
-        "/pip": "Pip — Your Telegram mate",
-    }
-    expected_sha256 = {
-        "/share-cards/luinbytes-dev-pip.png": "e8ad43690346c7b2ff683e1da1676e82822ec0cc2498365dc095188b56e72789",
-    }
-
-    def test_pip_share_card_metadata_contract(self) -> None:
-        assert self.route_cards["/pip"] == "/share-cards/luinbytes-dev-pip.png"
-        assert self.route_alts["/pip"] == "Pip — Your Telegram mate"
-        assert self.expected_sha256[self.route_cards["/pip"]].startswith("e8ad4369")
