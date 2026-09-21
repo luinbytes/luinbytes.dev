@@ -85,6 +85,7 @@
 .header nav a,
 .heroActions a,
 .moreGrid a,
+.primaryAction,
 .contactCta,
 .footer a {
   color: inherit;
@@ -99,6 +100,7 @@
 
 .eyebrow,
 .heroActions,
+.primaryAction,
 .footer {
   font-family: var(--font-space-mono), "Space Mono", monospace;
   text-transform: uppercase;
@@ -139,6 +141,9 @@
   transform-origin: center;
   transition: transform 150ms ease;
 }
+
+.header nav .pipNavLink { gap: 8px; }
+.pipNavLink svg { width: 20px; height: 20px; color: #f6be91; }
 
 .footer a {
   display: inline-flex;
@@ -227,6 +232,7 @@
 }
 
 .heroActions a,
+.primaryAction,
 .contactCta {
   display: inline-flex;
   align-items: center;
@@ -252,11 +258,13 @@
 }
 
 .heroActions a:active,
+.primaryAction:active,
 .contactCta:active {
   transform: scale(0.98);
 }
 
 .heroActions svg,
+.primaryAction svg,
 .contactCta svg {
   width: 15px;
   height: 15px;
@@ -576,11 +584,13 @@
   }
 
   .heroActions a:hover,
+  .primaryAction:hover,
   .contactCta:hover {
     transform: translateY(-2px);
   }
 
   .heroActions a:hover svg,
+  .primaryAction:hover svg,
   .contactCta:hover svg {
     transform: translate3d(2px, -2px, 0);
   }

@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowDown, ArrowUpRight, AudioLines, Bot, Github, Globe2, Mail, MapPin, Sparkles } from "lucide-react";
@@ -13,6 +14,8 @@ import {
 } from "@/lib/portfolio-content";
 import { PondEnvironment } from "./pond-environment";
 import { ProfileCard } from "./profile-card";
+import { PipFace } from "@/components/pip/pip-logo";
+import { PipFeature } from "@/components/pip/pip-feature";
 import projectStyles from "./project-explorer.module.css";
 import styles from "./signal-desk.module.css";
 
@@ -304,6 +307,7 @@ export function SignalDesk() {
         </a>
         <nav aria-label="Portfolio navigation">
           <a href="#work">Work</a>
+          <Link href="/pip" className={styles.pipNavLink}><PipFace /> Pip</Link>
           <a href="#about">About</a>
           <a href="#contact">Contact</a>
         </nav>
@@ -327,6 +331,8 @@ export function SignalDesk() {
             </motion.div>
           </motion.div>
         </section>
+
+        <PipFeature />
 
         <ProjectExplorer reduced={reduced} entrance={entrance} ready={ready} />
 

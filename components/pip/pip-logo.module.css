@@ -1,0 +1,21 @@
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pip-logo-gap, 10px);
+  color: #f6be91;
+}
+
+.logo svg {
+  flex-shrink: 0;
+  width: var(--pip-face-size, 34px);
+  height: var(--pip-face-size, 34px);
+}
+
+.logo > span {
+  font-family: var(--font-pixelify), sans-serif;
+  font-size: var(--pip-wordmark-size, 46px);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -3px;
+  transform: translateY(var(--pip-wordmark-offset, 0));
+}
