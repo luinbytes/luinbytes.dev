@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Pip social preview source</title>
+  <style>
+    /* FONT_FACES */
+    * { box-sizing: border-box; }
+    html, body { width: 1200px; height: 630px; margin: 0; overflow: hidden; }
+    body {
+      position: relative;
+      color: #f5f2df;
+      background:
+        radial-gradient(circle at 88% 14%, rgba(190, 217, 190, .22), transparent 24%),
+        radial-gradient(circle at 8% 90%, rgba(246, 190, 145, .12), transparent 30%),
+        #10201c;
+      font-family: "Space Grotesk", sans-serif;
+    }
+    body::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      opacity: .16;
+      background-image:
+        linear-gradient(rgba(190, 217, 190, .18) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(190, 217, 190, .18) 1px, transparent 1px);
+      background-size: 42px 42px;
+      mask-image: linear-gradient(90deg, black, transparent 80%);
+    }
+    .ring {
+      position: absolute;
+      width: 560px;
+      height: 560px;
+      right: -138px;
+      bottom: -282px;
+      border: 1px solid rgba(246, 190, 145, .34);
+      border-radius: 50%;
+      box-shadow: 0 0 0 28px rgba(246, 190, 145, .045), 0 0 0 56px rgba(246, 190, 145, .035);
+    }
+    .brandbar {
+      position: absolute;
+      top: 38px;
+      left: 64px;
+      right: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 18px;
+      border-bottom: 1px solid rgba(245, 242, 223, .16);
+    }
+    .brand { display: flex; align-items: center; gap: 13px; color: #f6be91; }
+    .brand-face { width: 42px; height: 42px; }
+    .brand-word {
+      font-family: "Pixelify Sans", sans-serif;
+      font-size: 40px;
+      line-height: .8;
+      letter-spacing: -3px;
+    }
+    .route, .eyebrow, .tags, .footer {
+      font-family: "Space Mono", monospace;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    .route { color: #b5bfb0; font-size: 12px; }
+    .hero { position: absolute; top: 143px; left: 72px; width: 515px; }
+    .eyebrow { display: flex; align-items: center; gap: 10px; margin: 0 0 25px; color: #bed9be; font-size: 12px; }
+    .eyebrow::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #f6be91; }
+    h1 {
+      margin: 0;
+      color: #f6be91;
+      font-family: "Pixelify Sans", sans-serif;
+      font-size: 124px;
+      font-weight: 700;
+      line-height: .78;
+      letter-spacing: -7px;
+    }
+    .strap { margin: 25px 0 0; color: #f5f2df; font-size: 34px; font-weight: 400; letter-spacing: -.055em; }
+    .lede { max-width: 405px; margin: 18px 0 0; color: #b5bfb0; font-size: 19px; line-height: 1.45; }
+    .tags { display: flex; gap: 8px; margin-top: 31px; color: #10201c; font-size: 10px; font-weight: 700; }
+    .tags span { padding: 9px 11px; border-radius: 7px; background: #bed9be; }
+    .tags span:nth-child(2) { background: #f6be91; }
+    .tags span:nth-child(3) { background: rgba(245, 242, 223, .85); }
+    .chat-card {
+      position: absolute;
+      top: 116px;
+      right: 72px;
+      width: 448px;
+      height: 424px;
+      overflow: hidden;
+      border: 1px solid rgba(228, 234, 212, .3);
+      border-radius: 26px;
+      background: rgba(41, 58, 47, .9);
+      box-shadow: 0 28px 70px rgba(4, 17, 13, .34), inset 0 1px rgba(255, 255, 255, .08);
+      transform: rotate(1.6deg);
+    }
+    .chat-head { display: flex; align-items: center; gap: 13px; padding: 19px 23px; border-bottom: 1px solid rgba(245, 242, 223, .12); }
+    .chat-face { width: 42px; height: 42px; color: #f6be91; flex: none; }
+    .chat-name { display: block; font-size: 20px; font-weight: 500; }
+    .chat-subline { display: block; color: #b5bfb0; font-family: "Space Mono", monospace; font-size: 8px; letter-spacing: .01em; }
+    .spark { margin-left: auto; color: #f6be91; font-size: 34px; line-height: 1; }
+    .messages { display: flex; flex-direction: column; gap: 10px; padding: 19px 20px 17px; }
+    .time { align-self: center; margin: 0 0 6px; color: #b5bfb0; font-family: "Space Mono", monospace; font-size: 8px; letter-spacing: .06em; }
+    .message { max-width: 86%; margin: 0; padding: 11px 14px; font-size: 14px; line-height: 1.38; }
+    .sent { align-self: flex-end; color: #f1f7ff; background: #356897; border-radius: 16px 16px 4px 16px; }
+    .received { background: rgba(232, 237, 212, .08); border: 1px solid rgba(232, 237, 212, .12); border-radius: 16px 16px 16px 4px; }
+    .chat-note { display: inline-flex; align-items: center; gap: 7px; margin: 2px 0 0 4px; color: #bed9be; font-size: 10px; }
+    .chat-note::before { content: "✳"; color: #f6be91; font-size: 14px; }
+    .card-caption { position: absolute; right: 23px; bottom: 18px; color: #b5bfb0; font-family: "Space Mono", monospace; font-size: 8px; letter-spacing: .07em; }
+    .footer { position: absolute; right: 72px; bottom: 38px; color: rgba(245, 242, 223, .62); font-size: 11px; }
+    .footer strong { color: #f6be91; font-weight: 400; }
+  </style>
+</head>
+<body>
+  <div class="ring" aria-hidden="true"></div>
+  <header class="brandbar">
+    <div class="brand" aria-label="Pip">
+      <svg class="brand-face" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+        <path d="M13 7h38a9 9 0 0 1 9 9v28a9 9 0 0 1-9 9H27L13 61V53a9 9 0 0 1-9-9V16a9 9 0 0 1 9-9Z" fill="currentColor" />
+        <path d="M23 24v7m18-7v7m-17 8c4 5 12 5 16 0" stroke="#17241e" stroke-width="4" stroke-linecap="round" />
+      </svg>
+      <span class="brand-word">pip</span>
+    </div>
+    <span class="route" data-copy>PIP / TELEGRAM AGENT</span>
+  </header>
+
+  <main class="hero">
+    <p class="eyebrow" data-copy>A LITTLE SOMETHING BY LU</p>
+    <h1 data-copy>pip.</h1>
+    <p class="strap" data-copy>YOUR TELEGRAM MATE</p>
+    <p class="lede" data-copy>A little help, one message away.</p>
+    <div class="tags" aria-label="Pip features">
+      <span data-copy>SEARCH</span>
+      <span data-copy>REMINDERS</span>
+      <span data-copy>EVERYDAY LIFE</span>
+    </div>
+  </main>
+
+  <aside class="chat-card" aria-label="Example conversation with Pip">
+    <div class="chat-head">
+      <svg class="chat-face" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+        <path d="M13 7h38a9 9 0 0 1 9 9v28a9 9 0 0 1-9 9H27L13 61V53a9 9 0 0 1-9-9V16a9 9 0 0 1 9-9Z" fill="currentColor" />
+        <path d="M23 24v7m18-7v7m-17 8c4 5 12 5 16 0" stroke="#17241e" stroke-width="4" stroke-linecap="round" />
+      </svg>
+      <div>
+        <span class="chat-name">Pip</span>
+        <span class="chat-subline">A LITTLE HELP, ONE TEXT AWAY</span>
+      </div>
+      <span class="spark" aria-hidden="true">✳</span>
+    </div>
+    <div class="messages">
+      <span class="time">A PERFECTLY ORDINARY EVENING</span>
+      <p class="message sent">got eggs, rice and zero motivation</p>
+      <p class="message received">egg fried rice. ten minutes, one pan. future you is grateful <span aria-hidden="true">🍳</span></p>
+      <p class="message sent">remind me to get soy sauce tomorrow at 6pm</p>
+      <p class="message received">you got it. tomorrow, 6pm <span aria-hidden="true">🫡</span></p>
+      <span class="chat-note">one less thing in your head.</span>
+    </div>
+    <span class="card-caption">SMALL TALK. USEFUL THINGS.</span>
+  </aside>
+
+  <footer class="footer"><strong data-copy>WARM / SHORT / EASYGOING</strong>&nbsp;&nbsp;·&nbsp;&nbsp; LUINBYTES.DEV / PIP</footer>
+</body>
+</html>
