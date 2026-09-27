@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
 import styles from "./profile-card.module.css";
 
@@ -9,22 +9,6 @@ export function ProfileCard({ reducedMotion, compact = false }: { reducedMotion:
   const cardRef = useRef<HTMLDivElement>(null);
   const foilCanvasRef = useRef<HTMLCanvasElement>(null);
   const foilDrawRef = useRef<(x: number, y: number, immediate?: boolean) => void>(() => {});
-  const [localTime, setLocalTime] = useState("UK time");
-
-  useEffect(() => {
-    const formatter = new Intl.DateTimeFormat("en-GB", {
-      timeZone: "Europe/London",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-      timeZoneName: "short",
-    });
-    const updateTime = () => setLocalTime(formatter.format(new Date()));
-    updateTime();
-    const interval = window.setInterval(updateTime, 60_000);
-    return () => window.clearInterval(interval);
-  }, []);
-
   useEffect(() => {
     const canvas = foilCanvasRef.current;
     const portrait = canvas?.parentElement;
@@ -435,13 +419,10 @@ export function ProfileCard({ reducedMotion, compact = false }: { reducedMotion:
             <strong>Lu</strong>
             <span className={styles.profileMeta}>
               <small>@x6c75</small>
-              <span aria-hidden="true" />
-              <small>United Kingdom</small>
             </span>
           </span>
           <span className={styles.profileStatus}>
-            <span><i aria-hidden="true" /> Android at Orchid.ai</span>
-            <time>{localTime}</time>
+            <span>Android at Orchid.ai</span>
           </span>
         </span>
       </div>

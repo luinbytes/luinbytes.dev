@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowDown, ArrowUpRight, AudioLines, Bot, Github, Globe2, Mail, MapPin, Sparkles } from "lucide-react";
+import { ArrowDown, ArrowUpRight, AudioLines, Github, Globe2, Mail, MapPin } from "lucide-react";
 
 import {
   portfolioIdentity,
@@ -26,25 +26,7 @@ const supportingWork = [
   { name: "ByteBot", note: "Stateful Discord operations", href: "https://github.com/luinbytes/bytebot-definitive-edition" },
 ] as const;
 
-const PROJECT_SIGNALS: Partial<Record<PortfolioProjectId, readonly string[]>> = {
-  "rakazo-android": ["Delegated replies", "Android parity", "Scheduled group work", "Long-chat performance"],
-  "linux-sonar": ["Per-app audio routing", "Hardware ChatMix", "Microphone effects", "systemd lifecycle"],
-  homebot: ["Durable conversations", "Tools + routines", "Permissions + checkpoints", "Native desktop + Android"],
-};
-
 const EASE_OUT = [0.23, 1, 0.32, 1] as const;
-const HERO_SEQUENCE = {
-  hidden: {},
-  visible: { transition: { delayChildren: 0.08, staggerChildren: 0.085 } },
-};
-const HERO_REVEAL = {
-  hidden: { opacity: 0, y: 22, clipPath: "inset(0 0 20% 0)" },
-  visible: { opacity: 1, y: 0, clipPath: "inset(0 0 0% 0)", transitionEnd: { clipPath: "none" } },
-};
-const HERO_HEADING_REVEAL = {
-  hidden: { opacity: 0, y: 22 },
-  visible: { opacity: 1, y: 0 },
-};
 
 function motionValue(reduced: boolean, value: number) {
   return reduced ? 0 : value;
@@ -52,10 +34,6 @@ function motionValue(reduced: boolean, value: number) {
 
 function motionExit<T>(reduced: boolean, value: T) {
   return reduced ? undefined : value;
-}
-
-function motionVariants(reduced: boolean) {
-  return reduced ? { hidden: {}, visible: {} } : HERO_SEQUENCE;
 }
 
 function useReducedMotionPreference() {
@@ -70,19 +48,6 @@ function useReducedMotionPreference() {
   }, []);
 
   return preference;
-}
-
-function useScrolledHeader() {
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const sync = () => setScrolled(window.scrollY > 36);
-    sync();
-    window.addEventListener("scroll", sync, { passive: true });
-    return () => window.removeEventListener("scroll", sync);
-  }, []);
-
-  return scrolled;
 }
 
 function SiteFooter({ reduced, entrance, ready }: { reduced: boolean; entrance: boolean; ready: boolean }) {
@@ -106,43 +71,25 @@ function SiteFooter({ reduced, entrance, ready }: { reduced: boolean; entrance: 
 }
 
 function ProjectArtwork({ project }: { project: PortfolioProject }) {
-  const signals: readonly string[] | undefined = PROJECT_SIGNALS[project.id];
-
-  if (signals) {
-    const isRakazo = project.id === "rakazo-android";
+  if (!project.image) {
     return (
-      <div className={`${projectStyles.projectMedia} ${projectStyles.mediarakazoandroid}`}>
-        <div className={`${projectStyles.rakazoIdentity} ${isRakazo ? "" : projectStyles.compactIdentity}`}>
-          {isRakazo && project.image ? (
-            <Image src={project.image} alt={project.imageAlt ?? "Rakazo Android application icon"} width={104} height={104} />
-          ) : (
-            <span className={projectStyles.projectGlyph} aria-hidden="true">
-              {project.id === "linux-sonar" ? <AudioLines /> : <Bot />}
-            </span>
-          )}
-          <span><strong>{project.name}</strong><small>{project.category}</small></span>
-        </div>
-        <div className={projectStyles.rakazoSignals} aria-label={`${project.name} highlights`}>
-          {signals.map((signal) => <span key={signal}>{signal}</span>)}
-        </div>
-        <span className={projectStyles.mediaCaption}>{project.category}</span>
+      <div className={`${projectStyles.projectMedia} ${projectStyles.projectCover}`}>
+        <AudioLines aria-hidden="true" />
+        <strong>{project.name}</strong>
+        <span>{project.category}</span>
       </div>
     );
   }
 
-  const image = project.image;
-  if (!image) return null;
-
   return (
     <div className={`${projectStyles.projectMedia} ${projectStyles[`media${project.id.replaceAll("-", "")}`]}`}>
       <Image
-        src={image}
+        src={project.image}
         alt={project.imageAlt ?? `${project.name} project artwork`}
         fill
         sizes="(max-width: 820px) 92vw, 48vw"
         priority={project.id === "orchid-android"}
       />
-      <span className={projectStyles.mediaCaption}>{project.category}</span>
     </div>
   );
 }
@@ -158,7 +105,7 @@ function ProjectNavigation({
 }) {
   return (
     <div className={projectStyles.projectNav} role="group" aria-label="Featured projects">
-      {portfolioProjects.map((project, index) => {
+      {portfolioProjects.map((project) => {
         const active = project.id === activeId;
         return (
           <motion.button
@@ -171,7 +118,6 @@ function ProjectNavigation({
             transition={{ duration: 0.1 }}
           >
             {active && <motion.i className={projectStyles.projectMarker} layoutId="project-marker" transition={{ duration: reduced ? 0 : 0.24, ease: EASE_OUT }} />}
-            <span>0{index + 1}</span>
             <strong>{project.name}</strong>
             <small>{project.category}</small>
           </motion.button>
@@ -200,8 +146,8 @@ function ProjectPanel({ project, reduced }: { project: PortfolioProject; reduced
         >
           <motion.div
             className={projectStyles.projectVisual}
-            initial={{ clipPath: "inset(0 8% 0 0)", scale: 1.02 }}
-            animate={{ clipPath: "inset(0 0 0 0)", scale: 1 }}
+            initial={{ opacity: 0, scale: 1.015 }}
+            animate={{ opacity: 1, scale: 1 }}
             exit={motionExit(reduced, { opacity: 0, scale: 0.99 })}
             transition={{ duration: motionValue(reduced, 0.34), ease: EASE_OUT }}
           >
@@ -214,7 +160,7 @@ function ProjectPanel({ project, reduced }: { project: PortfolioProject; reduced
             exit={motionExit(reduced, { opacity: 0, x: -8 })}
             transition={{ duration: motionValue(reduced, 0.3), delay: motionValue(reduced, 0.035), ease: EASE_OUT }}
           >
-            <span className={projectStyles.projectEyebrow}>{project.eyebrow}</span>
+            <span className={projectStyles.projectEyebrow}>{project.category}</span>
             <h3>{project.name}</h3>
             <p className={projectStyles.projectSummary}>{project.summary}</p>
             <p className={projectStyles.projectDetail}>{project.detail}</p>
@@ -250,12 +196,11 @@ function ProjectExplorer({ reduced, entrance, ready }: { reduced: boolean; entra
       <motion.div
         key={ready ? "work-intro-ready" : "work-intro-server"}
         className={styles.sectionIntro}
-        initial={entrance ? { opacity: 0, clipPath: "inset(0 0 18% 0)", y: 26 } : false}
-        whileInView={{ opacity: 1, clipPath: "inset(0 0 0% 0)", y: 0 }}
+        initial={entrance ? { opacity: 0, y: 20 } : false}
+        whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.35 }}
         transition={{ duration: reduced ? 0 : 0.62, ease: EASE_OUT }}
       >
-        <span className={styles.eyebrow}>Selected work / 2026</span>
         <h2 id="work-title">Built where the interesting problems live.</h2>
         <p>Native apps, agent infrastructure, Linux systems. Pick a project to inspect the work.</p>
       </motion.div>
@@ -288,7 +233,6 @@ function ProjectExplorer({ reduced, entrance, ready }: { reduced: boolean; entra
 
 export function SignalDesk() {
   const { ready, reduced } = useReducedMotionPreference();
-  const scrolled = useScrolledHeader();
   const entrance = ready && !reduced;
 
   return (
@@ -296,14 +240,10 @@ export function SignalDesk() {
       <PondEnvironment reduced={reduced} />
       <p className={styles.srOnly}>The decorative pond responds to pointer movement. Right-click open water, or double-tap it on touch devices, to feed the fish.</p>
 
-      <motion.header
-        className={`${styles.header} ${scrolled ? styles.headerScrolled : ""}`}
-        initial={false}
-        animate={{ opacity: 1 }}
-        transition={{ duration: motionValue(reduced, 0.42), ease: EASE_OUT }}
-      >
-        <a className={styles.brand} href="#top" aria-label="Lu, back to top">
+      <header className={styles.header}>
+        <a className={styles.brand} href="#top">
           <ProfileCard reducedMotion={reduced} compact />
+          <span className={styles.srOnly}>Back to top</span>
         </a>
         <nav aria-label="Portfolio navigation">
           <a href="#work">Work</a>
@@ -311,25 +251,19 @@ export function SignalDesk() {
           <a href="#about">About</a>
           <a href="#contact">Contact</a>
         </nav>
-      </motion.header>
+      </header>
 
       <div className={styles.content}>
         <section className={styles.hero} aria-labelledby="hero-title">
-          <motion.div
-            key={ready ? "hero-ready" : "hero-server"}
-            className={styles.heroCopy}
-            variants={motionVariants(reduced)}
-            initial={entrance ? "hidden" : false}
-            animate="visible"
-          >
-            <motion.span variants={HERO_REVEAL} transition={{ duration: motionValue(reduced, 0.62), ease: EASE_OUT }} className={styles.eyebrow}><Sparkles aria-hidden="true" /> Lu / software engineer</motion.span>
-            <motion.h1 variants={HERO_HEADING_REVEAL} transition={{ duration: motionValue(reduced, 0.62), ease: EASE_OUT }} id="hero-title">I make stubborn software <em>behave.</em></motion.h1>
-            <motion.p variants={HERO_REVEAL} transition={{ duration: motionValue(reduced, 0.62), ease: EASE_OUT }}>I build Orchid.ai’s native Android app, agent systems, and Linux tools that do the useful part without making a fuss.</motion.p>
-            <motion.div variants={HERO_REVEAL} transition={{ duration: motionValue(reduced, 0.62), ease: EASE_OUT }} className={styles.heroActions}>
+          <div className={styles.heroCopy}>
+            <span className={styles.eyebrow}>Software engineer</span>
+            <h1 id="hero-title">I make stubborn software <em>behave.</em></h1>
+            <p>I build Orchid.ai’s native Android app, agent systems, and Linux tools that do the useful part without making a fuss.</p>
+            <div className={styles.heroActions}>
               <a href="#work">See the work <ArrowDown aria-hidden="true" /></a>
               <a href={portfolioIdentity.calendar}>Start a conversation <Mail aria-hidden="true" /></a>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         </section>
 
         <PipFeature />
@@ -340,12 +274,11 @@ export function SignalDesk() {
           <motion.div
             key={ready ? "about-lead-ready" : "about-lead-server"}
             className={styles.aboutLead}
-            initial={entrance ? { opacity: 0, clipPath: "inset(0 0 16% 0)", y: 28 } : false}
-            whileInView={{ opacity: 1, clipPath: "inset(0 0 0% 0)", y: 0 }}
+            initial={entrance ? { opacity: 0, y: 20 } : false}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.28 }}
             transition={{ duration: motionValue(reduced, 0.62), ease: EASE_OUT }}
           >
-            <span className={styles.eyebrow}>About / how I work</span>
             <h2 id="about-title">Practical systems. Properly finished.</h2>
             <p>I work across native apps, agent infrastructure, Linux, and the awkward seams between them. I like the problems where “mostly works” is still broken.</p>
           </motion.div>
@@ -358,7 +291,7 @@ export function SignalDesk() {
             viewport={{ once: true, amount: 0.32 }}
             transition={{ duration: motionValue(reduced, 0.56), ease: EASE_OUT }}
           >
-            <span className={projectStyles.projectEyebrow}>Independent work / Iniuria.us</span>
+            <span className={projectStyles.projectEyebrow}>Iniuria.us</span>
             <h3>Automation with an actual job to do.</h3>
             <p>Discord automation, internal admin panels, and AI-assisted support triage built around the daily realities of an active community.</p>
             <div className={projectStyles.proofRow}><span>Discord systems</span><span>Admin tooling</span><span>AI triage</span></div>
@@ -367,8 +300,8 @@ export function SignalDesk() {
           <motion.div
             key={ready ? "more-work-ready" : "more-work-server"}
             className={styles.moreWork}
-            initial={entrance ? { opacity: 0, clipPath: "inset(0 0 0 8%)" } : false}
-            whileInView={{ opacity: 1, clipPath: "inset(0 0 0 0%)" }}
+            initial={entrance ? { opacity: 0, y: 12 } : false}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.18 }}
             transition={{ duration: motionValue(reduced, 0.58), ease: EASE_OUT }}
           >
@@ -398,13 +331,12 @@ export function SignalDesk() {
           transition={{ duration: motionValue(reduced, 0.56), ease: EASE_OUT }}
         >
           <div className={styles.contactIntro}>
-            <span className={styles.eyebrow}>Open channel</span>
             <h2 id="contact-title">Got a useful problem?</h2>
             <p>Native apps, agent infrastructure, strange systems, and software that needs to behave.</p>
           </div>
           <div className={styles.contactBooking}>
             <span className={styles.contactLabel}>Book a call</span>
-            <h3>30 minutes. No forms.</h3>
+            <h3>Tell me what you’re working on.</h3>
             <div className={styles.contactFacts} aria-label="Booking details">
               <span><Globe2 aria-hidden="true" /> Cal.com / luinbytes</span>
               <span><MapPin aria-hidden="true" /> Europe / London</span>

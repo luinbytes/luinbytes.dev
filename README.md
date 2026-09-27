@@ -9,14 +9,20 @@ The site has two public routes: `/`, the interactive portfolio, and `/pip`, a st
 The portfolio features [HomeBot](https://github.com/luinbytes/HomeBot), [rakazo-android](https://github.com/luinbytes/rakazo-android), [Linux Sonar](https://github.com/luinbytes/linux-sonar), [bongocat](https://github.com/luinbytes/bongocat), and [cursor-barrier](https://github.com/luinbytes/cursor-barrier).
 
 Pip has a dedicated introduction below the homepage hero, a **Meet Pip** link to
-`/pip`, and a desktop navigation link. Both pages share the Pip speech-bubble
+`/pip`, and a navigation link at every screen size. Both pages share the Pip speech-bubble
 logo and Pixelify wordmark from `components/pip/pip-logo.tsx`.
+
+The interface follows the system light/dark preference. The pond, fish, cat,
+feeding controls, and portrait foil retain their existing behavior in both modes.
+Navigation is available at every screen size, including without JavaScript. Pip
+uses a dedicated pixel illustration with a readable example conversation and
+keeps its Telegram, copy-handle, and on-demand QR contact paths.
 
 ## Stack
 
 - Next.js 16 with static export for GitHub Pages
 - React 19 and TypeScript
-- Tailwind CSS v4
+- CSS Modules with shared theme tokens and Tailwind CSS v4
 - Framer Motion for interface motion
 - PixiJS and Yuka for the procedural pond ecosystem
 - Lucide React for interface icons

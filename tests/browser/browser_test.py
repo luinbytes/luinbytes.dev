@@ -36,6 +36,12 @@ LEGACY_ROUTES = (
     "/sleepr",
     "/super-hacker-golf",
 )
+PORTFOLIO_NAV_LINKS = (
+    ("Work", "#work"),
+    ("Pip", "/pip"),
+    ("About", "#about"),
+    ("Contact", "#contact"),
+)
 
 
 def find_open_water(page: Page, pond, preferred=()):
@@ -72,7 +78,8 @@ def test_port() -> int:
 
 
 def wait_for_owned_server(server, server_log: Path, base_url: str) -> None:
-    deadline = time.monotonic() + 30
+    # A cold route compile can outlast the dev server's startup message.
+    deadline = time.monotonic() + 90
     saw_ready = False
 
     while time.monotonic() < deadline:
@@ -88,7 +95,7 @@ def wait_for_owned_server(server, server_log: Path, base_url: str) -> None:
 
         if saw_ready:
             try:
-                with urllib.request.urlopen(base_url, timeout=1):
+                with urllib.request.urlopen(base_url, timeout=5):
                     pass
                 if server.poll() is not None:
                     raise RuntimeError(
@@ -167,7 +174,7 @@ class ShareCardStaticExportTests(unittest.TestCase):
     }
     route_alts = {
         "/": "Lu | Software Engineer",
-        "/pip": "Pip — Your Telegram mate",
+        "/pip": "Pip - Your Telegram mate",
     }
 
     def test_editable_source_contains_the_original_card_copy(self) -> None:
@@ -218,14 +225,23 @@ class ShareCardStaticExportTests(unittest.TestCase):
                 self.assertEqual(names.get("twitter:image"), card_url)
                 self.assertEqual(names.get("twitter:image:alt"), self.route_alts[route])
 
+                if route == "/":
+                    self.assertEqual(
+                        next(
+                            item.get("href")
+                            for item in parser.metadata
+                            if item.get("rel") == "canonical"
+                        ),
+                        "https://luinbytes.dev",
+                    )
                 if route == "/pip":
                     self.assertIn(
-                        "<title>Pip — Your Telegram mate | Lu</title>",
+                        "<title>Pip - Your Telegram mate | Lu</title>",
                         html,
                     )
                     self.assertEqual(
                         properties.get("og:title"),
-                        "Pip — Your Telegram mate",
+                        "Pip - Your Telegram mate",
                     )
                     self.assertEqual(
                         properties.get("og:description"),
@@ -347,7 +363,7 @@ class PipRouteTests(BrowserTestCase):
         response = page.goto(f"{self.base_url}/pip", wait_until="networkidle")
         self.assertIsNotNone(response)
         self.assertEqual(response.status, 200)
-        self.assertEqual(page.title(), "Pip — Your Telegram mate | Lu")
+        self.assertEqual(page.title(), "Pip - Your Telegram mate | Lu")
         self.assertTrue(
             page.get_by_role(
                 "heading", name=re.compile(r"A little help\.\s*A little banter\.")
@@ -609,6 +625,116 @@ class PortfolioTests(BrowserTestCase):
                 )
                 browser.close()
 
+    def test_mobile_navigation_hero_viewport_and_system_color_modes(self) -> None:
+        browser = self.playwright.chromium.launch()
+        self.addCleanup(browser.close)
+        page = browser.new_page(viewport={"width": 320, "height": 640})
+        page.goto(f"{self.base_url}/?pond-seed=e2e-mobile-first-view", wait_until="networkidle")
+
+        light_signature = None
+        dark_signature = None
+
+        for width, height in ((320, 640), (390, 844)):
+            with self.subTest(viewport=width):
+                page.set_viewport_size({"width": width, "height": height})
+                page.wait_for_timeout(700)
+                self.assertLessEqual(page.evaluate("document.documentElement.scrollWidth"), width)
+                self.assertLessEqual(page.evaluate("document.body.scrollWidth"), width)
+
+                navigation = page.get_by_role("navigation", name="Portfolio navigation")
+                links = navigation.get_by_role("link")
+                self.assertEqual(links.count(), len(PORTFOLIO_NAV_LINKS))
+                for index, (name, href) in enumerate(PORTFOLIO_NAV_LINKS):
+                    with self.subTest(nav_link=name):
+                        link = links.nth(index)
+                        self.assertEqual(link.inner_text().strip(), name)
+                        self.assertEqual(link.get_attribute("href"), href)
+                        self.assertTrue(link.is_visible())
+                        bounds = link.bounding_box()
+                        self.assertIsNotNone(bounds)
+                        self.assertGreaterEqual(bounds["width"], 44)
+                        self.assertGreaterEqual(bounds["height"], 44)
+                        self.assertGreaterEqual(bounds["x"], -1)
+                        self.assertLessEqual(bounds["x"] + bounds["width"], width + 1)
+                        link.focus()
+                        self.assertTrue(
+                            link.evaluate("element => document.activeElement === element")
+                        )
+
+                hero = page.locator("section[aria-labelledby='hero-title']")
+                hero_actions = (
+                    hero.get_by_role("link", name="See the work", exact=True),
+                    hero.get_by_role("link", name="Start a conversation", exact=True),
+                )
+                for action in hero_actions:
+                    self.assertTrue(action.is_visible())
+                    action_bounds = action.bounding_box()
+                    self.assertIsNotNone(action_bounds)
+                    self.assertGreaterEqual(action_bounds["y"], -1)
+                    self.assertLessEqual(
+                        action_bounds["y"] + action_bounds["height"], height + 1
+                    )
+
+                for color_scheme in ("light", "dark"):
+                    page.emulate_media(color_scheme=color_scheme)
+                    page.wait_for_timeout(40)
+                    self.assertTrue(navigation.is_visible())
+                    self.assertTrue(all(action.is_visible() for action in hero_actions))
+                    contrast = hero_actions[0].evaluate(
+                        """element => {
+                            const style = getComputedStyle(element);
+                            const channel = value => {
+                                const parts = value.match(/[\\d.]+/g)?.map(Number) ?? [];
+                                return parts.length >= 3 ? parts.slice(0, 3) : null;
+                            };
+                            const luminance = value => {
+                                const rgb = channel(value);
+                                if (!rgb) return null;
+                                const linear = rgb.map(component => {
+                                    const value = component / 255;
+                                    return value <= 0.04045
+                                        ? value / 12.92
+                                        : ((value + 0.055) / 1.055) ** 2.4;
+                                });
+                                return linear[0] * 0.2126 + linear[1] * 0.7152 + linear[2] * 0.0722;
+                            };
+                            const foreground = luminance(style.color);
+                            const background = luminance(style.backgroundColor);
+                            if (foreground === null || background === null) return null;
+                            return (Math.max(foreground, background) + 0.05)
+                                / (Math.min(foreground, background) + 0.05);
+                        }"""
+                    )
+                    self.assertIsNotNone(contrast)
+                    self.assertGreaterEqual(contrast, 4.5)
+
+                    signature = page.evaluate(
+                        """() => {
+                            const navigation = document.querySelector('header nav');
+                            const title = document.querySelector('#hero-title');
+                            const action = [...document.querySelectorAll('header nav a')]
+                                .find(link => link.getAttribute('href') === '#work')
+                                ?.closest('header') ?? document.querySelector('header');
+                            const styles = [
+                                getComputedStyle(document.body),
+                                getComputedStyle(navigation),
+                                getComputedStyle(title),
+                                getComputedStyle(action),
+                            ];
+                            return styles.flatMap(style => [
+                                style.color,
+                                style.backgroundColor,
+                                style.borderColor,
+                            ]);
+                        }"""
+                    )
+                    if color_scheme == "light":
+                        light_signature = signature
+                    else:
+                        dark_signature = signature
+
+                self.assertNotEqual(light_signature, dark_signature)
+
     def test_homepage_pip_section_roundtrips_to_pip_and_back(self) -> None:
         browser = self.playwright.chromium.launch()
         try:
@@ -708,6 +834,17 @@ class PortfolioTests(BrowserTestCase):
         )
         page = context.new_page()
         page.goto(f"{self.base_url}/", wait_until="domcontentloaded")
+
+        navigation = page.get_by_role("navigation", name="Portfolio navigation")
+        links = navigation.get_by_role("link")
+        self.assertEqual(
+            [
+                (links.nth(index).inner_text().strip(), links.nth(index).get_attribute("href"))
+                for index in range(links.count())
+            ],
+            list(PORTFOLIO_NAV_LINKS),
+        )
+        self.assertTrue(all(links.nth(index).is_visible() for index in range(links.count())))
 
         section = page.locator("#pip")
         self.assertTrue(section.is_visible())
@@ -927,7 +1064,7 @@ class PortfolioTests(BrowserTestCase):
         page.wait_for_timeout(1_200)
 
         hero = page.locator("section[aria-labelledby='hero-title']")
-        hero_action = hero.get_by_role("link", name="Start a conversation")
+        hero_action = hero.get_by_role("link", name="Start a conversation", exact=True)
         hero_action.hover()
         page.wait_for_timeout(180)
         clipping_ancestors = hero_action.evaluate(
@@ -983,32 +1120,66 @@ class PortfolioTests(BrowserTestCase):
             )
         )
 
-        for project in ("Rakazo", "linux-sonar", "HomeBot"):
-            page.get_by_role("button", name=re.compile(project, re.I)).click()
-            page.locator("[class*='rakazoSignals']").wait_for(state="visible")
+        project_hrefs = {
+            "Rakazo": "https://github.com/luinbytes/rakazo-android",
+            "linux-sonar": "https://github.com/luinbytes/linux-sonar",
+            "HomeBot": "https://github.com/luinbytes/HomeBot",
+        }
+
+        def assert_homebot_image_fits(panel) -> None:
+            image = panel.get_by_role(
+                "img", name="HomeBot native desktop chat interface", exact=True
+            )
+            page.wait_for_function(
+                """alt => {
+                    const image = [...document.images].find(candidate => candidate.alt === alt);
+                    return image?.complete && image.naturalWidth > 0;
+                }""",
+                arg="HomeBot native desktop chat interface",
+            )
+            self.assertTrue(image.is_visible())
+            self.assertIn("homebot-chat.png", image.get_attribute("src"))
             self.assertTrue(
-                page.locator("[class*='rakazoIdentity']").evaluate(
-                    """identity => {
-                        const identityBounds = identity.querySelector('strong').getBoundingClientRect();
-                        const signalsBounds = identity.nextElementSibling.getBoundingClientRect();
-                        return identityBounds.right <= signalsBounds.left + 0.5;
+                image.evaluate(
+                    """element => {
+                        const image = element.getBoundingClientRect();
+                        const media = element.parentElement.getBoundingClientRect();
+                        return media.width > 0 && media.height > 0
+                            && getComputedStyle(element).objectFit === 'contain'
+                            && image.left >= media.left - 1
+                            && image.top >= media.top - 1
+                            && image.right <= media.right + 1
+                            && image.bottom <= media.bottom + 1;
                     }"""
-                ),
-                f"{project} identity overlaps its signal list",
+                )
             )
 
-        page.set_viewport_size({"width": 390, "height": 844})
-        page.get_by_role("button", name=re.compile("HomeBot", re.I)).click()
-        page.locator("[class*='rakazoSignals']").wait_for(state="visible")
-        self.assertTrue(
-            page.locator("[class*='rakazoSignals']").evaluate(
-                """signals => {
-                    const signalBounds = signals.getBoundingClientRect();
-                    const captionBounds = signals.parentElement.querySelector('[class*=mediaCaption]').getBoundingClientRect();
-                    return signalBounds.bottom <= captionBounds.top;
-                }"""
+        for project, href in project_hrefs.items():
+            button = page.get_by_role("button", name=re.compile(project, re.I))
+            button.click()
+            self.assertEqual(button.get_attribute("aria-pressed"), "true")
+            panel = page.locator("article").filter(
+                has=page.get_by_role("heading", name=project, exact=True)
             )
+            panel.wait_for(state="visible")
+            self.assertEqual(
+                panel.get_by_role("link", name="View project", exact=True).get_attribute(
+                    "href"
+                ),
+                href,
+            )
+            if project == "HomeBot":
+                assert_homebot_image_fits(panel)
+
+        page.set_viewport_size({"width": 390, "height": 844})
+        homebot_button = page.get_by_role("button", name=re.compile("HomeBot", re.I))
+        homebot_button.click()
+        self.assertEqual(homebot_button.get_attribute("aria-pressed"), "true")
+        homebot_panel = page.locator("article").filter(
+            has=page.get_by_role("heading", name="HomeBot", exact=True)
         )
+        homebot_panel.wait_for(state="visible")
+        assert_homebot_image_fits(homebot_panel)
         browser.close()
 
     def test_pointer_stirs_the_pond(self) -> None:
@@ -1380,6 +1551,17 @@ class PortfolioTests(BrowserTestCase):
             for point in pond.get_attribute("data-fish-positions").split(";")
         ]
         fish_x, fish_y = find_open_water(page, pond, fish_points)
+        page.evaluate("""() => {
+            window.__pondTouchEvents = [];
+            for (const type of ['pointerdown', 'pointerup', 'pointercancel']) {
+                document.addEventListener(type, event => {
+                    if (event.pointerType === 'touch') window.__pondTouchEvents.push({
+                        type, time: performance.now(), x: event.clientX, y: event.clientY,
+                        target: event.target?.tagName,
+                    });
+                }, true);
+            }
+        }""")
         impacts_before = int(pond.get_attribute("data-primary-impact-count"))
         page.touchscreen.tap(fish_x, fish_y)
         page.wait_for_function(
@@ -1403,6 +1585,7 @@ class PortfolioTests(BrowserTestCase):
             detail = pond.evaluate(
                 "element => ({ gesture: element.dataset.touchGesture, requested: element.dataset.foodRequestedAt, frame: element.dataset.frame, state: element.dataset.pixiState })"
             )
+            detail["touch_events"] = page.evaluate("window.__pondTouchEvents")
             context.close()
             browser.close()
             self.fail(f"Double-tap did not commit food: {detail}")
