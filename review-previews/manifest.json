@@ -1,0 +1,258 @@
+[
+  {
+    "page": "homepage",
+    "area": "hero",
+    "device": "desktop1440x900-light",
+    "viewport": "1440x900",
+    "colorScheme": "light",
+    "path": "review-previews/homepage-desktop1440x900-light-hero.jpg"
+  },
+  {
+    "page": "homepage",
+    "area": "Pip feature",
+    "device": "desktop1440x900-light",
+    "viewport": "1440x900",
+    "colorScheme": "light",
+    "path": "review-previews/homepage-desktop1440x900-light-pip-feature.jpg"
+  },
+  {
+    "page": "homepage",
+    "area": "Work - Orchid.ai",
+    "device": "desktop1440x900-light",
+    "viewport": "1440x900",
+    "colorScheme": "light",
+    "path": "review-previews/homepage-desktop1440x900-light-work-orchid-ai.jpg"
+  },
+  {
+    "page": "homepage",
+    "area": "Work - Rakazo",
+    "device": "desktop1440x900-light",
+    "viewport": "1440x900",
+    "colorScheme": "light",
+    "path": "review-previews/homepage-desktop1440x900-light-work-rakazo.jpg"
+  },
+  {
+    "page": "homepage",
+    "area": "Work - linux-sonar",
+    "device": "desktop1440x900-light",
+    "viewport": "1440x900",
+    "colorScheme": "light",
+    "path": "review-previews/homepage-desktop1440x900-light-work-linux-sonar.jpg"
+  },
+  {
+    "page": "homepage",
+    "area": "Work - HomeBot",
+    "device": "desktop1440x900-light",
+    "viewport": "1440x900",
+    "colorScheme": "light",
+    "path": "review-previews/homepage-desktop1440x900-light-work-homebot.jpg"
+  },
+  {
+    "page": "homepage",
+    "area": "About and supporting work",
+    "device": "desktop1440x900-light",
+    "viewport": "1440x900",
+    "colorScheme": "light",
+    "path": "review-previews/homepage-desktop1440x900-light-about-supporting-work.jpg"
+  },
+  {
+    "page": "homepage",
+    "area": "Contact and footer",
+    "device": "desktop1440x900-light",
+    "viewport": "1440x900",
+    "colorScheme": "light",
+    "path": "review-previews/homepage-desktop1440x900-light-contact-footer.jpg"
+  },
+  {
+    "page": "homepage",
+    "area": "hero",
+    "device": "mobile390x844-dark",
+    "viewport": "390x844",
+    "colorScheme": "dark",
+    "path": "review-previews/homepage-mobile390x844-dark-hero.jpg"
+  },
+  {
+    "page": "homepage",
+    "area": "Pip feature",
+    "device": "mobile390x844-dark",
+    "viewport": "390x844",
+    "colorScheme": "dark",
+    "path": "review-previews/homepage-mobile390x844-dark-pip-feature.jpg"
+  },
+  {
+    "page": "homepage",
+    "area": "Work - Orchid.ai",
+    "device": "mobile390x844-dark",
+    "viewport": "390x844",
+    "colorScheme": "dark",
+    "path": "review-previews/homepage-mobile390x844-dark-work-orchid-ai.jpg"
+  },
+  {
+    "page": "homepage",
+    "area": "Work - Rakazo",
+    "device": "mobile390x844-dark",
+    "viewport": "390x844",
+    "colorScheme": "dark",
+    "path": "review-previews/homepage-mobile390x844-dark-work-rakazo.jpg"
+  },
+  {
+    "page": "homepage",
+    "area": "Work - linux-sonar",
+    "device": "mobile390x844-dark",
+    "viewport": "390x844",
+    "colorScheme": "dark",
+    "path": "review-previews/homepage-mobile390x844-dark-work-linux-sonar.jpg"
+  },
+  {
+    "page": "homepage",
+    "area": "Work - HomeBot",
+    "device": "mobile390x844-dark",
+    "viewport": "390x844",
+    "colorScheme": "dark",
+    "path": "review-previews/homepage-mobile390x844-dark-work-homebot.jpg"
+  },
+  {
+    "page": "homepage",
+    "area": "About and supporting work",
+    "device": "mobile390x844-dark",
+    "viewport": "390x844",
+    "colorScheme": "dark",
+    "path": "review-previews/homepage-mobile390x844-dark-about-supporting-work.jpg"
+  },
+  {
+    "page": "homepage",
+    "area": "Contact and footer",
+    "device": "mobile390x844-dark",
+    "viewport": "390x844",
+    "colorScheme": "dark",
+    "path": "review-previews/homepage-mobile390x844-dark-contact-footer.jpg"
+  },
+  {
+    "page": "homepage",
+    "area": "hero",
+    "device": "mobile320x640-light",
+    "viewport": "320x640",
+    "colorScheme": "light",
+    "path": "review-previews/homepage-mobile320x640-light-hero.jpg"
+  },
+  {
+    "page": "Pip",
+    "area": "Hero and header",
+    "device": "desktop1440x900-light",
+    "viewport": "1440x900",
+    "colorScheme": "light",
+    "path": "review-previews/pip-desktop1440x900-light-hero-header.jpg"
+  },
+  {
+    "page": "Pip",
+    "area": "Example conversation",
+    "device": "desktop1440x900-light",
+    "viewport": "1440x900",
+    "colorScheme": "light",
+    "path": "review-previews/pip-desktop1440x900-light-example-conversation.jpg"
+  },
+  {
+    "page": "Pip",
+    "area": "Features",
+    "device": "desktop1440x900-light",
+    "viewport": "1440x900",
+    "colorScheme": "light",
+    "path": "review-previews/pip-desktop1440x900-light-features.jpg"
+  },
+  {
+    "page": "Pip",
+    "area": "Personality",
+    "device": "desktop1440x900-light",
+    "viewport": "1440x900",
+    "colorScheme": "light",
+    "path": "review-previews/pip-desktop1440x900-light-personality.jpg"
+  },
+  {
+    "page": "Pip",
+    "area": "Contact and footer",
+    "device": "desktop1440x900-light",
+    "viewport": "1440x900",
+    "colorScheme": "light",
+    "path": "review-previews/pip-desktop1440x900-light-contact-footer.jpg"
+  },
+  {
+    "page": "Pip",
+    "area": "Contact and footer with QR expanded",
+    "device": "desktop1440x900-light",
+    "viewport": "1440x900",
+    "colorScheme": "light",
+    "path": "review-previews/pip-desktop1440x900-light-contact-footer-qr-expanded.jpg"
+  },
+  {
+    "page": "Pip",
+    "area": "Hero and header",
+    "device": "mobile390x844-dark",
+    "viewport": "390x844",
+    "colorScheme": "dark",
+    "path": "review-previews/pip-mobile390x844-dark-hero-header.jpg"
+  },
+  {
+    "page": "Pip",
+    "area": "Example conversation",
+    "device": "mobile390x844-dark",
+    "viewport": "390x844",
+    "colorScheme": "dark",
+    "path": "review-previews/pip-mobile390x844-dark-example-conversation.jpg"
+  },
+  {
+    "page": "Pip",
+    "area": "Features",
+    "device": "mobile390x844-dark",
+    "viewport": "390x844",
+    "colorScheme": "dark",
+    "path": "review-previews/pip-mobile390x844-dark-features.jpg"
+  },
+  {
+    "page": "Pip",
+    "area": "Personality",
+    "device": "mobile390x844-dark",
+    "viewport": "390x844",
+    "colorScheme": "dark",
+    "path": "review-previews/pip-mobile390x844-dark-personality.jpg"
+  },
+  {
+    "page": "Pip",
+    "area": "Contact and footer",
+    "device": "mobile390x844-dark",
+    "viewport": "390x844",
+    "colorScheme": "dark",
+    "path": "review-previews/pip-mobile390x844-dark-contact-footer.jpg"
+  },
+  {
+    "page": "Pip",
+    "area": "Contact and footer with QR expanded",
+    "device": "mobile390x844-dark",
+    "viewport": "390x844",
+    "colorScheme": "dark",
+    "path": "review-previews/pip-mobile390x844-dark-contact-footer-qr-expanded.jpg"
+  },
+  {
+    "page": "Pip",
+    "area": "Hero and header",
+    "device": "mobile320x640-light",
+    "viewport": "320x640",
+    "colorScheme": "light",
+    "path": "review-previews/pip-mobile320x640-light-hero-header.jpg"
+  },
+  {
+    "page": "404",
+    "area": "404 viewport",
+    "device": "desktop1440x900-light",
+    "viewport": "1440x900",
+    "colorScheme": "light",
+    "path": "review-previews/404-desktop1440x900-light-viewport.jpg"
+  },
+  {
+    "page": "404",
+    "area": "404 viewport",
+    "device": "mobile390x844-dark",
+    "viewport": "390x844",
+    "colorScheme": "dark",
+    "path": "review-previews/404-mobile390x844-dark-viewport.jpg"
+  }
+]

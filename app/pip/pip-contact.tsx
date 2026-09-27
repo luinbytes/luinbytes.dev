@@ -24,10 +24,8 @@ export function PipContact({ contact }: { contact: ReturnType<typeof getPipConta
   return (
     <section id="text-pip" className={styles.contact} aria-labelledby="contact-title">
       <div className={styles.contactIntro}>
-        <span className={styles.label}>YOUR NEXT CONVERSATION</span>
         <h2 id="contact-title">Say hey to Pip<span>.</span></h2>
         <p>A question, a half-formed thought, or just a hello.<br />Start wherever you like.</p>
-        <span className={styles.contactSignoff}>see you in the chat <span aria-hidden="true">↗</span></span>
       </div>
 
       <div className={styles.contactActions}>
@@ -91,7 +89,7 @@ export function PipContact({ contact }: { contact: ReturnType<typeof getPipConta
             </div>
           )}
         </div>
-        <noscript><p className={styles.actionHint}>Copy the handle manually or use Message Pip. QR and copy buttons need JavaScript.</p></noscript>
+        <noscript><p className={styles.actionHint}>Without JavaScript, use the handle above or Message Pip. Copy and QR controls need JavaScript.</p></noscript>
       </div>
     </section>
   );

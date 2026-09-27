@@ -10,7 +10,7 @@ export function PipFeature() {
       <div className={styles.card}>
         <div className={styles.identity}>
           <PipLogo className={styles.logo} />
-          <span className={deskStyles.eyebrow}>YOUR TELEGRAM MATE</span>
+          <span className={deskStyles.eyebrow}>Your Telegram mate</span>
         </div>
         <div className={styles.copy}>
           <h2 id="homepage-pip-title">A little help. <span>A little banter.</span></h2>

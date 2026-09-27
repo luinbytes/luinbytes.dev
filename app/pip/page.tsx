@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
-import { ArrowDown, ArrowUpRight, Bell, Compass, Heart, Send, Search, Smile, Sparkles } from "lucide-react";
+import { ArrowUpRight, Bell, Compass, Heart, Search, Send, Smile, Sparkles } from "lucide-react";
 import { getPipContact } from "@/lib/pip";
 import siteConfig from "@/site.config.json";
 import { PipFace, PipLogo } from "@/components/pip/pip-logo";
 import { PipContact } from "./pip-contact";
 import styles from "./pip.module.css";
 
-const title = "Pip — Your Telegram mate";
+const title = "Pip - Your Telegram mate";
 const description = "A little help, one message away. Pip is your warm, easygoing Telegram agent for questions, web searches, reminders, and everyday life. Built on Keiki.";
 const pageUrl = `${siteConfig.siteUrl}/pip`;
 const shareCard = {
@@ -15,7 +16,7 @@ const shareCard = {
   width: 1200,
   height: 630,
   type: "image/png",
-  alt: "Pip — Your Telegram mate",
+  alt: "Pip - Your Telegram mate",
 };
 
 export const metadata: Metadata = {
@@ -41,83 +42,124 @@ export const metadata: Metadata = {
 };
 
 const features = [
-  { icon: Search, title: "Down the rabbit hole.", text: "Quick questions or oddly specific curiosities. Pip searches the web and brings back the useful bits.", label: "WEB SEARCH" },
-  { icon: Bell, title: "A nudge when you need it.", text: "The thing you’ll definitely remember? Text it to Pip. Reminders are set for you, on your schedule.", label: "PERSONAL REMINDERS" },
-  { icon: Smile, title: "Sometimes, a sticker says it.", text: "Images, stickers, and a little personality. There’s room for something other than words.", label: "IMAGES & STICKERS" },
-  { icon: Compass, title: "A little local knowledge.", text: "A useful link, a spot on the map, or the weather before you head out. All in the conversation.", label: "LINKS, MAPS & WEATHER" },
-  { icon: Heart, title: "Less starting from scratch.", text: "Pip remembers each person, so your next chat can pick up with a little more context.", label: "REMEMBERS YOU" },
-  { icon: Sparkles, title: "Talk the small stuff through.", text: "Dinner ideas, a second opinion, or a tiny everyday dilemma. Short answers. Easy conversation.", label: "EVERYDAY ADVICE" },
+  {
+    icon: Bell,
+    title: "Reminders",
+    text: "Set a reminder in chat for the time you choose.",
+  },
+  {
+    icon: Smile,
+    title: "Stickers and images",
+    text: "Share images and stickers when words are not quite enough.",
+  },
+  {
+    icon: Compass,
+    title: "Maps and weather",
+    text: "Find places on a map and check the weather before you head out.",
+  },
+  {
+    icon: Heart,
+    title: "Conversation memory",
+    text: "Pip can remember details about each person so later chats have more context.",
+  },
+  {
+    icon: Sparkles,
+    title: "Everyday advice",
+    text: "Talk through meal ideas, second opinions, and small decisions.",
+  },
 ];
 
 export default function PipPage() {
   const contact = getPipContact();
 
   return (
-    <div className={styles.page}>
+    <div className={styles.page} id="top">
       <div className={styles.shell}>
         <header className={styles.header}>
-          <a href="#" className={styles.wordmark} aria-label="Pip, back to top"><PipLogo /></a>
-          <Link href="/" className={styles.homeLink}>A LITTLE SOMETHING BY LU <ArrowUpRight aria-hidden="true" /></Link>
+          <a href="#top" className={styles.wordmark} aria-label="Pip, back to top"><PipLogo /></a>
+          <Link href="/" className={styles.homeLink}>Back to Lu <ArrowUpRight aria-hidden="true" /></Link>
         </header>
 
         <section className={styles.hero} aria-labelledby="pip-title">
           <div className={styles.heroCopy}>
-            <p className={styles.eyebrow}><span aria-hidden="true" /> YOUR TELEGRAM MATE</p>
             <h1 id="pip-title">A little help.<br />A little <span>banter.</span></h1>
-            <p className={styles.intro}>Meet Pip, your AI mate on Telegram. For the random questions, the small favours, and the stuff on your mind.</p>
+            <p className={styles.intro}>Pip is your Telegram mate for quick answers, useful reminders, and the everyday things on your mind.</p>
             <div className={styles.heroActions}>
               {contact ? (
                 <a href={contact.telegramUrl} className={styles.primaryAction}><Send aria-hidden="true" /> Message Pip <ArrowUpRight aria-hidden="true" /></a>
               ) : (
                 <button type="button" className={styles.primaryAction} disabled><Send aria-hidden="true" /> Message Pip <ArrowUpRight aria-hidden="true" /></button>
               )}
-              <a href="#everyday" className={styles.exploreLink}>Get to know Pip <ArrowDown aria-hidden="true" /></a>
             </div>
-            <p className={styles.heroHint}>{contact ? "One conversation. Right in Telegram." : "Chat opens soon. A new mate is on the way."}</p>
+            {!contact && <p className={styles.actionHint}>Pip is not available to message right now.</p>}
           </div>
 
+          <div className={styles.heroVisual}>
+            <Image
+              src="/images/portfolio/pip-everyday.webp"
+              alt="Pixel art of an open notebook, a cup of tea, oranges, and a leafy plant on a desk beside a lake view."
+              fill
+              priority
+              sizes="(min-width: 960px) 50vw, 100vw"
+              className={styles.heroImage}
+            />
+          </div>
+        </section>
+
+        <section className={styles.example} aria-labelledby="example-title">
+          <div className={styles.exampleHeading}>
+            <h2 id="example-title">A little help, in context.</h2>
+            <p>A dinner idea, then a reminder. Both fit in the same conversation.</p>
+          </div>
           <figure className={styles.conversation} aria-label="Example conversation">
-            <div className={styles.chatHeader}>
-              <PipFace className={styles.avatar} />
-              <div><span className={styles.chatName}>Pip</span><span className={styles.chatSubline}>a little help, one text away</span></div>
-              <span className={styles.chatSpark} aria-hidden="true">✧</span>
+            <figcaption className={styles.conversationCaption}>Example conversation</figcaption>
+            <div className={styles.exchange}>
+              <span className={styles.speaker}>You</span>
+              <blockquote>Got eggs, rice and zero motivation.</blockquote>
             </div>
-            <div className={styles.messages}>
-              <span className={styles.chatTime}>A PERFECTLY ORDINARY EVENING</span>
-              <p className={styles.sent}><span className="sr-only">You: </span>got eggs, rice and zero motivation</p>
-              <p className={styles.received}><span className="sr-only">Pip: </span>egg fried rice. ten minutes, one pan. future you is grateful <span aria-hidden="true">🍳</span></p>
-              <p className={styles.sent}><span className="sr-only">You: </span>remind me to get soy sauce tomorrow at 6pm</p>
-              <p className={styles.received}><span className="sr-only">Pip: </span>you got it. tomorrow, 6pm <span aria-hidden="true">🫡</span></p>
-              <span className={styles.chatNote}><Bell size={12} aria-hidden="true" /> One less thing in your head.</span>
+            <div className={styles.exchange}>
+              <span className={styles.speaker}>Pip</span>
+              <blockquote>Egg fried rice. Ten minutes, one pan. Future you will thank you.</blockquote>
             </div>
-            <figcaption>EXAMPLE CONVERSATION <span>small talk. useful things.</span></figcaption>
+            <div className={styles.exchange}>
+              <span className={styles.speaker}>You</span>
+              <blockquote>Remind me to get soy sauce tomorrow at 6pm.</blockquote>
+            </div>
+            <div className={styles.exchange}>
+              <span className={styles.speaker}>Pip</span>
+              <blockquote>You got it. Tomorrow at 6pm.</blockquote>
+            </div>
           </figure>
         </section>
 
-        <div className={styles.interlude}><span>CURIOUS BY NATURE</span><span aria-hidden="true">✧</span><span>GOOD COMPANY BY DESIGN</span></div>
-
         <section id="everyday" className={styles.everyday} aria-labelledby="everyday-title">
           <div className={styles.sectionHeading}>
-            <span className={styles.label}>FOR THE EVERYDAY BITS</span>
             <h2 id="everyday-title">Small asks. <span>Sorted.</span></h2>
-            <p>Useful enough to keep around.<br />Chill enough to just say hey.</p>
+            <p>Search, remember a detail, or make a quick plan. Pip can help with the small stuff.</p>
           </div>
           <div className={styles.features}>
-            {features.map(({ icon: Icon, title: featureTitle, text, label }) => (
-              <article key={label} className={styles.feature}>
-                <Icon aria-hidden="true" className={styles.featureIcon} strokeWidth={1.5} />
-                <span className={styles.label}>{label}</span>
-                <h3>{featureTitle}</h3>
-                <p>{text}</p>
-              </article>
-            ))}
+            <article className={styles.featureLead}>
+              <Search aria-hidden="true" className={styles.featureIcon} strokeWidth={1.6} />
+              <h3>Web search</h3>
+              <p>Ask a quick question or follow a curiosity. Pip searches the web and brings back useful links.</p>
+            </article>
+            <ul className={styles.featureList}>
+              {features.map(({ icon: Icon, title: featureTitle, text }) => (
+                <li key={featureTitle} className={styles.featureRow}>
+                  <Icon aria-hidden="true" className={styles.featureIcon} strokeWidth={1.6} />
+                  <div>
+                    <h3>{featureTitle}</h3>
+                    <p>{text}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
           </div>
         </section>
 
         <section className={styles.personality} aria-labelledby="personality-title">
-          <div className={styles.personalityArt} aria-hidden="true"><PipFace /><span>hey, you.</span></div>
+          <div className={styles.personalityArt} aria-hidden="true"><PipFace /></div>
           <div>
-            <span className={styles.label}>A MATE, WITH SOME COMMON SENSE</span>
             <h2 id="personality-title">Easy company.<br />Clear boundaries.</h2>
             <p>Warm, short, and easygoing. Pip keeps things helpful with a gentle redirect when needed, and a firm no for clearly illegal requests.</p>
           </div>

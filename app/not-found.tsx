@@ -17,11 +17,10 @@ export default function NotFound() {
 
       <Link className={styles.brand} href="/" aria-label="Lu, return to the portfolio">
         <span>LU / 6C75</span>
-        <small>THE QUIET END OF THE POND</small>
+        <small>Software by Lu</small>
       </Link>
 
       <div className={styles.card}>
-        <span className={styles.eyebrow}><Waves aria-hidden="true" /> 404 / out of bounds</span>
         <span className={styles.code} aria-hidden="true">404</span>
         <h1 id="not-found-title">Nothing surfaced here.</h1>
         <p>That route drifted out of the pond. The fish deny everything.</p>
@@ -44,8 +43,6 @@ export default function NotFound() {
           </button>
         </div>
       </div>
-
-      <p className={styles.coordinate} aria-hidden="true">LAT 00.404 / LONG 06.C75</p>
     </section>
   );
 }
