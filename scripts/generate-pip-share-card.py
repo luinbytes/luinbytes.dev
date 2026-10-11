@@ -1,6 +1,6 @@
-"""Render the checked-in Pip social PNG from the built site's fonts.
+"""Render the checked-in Pip social PNG from the installed local fonts.
 
-Run `npm run build` first, then `python3 scripts/generate-pip-share-card.py`.
+Run `npm ci` first, then `python3 scripts/generate-pip-share-card.py`.
 Rendering is offline; normal builds only copy the checked-in PNG into out/.
 """
 
@@ -12,6 +12,7 @@ import tempfile
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
+from share_card_fonts import local_fonts
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -34,26 +35,10 @@ def data_url(path: Path, mime: str) -> str:
     return f"data:{mime};base64,{base64.b64encode(path.read_bytes()).decode()}"
 
 
-def built_fonts() -> str:
-    faces = []
-    for css in sorted((ROOT / "out/_next/static").rglob("*.css")):
-        for face in re.findall(r"@font-face\s*\{[^}]+\}", css.read_text()):
-            if not any(f"font-family:{family};" in face for family in FONT_FAMILIES):
-                continue
-            face = re.sub(
-                r"url\(([^)]+)\)",
-                lambda match: f"url({data_url((css.parent / match[1].strip(chr(34) + chr(39))).resolve(), 'font/woff2')})",
-                face,
-            )
-            faces.append(face)
-    if not faces:
-        raise RuntimeError("No built Pip fonts found. Run npm run build first.")
-    return "\n".join(faces)
-
 
 def main() -> None:
     html = (ROOT / "scripts/pip-share-card.html").read_text().replace(
-        "/* FONT_FACES */", built_fonts()
+        "/* FONT_FACES */", local_fonts(include_pixelify=True)
     )
     CARD.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=ROOT / "scripts") as directory:

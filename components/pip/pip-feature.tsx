@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { PipLogo } from "./pip-logo";
+import { Button } from "@/components/ui/button";
 import deskStyles from "@/components/concepts/signal-desk/signal-desk.module.css";
 import styles from "./pip-feature.module.css";
 
@@ -17,9 +17,9 @@ export function PipFeature() {
           <p>Meet Pip, your AI mate on Telegram. Quick questions, useful reminders, and a little everyday company.</p>
         </div>
         <div className={styles.actions}>
-          <Link href="/pip" className={deskStyles.primaryAction}>
+          <Button asChild className={deskStyles.primaryAction}><a href="/pip">
             <span className={styles.actionContent}>Meet Pip <ArrowUpRight aria-hidden="true" /></span>
-          </Link>
+          </a></Button>
           <span>Built on Keiki. Made by Lu.</span>
         </div>
       </div>

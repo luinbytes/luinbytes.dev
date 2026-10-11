@@ -1,45 +1,9 @@
-import type { Metadata } from "next";
-import Image from "next/image";
-import Link from "next/link";
 import { ArrowUpRight, Bell, Compass, Heart, Search, Send, Smile, Sparkles } from "lucide-react";
 import { getPipContact } from "@/lib/pip";
-import siteConfig from "@/site.config.json";
 import { PipFace, PipLogo } from "@/components/pip/pip-logo";
+import { Button } from "@/components/ui/button";
 import { PipContact } from "./pip-contact";
 import styles from "./pip.module.css";
-
-const title = "Pip - Your Telegram mate";
-const description = "A little help, one message away. Pip is your warm, easygoing Telegram agent for questions, web searches, reminders, and everyday life. Built on Keiki.";
-const pageUrl = `${siteConfig.siteUrl}/pip`;
-const shareCard = {
-  url: `${siteConfig.siteUrl}/share-cards/luinbytes-dev-pip.png`,
-  width: 1200,
-  height: 630,
-  type: "image/png",
-  alt: "Pip - Your Telegram mate",
-};
-
-export const metadata: Metadata = {
-  title,
-  description,
-  alternates: { canonical: pageUrl },
-  openGraph: {
-    title,
-    description,
-    url: pageUrl,
-    type: "website",
-    locale: "en_GB",
-    siteName: "Luinbytes",
-    images: [shareCard],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title,
-    description,
-    creator: "@x6c75",
-    images: [shareCard],
-  },
-};
 
 const features = [
   {
@@ -77,7 +41,7 @@ export default function PipPage() {
       <div className={styles.shell}>
         <header className={styles.header}>
           <a href="#top" className={styles.wordmark} aria-label="Pip, back to top"><PipLogo /></a>
-          <Link href="/" className={styles.homeLink}>Back to Lu <ArrowUpRight aria-hidden="true" /></Link>
+          <a href="/" className={styles.homeLink}>Back to Lu <ArrowUpRight aria-hidden="true" /></a>
         </header>
 
         <section className={styles.hero} aria-labelledby="pip-title">
@@ -86,20 +50,21 @@ export default function PipPage() {
             <p className={styles.intro}>Pip is your Telegram mate for quick answers, useful reminders, and the everyday things on your mind.</p>
             <div className={styles.heroActions}>
               {contact ? (
-                <a href={contact.telegramUrl} className={styles.primaryAction}><Send aria-hidden="true" /> Message Pip <ArrowUpRight aria-hidden="true" /></a>
+                <Button asChild className={styles.primaryAction}><a href={contact.telegramUrl}><Send aria-hidden="true" /> Message Pip <ArrowUpRight aria-hidden="true" /></a></Button>
               ) : (
-                <button type="button" className={styles.primaryAction} disabled><Send aria-hidden="true" /> Message Pip <ArrowUpRight aria-hidden="true" /></button>
+                <Button type="button" className={styles.primaryAction} disabled><Send aria-hidden="true" /> Message Pip <ArrowUpRight aria-hidden="true" /></Button>
               )}
             </div>
             {!contact && <p className={styles.actionHint}>Pip is not available to message right now.</p>}
           </div>
 
           <div className={styles.heroVisual}>
-            <Image
+            <img
               src="/images/portfolio/pip-everyday.webp"
               alt="Pixel art of an open notebook, a cup of tea, oranges, and a leafy plant on a desk beside a lake view."
-              fill
-              priority
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+              loading="eager"
+              fetchPriority="high"
               sizes="(min-width: 960px) 50vw, 100vw"
               className={styles.heroImage}
             />
@@ -168,7 +133,7 @@ export default function PipPage() {
         <PipContact contact={contact} />
 
         <footer className={styles.footer}>
-          <Link href="/">LU / 6C75 <ArrowUpRight aria-hidden="true" /></Link>
+          <a href="/">LU / 6C75 <ArrowUpRight aria-hidden="true" /></a>
           <p>Built on Keiki. Made to be good company.</p>
           <span className={styles.footerPip} aria-hidden="true">pip.</span>
         </footer>

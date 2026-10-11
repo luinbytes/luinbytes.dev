@@ -1,0 +1,23 @@
+
+> luinbytes-site@0.1.0 test:pond
+> node --test tests/pond-world.test.mts
+
+✔ authored anchors lie inside their rock-local sitting regions (1.343524ms)
+✔ five virtual minutes without targets never produces an empty-space bat (30.32156ms)
+✔ passive patrols remember recent rocks instead of ping-ponging (22.456691ms)
+✔ the cat routes across rocks to hunt an actual fish (5.872462ms)
+✔ the cat chooses a fish beside a reachable perch instead of an open-water decoy (5.627697ms)
+✔ the integrated cat hunts moving koi from the eastern rock route (446.982563ms)
+✔ long seeded sessions only land on anchors and only bat valid targets (307.319546ms)
+✔ the same seed is reproducible and different seeds stay varied (105.722335ms)
+✔ food drops are exact, bounded, and evict the oldest entity at capacity (1.13093ms)
+✔ fish discover, reserve, curve toward, eat, and release seeded food (85.96246ms)
+✔ nearby fish commit to fresh food promptly despite the drop disturbance (0.642245ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1265.870507

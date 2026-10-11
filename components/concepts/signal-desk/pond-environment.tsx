@@ -1,11 +1,9 @@
-"use client";
-
 import { useEffect, useRef } from "react";
 
 import styles from "./pond-environment.module.css";
 
-const DEBUG_ATTRIBUTES = process.env.NODE_ENV === "production" ? {} : {
-  "data-pixi-state": "idle",
+const POND_ATTRIBUTES = {
+  "data-pond-state": "idle",
   "data-ripple-count": "0",
   "data-ring-count": "0",
   "data-wake-count": "0",
@@ -50,7 +48,7 @@ export function PondEnvironment({ reduced }: { reduced: boolean }) {
         host,
         interaction,
         reduced,
-        canvasClassName: styles.pixiCanvas,
+        canvasClassName: styles.pondCanvas,
         signal: controller.signal,
       }))
       .then((stop) => {
@@ -61,10 +59,8 @@ export function PondEnvironment({ reduced }: { reduced: boolean }) {
         if (controller.signal.aborted) return;
         host.replaceChildren();
         pond.dataset.renderer = "fallback";
-        if (process.env.NODE_ENV !== "production") {
-          host.dataset.pixiState = "fallback";
-          host.dataset.fallbackReason = error instanceof Error ? error.message : "renderer-init-failed";
-        }
+        host.dataset.pondState = "fallback";
+        host.dataset.fallbackReason = error instanceof Error ? error.message : "renderer-init-failed";
       });
 
     return () => {
@@ -78,7 +74,7 @@ export function PondEnvironment({ reduced }: { reduced: boolean }) {
     <>
       <div ref={pondRef} className={styles.pond} data-renderer="fallback" aria-hidden="true">
         <div className={styles.pondImage} />
-        <div ref={hostRef} className={styles.pixiHost} {...DEBUG_ATTRIBUTES} />
+        <div ref={hostRef} className={styles.pondHost} {...POND_ATTRIBUTES} />
         <div className={styles.pondGrade} />
         <div className={styles.surfaceLight} />
       </div>

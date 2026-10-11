@@ -1,6 +1,3 @@
-"use client";
-
-import Image from "next/image";
 import { useEffect, useRef } from "react";
 
 import styles from "./profile-card.module.css";
@@ -207,7 +204,7 @@ export function ProfileCard({ reducedMotion, compact = false }: { reducedMotion:
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.uniform2f(view, x, 1 - y);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-      if (process.env.NODE_ENV !== "production") canvas.dataset.foilView = `${x.toFixed(3)},${y.toFixed(3)}`;
+      canvas.dataset.foilView = `${x.toFixed(3)},${y.toFixed(3)}`;
     };
 
     const stopSpring = () => {
@@ -245,7 +242,7 @@ export function ProfileCard({ reducedMotion, compact = false }: { reducedMotion:
     const setView = (x: number, y: number, immediate = false) => {
       targetX = Math.max(0, Math.min(1, x));
       targetY = Math.max(0, Math.min(1, y));
-      if (process.env.NODE_ENV !== "production") canvas.dataset.foilTarget = `${targetX.toFixed(3)},${targetY.toFixed(3)}`;
+      canvas.dataset.foilTarget = `${targetX.toFixed(3)},${targetY.toFixed(3)}`;
       if (immediate) {
         stopSpring();
         currentX = targetX;
@@ -411,7 +408,7 @@ export function ProfileCard({ reducedMotion, compact = false }: { reducedMotion:
     <div ref={cardRef} className={`${styles.profileTilt} ${compact ? styles.compact : ""}`}>
       <div className={styles.profileLine}>
         <span className={styles.profilePortrait}>
-          <Image src="/images/portfolio/lu-avatar.jpg" alt="Lu's illustrated avatar wearing a pink cap" width={72} height={72} priority />
+          <img src="/images/portfolio/lu-avatar.jpg" alt="Lu's illustrated avatar wearing a pink cap" width={72} height={72} loading="eager" fetchPriority="high" />
           <canvas ref={foilCanvasRef} className={styles.profileFoilCanvas} width={72} height={72} aria-hidden="true" />
         </span>
         <span className={styles.profileDetails}>

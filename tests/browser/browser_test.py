@@ -3,7 +3,6 @@ import hashlib
 import json
 import os
 import re
-import shutil
 import signal
 import socket
 import subprocess
@@ -44,6 +43,35 @@ PORTFOLIO_NAV_LINKS = (
 )
 
 
+def control_contrast(locator):
+    return locator.evaluate(
+        """element => {
+            const style = getComputedStyle(element);
+            const channel = value => {
+                const parts = value.match(/[\\d.]+/g)?.map(Number) ?? [];
+                return parts.length >= 3 ? parts.slice(0, 3) : null;
+            };
+            const luminance = value => {
+                const rgb = channel(value);
+                if (!rgb) return null;
+                const linear = rgb.map(component => {
+                    const value = component / 255;
+                    return value <= 0.04045
+                        ? value / 12.92
+                        : ((value + 0.055) / 1.055) ** 2.4;
+                });
+                return linear[0] * 0.2126 + linear[1] * 0.7152 + linear[2] * 0.0722;
+            };
+            const foreground = luminance(style.color);
+            const background = luminance(style.backgroundColor);
+            if (foreground === null || background === null) return null;
+            return (Math.max(foreground, background) + 0.05)
+                / (Math.min(foreground, background) + 0.05);
+        }"""
+    )
+
+
+
 def find_open_water(page: Page, pond, preferred=()):
     viewport = page.viewport_size
     candidates = list(preferred)
@@ -78,7 +106,6 @@ def test_port() -> int:
 
 
 def wait_for_owned_server(server, server_log: Path, base_url: str) -> None:
-    # A cold route compile can outlast the dev server's startup message.
     deadline = time.monotonic() + 90
     saw_ready = False
 
@@ -186,9 +213,7 @@ class ShareCardStaticExportTests(unittest.TestCase):
         self.assertNotIn("ORCHID.AI // MOBILE DEVELOPER", source)
 
     def test_every_scoped_route_exports_a_production_large_image_card(self) -> None:
-        build = subprocess.run(["npm", "run", "build"], check=False)
-        self.assertEqual(build.returncode, 0)
-        export_root = Path(os.environ.get("NEXT_DIST_DIR", "out"))
+        export_root = Path("out")
 
         for route, card_path in self.route_cards.items():
             with self.subTest(route=route):
@@ -300,30 +325,22 @@ class BrowserTestCase(unittest.TestCase):
     def setUpClass(cls) -> None:
         SCREENSHOTS.mkdir(exist_ok=True)
         port = test_port()
-        cls.dist_dir = Path(".next-e2e")
-        shutil.rmtree(cls.dist_dir, ignore_errors=True)
         cls.server_log = SERVER_LOG.open("w")
         try:
             cls.server = subprocess.Popen(
                 [
                     "npm",
                     "run",
-                    "dev",
+                    "preview",
                     "--",
-                    "--hostname",
+                    "--host",
                     "127.0.0.1",
                     "--port",
                     str(port),
-                    "--webpack",
                 ],
                 stdout=cls.server_log,
                 stderr=subprocess.STDOUT,
                 start_new_session=True,
-                env={
-                    **os.environ,
-                    "NEXT_DISABLE_WEBPACK_CACHE": "1",
-                    "NEXT_DIST_DIR": str(cls.dist_dir),
-                },
             )
         except BaseException:
             cls.server_log.close()
@@ -347,7 +364,6 @@ class BrowserTestCase(unittest.TestCase):
                 os.killpg(cls.server.pid, signal.SIGKILL)
                 cls.server.wait(timeout=10)
         cls.server_log.close()
-        shutil.rmtree(cls.dist_dir, ignore_errors=True)
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -388,6 +404,11 @@ class PipRouteTests(BrowserTestCase):
         self.assertFalse(copy_button.is_disabled())
         self.assertFalse(qr_button.is_disabled())
         self.assertEqual(qr_button.get_attribute("aria-expanded"), "false")
+        for theme in ("dark", "light"):
+            page.emulate_media(color_scheme=theme)
+            page.wait_for_timeout(40)
+            for link in page.get_by_role("link", name="Message Pip", exact=True).all():
+                self.assertGreaterEqual(control_contrast(link), 4.5)
         page.screenshot(path=SCREENSHOTS / "pip-final-1440.png", full_page=True)
 
         browser.close()
@@ -591,9 +612,9 @@ class PortfolioTests(BrowserTestCase):
                     )
 
                 page.wait_for_function(
-                    "document.querySelector('[data-pixi-state]')?.dataset.pixiState === 'running'"
+                    "document.querySelector('[data-pond-state]')?.dataset.pondState === 'running'"
                 )
-                impact_count = page.locator("[data-pixi-state]").get_attribute(
+                impact_count = page.locator("[data-pond-state]").get_attribute(
                     "data-primary-impact-count"
                 )
                 self.assertTrue(
@@ -601,7 +622,7 @@ class PortfolioTests(BrowserTestCase):
                 )
                 page.get_by_role("button", name=re.compile("Rakazo", re.I)).click()
                 self.assertEqual(
-                    page.locator("[data-pixi-state]").get_attribute(
+                    page.locator("[data-pond-state]").get_attribute(
                         "data-primary-impact-count"
                     ),
                     impact_count,
@@ -680,31 +701,7 @@ class PortfolioTests(BrowserTestCase):
                     page.wait_for_timeout(40)
                     self.assertTrue(navigation.is_visible())
                     self.assertTrue(all(action.is_visible() for action in hero_actions))
-                    contrast = hero_actions[0].evaluate(
-                        """element => {
-                            const style = getComputedStyle(element);
-                            const channel = value => {
-                                const parts = value.match(/[\\d.]+/g)?.map(Number) ?? [];
-                                return parts.length >= 3 ? parts.slice(0, 3) : null;
-                            };
-                            const luminance = value => {
-                                const rgb = channel(value);
-                                if (!rgb) return null;
-                                const linear = rgb.map(component => {
-                                    const value = component / 255;
-                                    return value <= 0.04045
-                                        ? value / 12.92
-                                        : ((value + 0.055) / 1.055) ** 2.4;
-                                });
-                                return linear[0] * 0.2126 + linear[1] * 0.7152 + linear[2] * 0.0722;
-                            };
-                            const foreground = luminance(style.color);
-                            const background = luminance(style.backgroundColor);
-                            if (foreground === null || background === null) return null;
-                            return (Math.max(foreground, background) + 0.05)
-                                / (Math.min(foreground, background) + 0.05);
-                        }"""
-                    )
+                    contrast = control_contrast(hero_actions[0])
                     self.assertIsNotNone(contrast)
                     self.assertGreaterEqual(contrast, 4.5)
 
@@ -783,6 +780,10 @@ class PortfolioTests(BrowserTestCase):
                     meet_pip = section.get_by_role("link", name="Meet Pip", exact=True)
                     self.assertTrue(meet_pip.is_visible())
                     self.assertEqual(meet_pip.get_attribute("href"), "/pip")
+                    for theme in ("dark", "light"):
+                        page.emulate_media(color_scheme=theme)
+                        page.wait_for_timeout(40)
+                        self.assertGreaterEqual(control_contrast(meet_pip), 4.5)
                     meet_bounds = meet_pip.bounding_box()
                     self.assertIsNotNone(meet_bounds)
                     self.assertGreaterEqual(meet_bounds["width"], 44)
@@ -920,9 +921,9 @@ class PortfolioTests(BrowserTestCase):
         page_errors = []
         page.on("pageerror", lambda error: page_errors.append(str(error)))
         page.goto(f"{self.base_url}/?pond-seed=e2e-viewport-matrix", wait_until="networkidle")
-        pond = page.locator("[data-pixi-state]")
+        pond = page.locator("[data-pond-state]")
         page.wait_for_function(
-            "document.querySelector('[data-pixi-state]')?.dataset.fishWorldPositions"
+            "document.querySelector('[data-pond-state]')?.dataset.fishWorldPositions"
         )
 
         for name, viewport in viewports:
@@ -934,7 +935,7 @@ class PortfolioTests(BrowserTestCase):
                 ]
                 page.set_viewport_size(viewport)
                 page.wait_for_function(
-                    "frame => document.querySelector('[data-pixi-state]')?.dataset.frame !== frame",
+                    "frame => document.querySelector('[data-pond-state]')?.dataset.frame !== frame",
                     arg=previous_frame,
                 )
                 page.wait_for_timeout(260)
@@ -948,7 +949,7 @@ class PortfolioTests(BrowserTestCase):
                         const projectNames = [...document.querySelectorAll('[aria-label="Featured projects"] strong')];
                         const aboutCards = [...document.querySelectorAll('#about > article, #about > div:last-child')];
                         const layoutWidth = document.documentElement.clientWidth;
-                        const fish = document.querySelector('[data-pixi-state]').dataset.fishPositions
+                        const fish = document.querySelector('[data-pond-state]').dataset.fishPositions
                             .split(';').map(point => point.split(',').map(Number));
                         return {
                             overflow: document.documentElement.scrollWidth - width,
@@ -1005,7 +1006,7 @@ class PortfolioTests(BrowserTestCase):
         page.route("**/pixel-koi-atlas.webp", delay_koi_atlas)
         page.goto(f"{self.base_url}/?pond-seed=e2e-loading", wait_until="domcontentloaded")
         pond = page.locator("[data-renderer]")
-        host = page.locator("[data-pixi-state]")
+        host = page.locator("[data-pond-state]")
         self.assertEqual(pond.get_attribute("data-renderer"), "fallback")
         self.assertEqual(host.locator("canvas").count(), 0)
         self.assertIn(
@@ -1021,9 +1022,12 @@ class PortfolioTests(BrowserTestCase):
         )
         self.assertEqual(host.evaluate("element => getComputedStyle(element).opacity"), "0")
         page.wait_for_function(
-            "document.querySelector('[data-renderer]')?.dataset.renderer === 'pixi'"
+            "document.querySelector('[data-renderer]')?.dataset.renderer === 'three'"
         )
-        page.wait_for_timeout(820)
+        page.wait_for_function(
+            "getComputedStyle(document.querySelector('[data-pond-state]')).opacity === '1'",
+            timeout=3_000,
+        )
         self.assertEqual(host.evaluate("element => getComputedStyle(element).opacity"), "1")
         browser.close()
 
@@ -1031,9 +1035,9 @@ class PortfolioTests(BrowserTestCase):
         browser = self.playwright.chromium.launch()
         page = browser.new_page(viewport={"width": 1280, "height": 800})
         page.goto(f"{self.base_url}/?pond-seed=e2e-hero-pointer", wait_until="networkidle")
-        pond = page.locator("[data-pixi-state]")
+        pond = page.locator("[data-pond-state]")
         page.wait_for_function(
-            "document.querySelector('[data-pixi-state]')?.dataset.pixiState === 'running'"
+            "document.querySelector('[data-pond-state]')?.dataset.pondState === 'running'"
         )
 
         box = page.get_by_role(
@@ -1200,11 +1204,11 @@ class PortfolioTests(BrowserTestCase):
         )
         self.assertEqual(page.get_by_text("Touch the water", exact=True).count(), 0)
 
-        pond = page.locator("[data-pixi-state]")
+        pond = page.locator("[data-pond-state]")
         page.wait_for_function(
             """() => {
-                const pond = document.querySelector('[data-pixi-state]');
-                return pond?.dataset.pixiState === 'running' && pond.dataset.fishPositions;
+                const pond = document.querySelector('[data-pond-state]');
+                return pond?.dataset.pondState === 'running' && pond.dataset.fishPositions;
             }"""
         )
         first_positions = pond.get_attribute("data-fish-positions")
@@ -1227,7 +1231,7 @@ class PortfolioTests(BrowserTestCase):
         )
         page.wait_for_function(
             """initial => {
-                const pond = document.querySelector('[data-pixi-state]');
+                const pond = document.querySelector('[data-pond-state]');
                 return pond?.dataset.waterOffset !== initial;
             }""",
             arg=first_water_offset,
@@ -1244,7 +1248,7 @@ class PortfolioTests(BrowserTestCase):
         self.assertEqual(pond.get_attribute("data-cat-water-violation"), "false")
         self.assertLess(abs(float(pond.get_attribute("data-cat-rotation"))), 0.12)
         page.wait_for_function(
-            "document.querySelector('[data-pixi-state]')?.dataset.catTarget !== 'none'",
+            "document.querySelector('[data-pond-state]')?.dataset.catTarget !== 'none'",
             timeout=20_000,
         )
         aim_x = float(pond.get_attribute("data-cat-aim-screen").split(",")[0])
@@ -1271,20 +1275,20 @@ class PortfolioTests(BrowserTestCase):
         disturb_water_near_cat(cat_x, cat_y)
         page.wait_for_function(
             """initial => {
-                const pond = document.querySelector('[data-pixi-state]');
+                const pond = document.querySelector('[data-pond-state]');
                 return Number(pond?.dataset.catPounceCount) > initial;
             }""",
             arg=first_pounce_count,
         )
         self.assertNotEqual(pond.get_attribute("data-cat-state"), "idle")
         page.wait_for_function(
-            "initial => document.querySelector('[data-pixi-state]')?.dataset.catPosition !== initial",
+            "initial => document.querySelector('[data-pond-state]')?.dataset.catPosition !== initial",
             arg=first_cat_position,
         )
         self.assertNotEqual(pond.get_attribute("data-cat-position"), first_cat_position)
         page.wait_for_function(
             """() => {
-                const pond = document.querySelector('[data-pixi-state]');
+                const pond = document.querySelector('[data-pond-state]');
                 return pond?.dataset.catGrounded === 'true' && ['idle', 'observe'].includes(pond.dataset.catState);
             }"""
         )
@@ -1313,7 +1317,7 @@ class PortfolioTests(BrowserTestCase):
         page.mouse.move(fish_x - 220, fish_y - 60)
         page.mouse.move(pointer_x, pointer_y, steps=2)
         page.wait_for_function(
-            "document.querySelector('[data-pixi-state]')?.dataset.fishReacting === 'true'"
+            "document.querySelector('[data-pond-state]')?.dataset.fishReacting === 'true'"
         )
         self.assertEqual(pond.get_attribute("data-fish-reacting"), "true")
         page.wait_for_timeout(320)
@@ -1330,7 +1334,7 @@ class PortfolioTests(BrowserTestCase):
         page.mouse.move(impact_x, impact_y, steps=6)
         page.mouse.click(impact_x, impact_y)
         page.wait_for_function(
-            "Number(document.querySelector('[data-pixi-state]')?.dataset.rippleCount) > 0",
+            "Number(document.querySelector('[data-pond-state]')?.dataset.rippleCount) > 0",
             timeout=2_000,
         )
         self.assertGreater(int(pond.get_attribute("data-ripple-count")), 0)
@@ -1349,9 +1353,9 @@ class PortfolioTests(BrowserTestCase):
         page_errors = []
         page.on("pageerror", lambda error: page_errors.append(str(error)))
         page.goto(f"{self.base_url}/?pond-seed=e2e-food", wait_until="networkidle")
-        pond = page.locator("[data-pixi-state]")
+        pond = page.locator("[data-pond-state]")
         page.wait_for_function(
-            "document.querySelector('[data-pixi-state]')?.dataset.fishPositions"
+            "document.querySelector('[data-pond-state]')?.dataset.fishPositions"
         )
         food_before = int(pond.get_attribute("data-food-dropped-count"))
         context_suppressed_on_link = page.get_by_role("link", name="See the work").evaluate(
@@ -1380,7 +1384,7 @@ class PortfolioTests(BrowserTestCase):
         )
         page.mouse.click(fish_x, fish_y, button="right")
         page.wait_for_function(
-            "initial => Number(document.querySelector('[data-pixi-state]')?.dataset.foodDroppedCount) > initial",
+            "initial => Number(document.querySelector('[data-pond-state]')?.dataset.foodDroppedCount) > initial",
             arg=food_before,
         )
         self.assertEqual(
@@ -1400,12 +1404,12 @@ class PortfolioTests(BrowserTestCase):
         self.assertAlmostEqual(dropped_x, camera_x + (fish_x - 720) / scale_x, delta=1.2)
         self.assertAlmostEqual(dropped_y, camera_y + (fish_y - 450) / scale_y, delta=1.2)
         page.wait_for_function(
-            "document.querySelector('[data-pixi-state]')?.dataset.foodReservations",
+            "document.querySelector('[data-pond-state]')?.dataset.foodReservations",
             timeout=20_000,
         )
         try:
             page.wait_for_function(
-                "Number(document.querySelector('[data-pixi-state]')?.dataset.fishFedCount) > 0",
+                "Number(document.querySelector('[data-pond-state]')?.dataset.fishFedCount) > 0",
                 timeout=30_000,
             )
         except PlaywrightTimeoutError:
@@ -1502,20 +1506,20 @@ class PortfolioTests(BrowserTestCase):
         page.emulate_media(reduced_motion="reduce")
         page.goto(f"{self.base_url}/?pond-seed=e2e-reduced", wait_until="networkidle")
 
-        pond = page.locator("[data-pixi-state]")
+        pond = page.locator("[data-pond-state]")
         page.wait_for_function(
             """() => {
-                const pond = document.querySelector('[data-pixi-state]');
-                return pond?.dataset.pixiState === 'running' && pond.dataset.fishPositions;
+                const pond = document.querySelector('[data-pond-state]');
+                return pond?.dataset.pondState === 'running' && pond.dataset.fishPositions;
             }"""
         )
         first_positions = pond.get_attribute("data-fish-positions")
         first_offset = pond.get_attribute("data-water-offset")
         self.assertEqual(pond.get_attribute("data-motion"), "reduced")
-        self.assertEqual(page.locator("[data-renderer]").get_attribute("data-renderer"), "pixi")
+        self.assertEqual(page.locator("[data-renderer]").get_attribute("data-renderer"), "three")
         self.assertEqual(pond.locator("canvas").count(), 1)
         page.wait_for_function(
-            "initial => document.querySelector('[data-pixi-state]')?.dataset.fishPositions !== initial",
+            "initial => document.querySelector('[data-pond-state]')?.dataset.fishPositions !== initial",
             arg=first_positions,
             timeout=5_000,
         )
@@ -1528,7 +1532,7 @@ class PortfolioTests(BrowserTestCase):
         fish_x, fish_y = find_open_water(page, pond, fish_points)
         page.mouse.click(fish_x, fish_y, button="right")
         page.wait_for_function(
-            "Number(document.querySelector('[data-pixi-state]')?.dataset.foodDroppedCount) > 0"
+            "Number(document.querySelector('[data-pond-state]')?.dataset.foodDroppedCount) > 0"
         )
         self.assertGreater(int(pond.get_attribute("data-food-count")), 0)
         self.assertEqual(page_errors, [])
@@ -1542,9 +1546,9 @@ class PortfolioTests(BrowserTestCase):
         )
         page = context.new_page()
         page.goto(f"{self.base_url}/?pond-seed=e2e-touch", wait_until="networkidle")
-        pond = page.locator("[data-pixi-state]")
+        pond = page.locator("[data-pond-state]")
         page.wait_for_function(
-            "document.querySelector('[data-pixi-state]')?.dataset.pixiState === 'running' && document.querySelector('[data-pixi-state]')?.dataset.fishPositions"
+            "document.querySelector('[data-pond-state]')?.dataset.pondState === 'running' && document.querySelector('[data-pond-state]')?.dataset.fishPositions"
         )
         fish_points = [
             tuple(float(value) for value in point.split(","))
@@ -1565,7 +1569,7 @@ class PortfolioTests(BrowserTestCase):
         impacts_before = int(pond.get_attribute("data-primary-impact-count"))
         page.touchscreen.tap(fish_x, fish_y)
         page.wait_for_function(
-            "document.querySelector('[data-pixi-state]')?.dataset.touchGesture === 'single-tap-impact'"
+            "document.querySelector('[data-pond-state]')?.dataset.touchGesture === 'single-tap-impact'"
         )
         self.assertEqual(
             int(pond.get_attribute("data-primary-impact-count")),
@@ -1579,11 +1583,11 @@ class PortfolioTests(BrowserTestCase):
         page.touchscreen.tap(fish_x, fish_y)
         try:
             page.wait_for_function(
-                "Number(document.querySelector('[data-pixi-state]')?.dataset.foodDroppedCount) > 0"
+                "Number(document.querySelector('[data-pond-state]')?.dataset.foodDroppedCount) > 0"
             )
         except PlaywrightTimeoutError:
             detail = pond.evaluate(
-                "element => ({ gesture: element.dataset.touchGesture, requested: element.dataset.foodRequestedAt, frame: element.dataset.frame, state: element.dataset.pixiState })"
+                "element => ({ gesture: element.dataset.touchGesture, requested: element.dataset.foodRequestedAt, frame: element.dataset.frame, state: element.dataset.pondState })"
             )
             detail["touch_events"] = page.evaluate("window.__pondTouchEvents")
             context.close()
@@ -1679,13 +1683,13 @@ class PortfolioTests(BrowserTestCase):
         page = context.new_page()
         page.goto(self.base_url, wait_until="networkidle")
         page.wait_for_function(
-            "document.querySelector('[data-pixi-state]')?.dataset.pixiState === 'fallback'"
+            "document.querySelector('[data-pond-state]')?.dataset.pondState === 'fallback'"
         )
         self.assertEqual(
             page.locator("[data-renderer]").get_attribute("data-renderer"),
             "fallback",
         )
-        self.assertEqual(page.locator("[data-pixi-state] canvas").count(), 0)
+        self.assertEqual(page.locator("[data-pond-state] canvas").count(), 0)
         self.assertTrue(
             page.get_by_role(
                 "heading", name="I make stubborn software behave."
@@ -1698,9 +1702,9 @@ class PortfolioTests(BrowserTestCase):
         browser = self.playwright.chromium.launch()
         page = browser.new_page(viewport={"width": 1280, "height": 800})
         page.goto(f"{self.base_url}/?pond-seed=e2e-lifecycle", wait_until="networkidle")
-        pond = page.locator("[data-pixi-state]")
+        pond = page.locator("[data-pond-state]")
         page.wait_for_function(
-            "document.querySelector('[data-pixi-state]')?.dataset.fishWorldPositions"
+            "document.querySelector('[data-pond-state]')?.dataset.fishWorldPositions"
         )
         first = [
             tuple(float(value) for value in point.split(","))
@@ -1724,7 +1728,7 @@ class PortfolioTests(BrowserTestCase):
                 document.dispatchEvent(new Event('visibilitychange'));
             }"""
         )
-        self.assertEqual(pond.get_attribute("data-pixi-state"), "paused")
+        self.assertEqual(pond.get_attribute("data-pond-state"), "paused")
         paused_frame = pond.get_attribute("data-frame")
         page.wait_for_timeout(350)
         self.assertEqual(pond.get_attribute("data-frame"), paused_frame)
@@ -1735,7 +1739,7 @@ class PortfolioTests(BrowserTestCase):
             }"""
         )
         page.wait_for_function(
-            "initial => document.querySelector('[data-pixi-state]')?.dataset.frame !== initial",
+            "initial => document.querySelector('[data-pond-state]')?.dataset.frame !== initial",
             arg=paused_frame,
         )
         missing_response = page.goto(
@@ -1747,9 +1751,9 @@ class PortfolioTests(BrowserTestCase):
         )
         page.go_back(wait_until="networkidle")
         page.wait_for_function(
-            "document.querySelector('[data-pixi-state]')?.dataset.pixiState === 'running'"
+            "document.querySelector('[data-pond-state]')?.dataset.pondState === 'running'"
         )
-        self.assertEqual(page.locator("[data-pixi-state] canvas").count(), 1)
+        self.assertEqual(page.locator("[data-pond-state] canvas").count(), 1)
         browser.close()
 
     def test_removed_routes_use_the_pond_not_found_page(self) -> None:
@@ -1770,6 +1774,10 @@ class PortfolioTests(BrowserTestCase):
         self.assertTrue(
             page.get_by_role("link", name="Return to the pond").is_visible()
         )
+        for theme in ("dark", "light"):
+            page.emulate_media(color_scheme=theme)
+            page.wait_for_timeout(40)
+            self.assertGreaterEqual(control_contrast(page.get_by_role("link", name="Return to the pond")), 4.5)
         self.assertEqual(page.locator("[data-renderer]").count(), 1)
         self.assertLessEqual(
             page.evaluate("document.documentElement.scrollWidth"), 1280

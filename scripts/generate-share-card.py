@@ -1,6 +1,6 @@
-"""Render the checked-in social PNG from the site's pond assets and built fonts.
+"""Render the checked-in social PNG from the site's pond assets and installed local fonts.
 
-Run `npm run build` first, then `python3 scripts/generate-share-card.py`.
+Run `npm ci` first, then `python3 scripts/generate-share-card.py`.
 Uses the project's existing requirements-test.txt / Playwright Chromium setup.
 Rendering is offline; normal builds only copy the checked-in PNG into out/.
 """
@@ -14,6 +14,7 @@ import tempfile
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
+from share_card_fonts import local_fonts
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -34,29 +35,13 @@ def data_url(path: Path, mime: str) -> str:
     return f"data:{mime};base64,{base64.b64encode(path.read_bytes()).decode()}"
 
 
-def built_fonts() -> str:
-    faces = []
-    for css in sorted((ROOT / "out/_next/static").rglob("*.css")):
-        for face in re.findall(r"@font-face\s*\{[^}]+\}", css.read_text()):
-            if not re.search(r"font-family:(?:Space Grotesk|Space Mono);", face):
-                continue
-            face = re.sub(
-                r"url\(([^)]+)\)",
-                lambda match: f"url({data_url((css.parent / match[1].strip(chr(34) + chr(39))).resolve(), 'font/woff2')})",
-                face,
-            )
-            faces.append(face)
-    if not faces:
-        raise RuntimeError("No built site fonts found. Run npm run build first.")
-    return "\n".join(faces)
-
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=CARD)
     args = parser.parse_args()
     html = (ROOT / "scripts/share-card.html").read_text().replace(
-        "/* FONT_FACES */", built_fonts()
+        "/* FONT_FACES */", local_fonts(include_pixelify=False)
     )
     html = re.sub(
         r'src="(../public/[^\"]+)"',

@@ -1,9 +1,7 @@
-"use client";
-
 import { useState } from "react";
-import Image from "next/image";
 import { ArrowUpRight, Check, Copy, Send, QrCode } from "lucide-react";
 import type { getPipContact } from "@/lib/pip";
+import { Button } from "@/components/ui/button";
 import styles from "./pip.module.css";
 
 export function PipContact({ contact }: { contact: ReturnType<typeof getPipContact> }) {
@@ -33,9 +31,9 @@ export function PipContact({ contact }: { contact: ReturnType<typeof getPipConta
           <>
             <span className={styles.label}>PIP’S TELEGRAM HANDLE</span>
             <p className={styles.handle}>{contact.handle}</p>
-            <a className={styles.primaryAction} href={contact.telegramUrl}>
+            <Button asChild className={styles.primaryAction}><a href={contact.telegramUrl}>
               <Send aria-hidden="true" /> Message Pip <ArrowUpRight aria-hidden="true" />
-            </a>
+            </a></Button>
             <p className={styles.actionHint}>Opens Pip in Telegram.</p>
           </>
         ) : (
@@ -43,16 +41,17 @@ export function PipContact({ contact }: { contact: ReturnType<typeof getPipConta
             <span className={styles.label}>A LITTLE HELLO, SOON</span>
             <p className={styles.comingSoon}>Chat opens soon.</p>
             <p className={styles.actionHint}>Pip’s public handle is on its way. Check back here to start a chat.</p>
-            <button className={styles.primaryAction} type="button" disabled>
+            <Button className={styles.primaryAction} type="button" disabled>
               <Send aria-hidden="true" /> Message Pip <ArrowUpRight aria-hidden="true" />
-            </button>
+            </Button>
           </>
         )}
         <div className={styles.secondaryActions}>
-          <button type="button" className={styles.secondaryAction} onClick={copyHandle} disabled={!contact}>
+          <Button variant="outline" type="button" className={styles.secondaryAction} onClick={copyHandle} disabled={!contact}>
             {copyStatus === "copied" ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />} Copy handle
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="outline"
             type="button"
             className={styles.secondaryAction}
             disabled={!contact}
@@ -61,7 +60,7 @@ export function PipContact({ contact }: { contact: ReturnType<typeof getPipConta
             onClick={() => setShowQr(!showQr)}
           >
             <QrCode aria-hidden="true" /> {showQr ? "Hide QR code" : "Show QR code"}
-          </button>
+          </Button>
         </div>
         <p className={styles.copyStatus} role="status">
           {copyStatus === "copied" && "Handle copied."}
@@ -74,12 +73,11 @@ export function PipContact({ contact }: { contact: ReturnType<typeof getPipConta
                 <p role="status">QR code couldn’t load. Use Message Pip or copy the handle instead.</p>
               ) : (
                 <>
-                  <Image
+                  <img
                     src={contact.qrUrl}
                     alt="Scan to message Pip on Telegram"
                     width={240}
                     height={240}
-                    unoptimized
                     referrerPolicy="no-referrer"
                     onError={() => setQrFailed(true)}
                   />

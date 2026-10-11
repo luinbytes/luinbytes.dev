@@ -1,0 +1,78 @@
+
+> luinbytes-site@0.1.0 test:e2e
+> npm run build && python3 -m unittest discover -s tests/browser -p '*_test.py' -v
+
+
+> luinbytes-site@0.1.0 prebuild
+> node scripts/generate-sitemap.js
+
+Generated sitemap with 2 URLs to /private/tmp/lu-site-final-check-20261011/public/sitemap.xml
+
+> luinbytes-site@0.1.0 build
+> tsc --noEmit && vite build && vite build --ssr app/entry-server.tsx && node scripts/prerender.mjs
+
+vite v8.3.3 building client environment for production...
+transforming...
+✓ 2270 modules transformed.
+rendering chunks...
+computing gzip size...
+out/index.html                                                   0.54 kB │ gzip:   0.33 kB
+out/assets/pixelify-sans-cyrillic-wght-normal-BfQLqnEI.woff2     5.06 kB
+out/assets/pixelify-sans-latin-ext-wght-normal-CsF3XSp0.woff2    8.20 kB
+out/assets/pixelify-sans-latin-wght-normal-Cbhn5ptY.woff2       12.01 kB
+out/assets/space-mono-latin-400-normal-_3DlpgIW.woff            12.31 kB
+out/assets/space-mono-latin-700-normal-D7A851RN.woff            12.41 kB
+out/assets/space-mono-latin-400-normal-Rg4St2Dn.woff2           16.52 kB
+out/assets/space-mono-latin-700-normal-mWgeinG7.woff2           16.72 kB
+out/assets/manrope-latin-variable-DHIcAJRg.woff2                24.83 kB
+out/assets/index-IpTcsXkz.css                                   78.15 kB │ gzip:  15.01 kB
+out/assets/index-DbIUGngv.js                                   424.96 kB │ gzip: 137.72 kB
+out/assets/pond-renderer-BTu1onqc.js                           647.47 kB │ gzip: 168.12 kB
+
+[plugin builtin:vite-reporter]
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 1.10s
+vite v8.3.3 building ssr environment for production...
+transforming...
+✓ 32 modules transformed.
+rendering chunks...
+computing gzip size...
+.prerender/entry-server.js                    73.34 kB │ gzip: 17.83 kB
+.prerender/assets/pond-renderer-CZdHM-jA.js  109.93 kB │ gzip: 27.38 kB
+
+✓ built in 325ms
+Prerendered 3 pages to out.
+test_sitemap_exposes_the_portfolio_and_pip (browser_test.GeneratedArtifactTests.test_sitemap_exposes_the_portfolio_and_pip) ... ok
+test_pip_page_fits_mobile_viewports_and_exposes_keyboard_skip_and_nav (browser_test.PipRouteTests.test_pip_page_fits_mobile_viewports_and_exposes_keyboard_skip_and_nav) ... ok
+test_pip_page_has_static_content_and_configured_telegram_contact (browser_test.PipRouteTests.test_pip_page_has_static_content_and_configured_telegram_contact) ... ok
+test_pip_page_remains_readable_without_javascript (browser_test.PipRouteTests.test_pip_page_remains_readable_without_javascript) ... ok
+test_telegram_contact_copy_reports_success_and_failure (browser_test.PipRouteTests.test_telegram_contact_copy_reports_success_and_failure) ... ok
+test_telegram_qr_uses_the_same_target_and_reports_remote_failure (browser_test.PipRouteTests.test_telegram_qr_uses_the_same_target_and_reports_remote_failure) ... ok
+test_food_drop_reservation_and_feeding (browser_test.PortfolioTests.test_food_drop_reservation_and_feeding) ... ok
+test_hero_copy_does_not_block_pointer_water_reaction (browser_test.PortfolioTests.test_hero_copy_does_not_block_pointer_water_reaction) ... ok
+test_homepage_is_responsive_and_routes_featured_work (browser_test.PortfolioTests.test_homepage_is_responsive_and_routes_featured_work) ... ok
+test_homepage_pip_link_works_without_javascript (browser_test.PortfolioTests.test_homepage_pip_link_works_without_javascript) ... ok
+test_homepage_pip_section_fits_320px_with_reduced_motion (browser_test.PortfolioTests.test_homepage_pip_section_fits_320px_with_reduced_motion) ... ok
+test_homepage_pip_section_roundtrips_to_pip_and_back (browser_test.PortfolioTests.test_homepage_pip_section_roundtrips_to_pip_and_back) ... ok
+test_homepage_preserves_layout_and_world_state_across_viewport_matrix (browser_test.PortfolioTests.test_homepage_preserves_layout_and_world_state_across_viewport_matrix) ... ok
+test_loading_shows_only_the_pond_then_fades_in_the_live_ecosystem (browser_test.PortfolioTests.test_loading_shows_only_the_pond_then_fades_in_the_live_ecosystem) ... ok
+test_mobile_navigation_hero_viewport_and_system_color_modes (browser_test.PortfolioTests.test_mobile_navigation_hero_viewport_and_system_color_modes) ... ok
+test_mobile_touch_disturbs_the_shared_pond (browser_test.PortfolioTests.test_mobile_touch_disturbs_the_shared_pond) ... ok
+test_navigation_and_bordered_controls_keep_their_visual_hierarchy (browser_test.PortfolioTests.test_navigation_and_bordered_controls_keep_their_visual_hierarchy) ... ok
+test_pause_resize_and_remount_keep_world_state_bounded (browser_test.PortfolioTests.test_pause_resize_and_remount_keep_world_state_bounded) ... ok
+test_pointer_stirs_the_pond (browser_test.PortfolioTests.test_pointer_stirs_the_pond) ... ok
+test_profile_card_foil_is_square_pointer_driven_and_motion_safe (browser_test.PortfolioTests.test_profile_card_foil_is_square_pointer_driven_and_motion_safe) ... ok
+test_reduced_motion_preserves_the_ecosystem_at_low_speed (browser_test.PortfolioTests.test_reduced_motion_preserves_the_ecosystem_at_low_speed) ... ok
+test_removed_routes_use_the_pond_not_found_page (browser_test.PortfolioTests.test_removed_routes_use_the_pond_not_found_page) ... ok
+test_webgl_failure_uses_the_art_directed_fallback (browser_test.PortfolioTests.test_webgl_failure_uses_the_art_directed_fallback) ... ok
+test_exited_child_reports_its_owned_log_without_probing_http (browser_test.ServerStartupTests.test_exited_child_reports_its_owned_log_without_probing_http) ... ok
+test_editable_source_contains_the_original_card_copy (browser_test.ShareCardStaticExportTests.test_editable_source_contains_the_original_card_copy) ... ok
+test_every_scoped_route_exports_a_production_large_image_card (browser_test.ShareCardStaticExportTests.test_every_scoped_route_exports_a_production_large_image_card) ... ok
+
+----------------------------------------------------------------------
+Ran 26 tests in 149.347s
+
+OK
