@@ -133,6 +133,8 @@ export class PondPixels extends THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasic
   }
 }
 
+export const POND_RIPPLE_CAPACITY = 6;
+
 export function createPondWater(geometry: THREE.BufferGeometry, background: THREE.Texture, water: THREE.Texture, displacement: THREE.Texture) {
   const uniforms = {
     background: { value: background },
@@ -147,8 +149,8 @@ export function createPondWater(geometry: THREE.BufferGeometry, background: THRE
     angles: { value: new THREE.Vector2(0, Math.PI / 3) },
     finger: { value: new THREE.Vector4(-1000, -1000, 150, 0) },
     glow: { value: 0.09 },
-    rippleCenters: { value: [new THREE.Vector4(), new THREE.Vector4()] },
-    rippleWaves: { value: [new THREE.Vector4(), new THREE.Vector4()] },
+    rippleCenters: { value: Array.from({ length: POND_RIPPLE_CAPACITY }, () => new THREE.Vector4()) },
+    rippleWaves: { value: Array.from({ length: POND_RIPPLE_CAPACITY }, () => new THREE.Vector4()) },
   };
   const material = new THREE.ShaderMaterial({
     uniforms,
@@ -178,8 +180,8 @@ export function createPondWater(geometry: THREE.BufferGeometry, background: THRE
       uniform vec2 angles;
       uniform vec4 finger;
       uniform float glow;
-      uniform vec4 rippleCenters[2];
-      uniform vec4 rippleWaves[2];
+      uniform vec4 rippleCenters[${POND_RIPPLE_CAPACITY}];
+      uniform vec4 rippleWaves[${POND_RIPPLE_CAPACITY}];
       varying vec2 pondUv;
       vec2 rotatePoint(vec2 point, float angle) {
         float s = sin(angle);
@@ -198,9 +200,10 @@ export function createPondWater(geometry: THREE.BufferGeometry, background: THRE
         float fingerFalloff = max(0.0, 1.0 - length(fromFinger) / finger.z);
         offset += fromFinger * finger.w * fingerFalloff * fingerFalloff;
         float brightness = 1.0;
-        for (int i = 0; i < 2; i++) {
-          vec4 center = rippleCenters[i];
+        for (int i = 0; i < ${POND_RIPPLE_CAPACITY}; i++) {
           vec4 wave = rippleWaves[i];
+          if (wave.w <= 0.0) continue;
+          vec4 center = rippleCenters[i];
           vec2 fromCenter = screen - center.xy;
           float distanceToCenter = length(fromCenter);
           float ringDistance = distanceToCenter - wave.x * wave.y;
