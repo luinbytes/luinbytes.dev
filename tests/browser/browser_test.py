@@ -1354,10 +1354,6 @@ class PortfolioTests(BrowserTestCase):
         self.assertEqual(pond.get_attribute("data-cat-over-water"), "false")
         self.assertEqual(pond.get_attribute("data-cat-water-violation"), "false")
         self.assertLess(abs(float(pond.get_attribute("data-cat-rotation"))), 0.12)
-        page.wait_for_function(
-            "document.querySelector('[data-pond-state]')?.dataset.catTarget !== 'none'",
-            timeout=20_000,
-        )
         aim_x = float(pond.get_attribute("data-cat-aim-screen").split(",")[0])
         cat_x = float(pond.get_attribute("data-cat-position").split(",")[0])
         self.assertEqual(
@@ -1755,7 +1751,6 @@ class PortfolioTests(BrowserTestCase):
         self.assertEqual(int(pond.get_attribute("data-food-dropped-count")), 0)
         impacts_before_food = int(pond.get_attribute("data-primary-impact-count"))
         page.touchscreen.tap(fish_x, fish_y)
-        page.wait_for_timeout(120)
         page.touchscreen.tap(fish_x, fish_y)
         try:
             page.wait_for_function(

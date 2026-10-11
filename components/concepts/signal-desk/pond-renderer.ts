@@ -20,6 +20,7 @@ import {
   createPondWater,
   loadPondAsset,
   PondPixels,
+  POND_RIPPLE_CAPACITY,
   setAtlasFrame,
   type PondAsset,
   type PondSprite,
@@ -47,6 +48,10 @@ type FishVisual = {
   baseScaleX: number;
   baseScaleY: number;
   lastWake: number;
+  surfaced: boolean;
+  status: THREE.Group;
+  bonk: PondPixels;
+  stars: PondPixels;
 };
 type FlyVisual = { container: THREE.Group; wings: PondPixels };
 type FoodVisual = { container: THREE.Group; group: THREE.Group; pellets: PondPixels[]; shadow: PondPixels };
@@ -277,7 +282,7 @@ export async function startPondRenderer(options: StartOptions) {
           y: pondTexture.height / 2 + (y - 0.5) * (window.innerHeight / viewScale) * 0.88,
         }),
         heading,
-        cruise: Math.round(cruise * 1.35 + 3),
+        cruise: Math.round(cruise * 1.8 + 5),
         alpha,
         species: ["kohaku", "ogon", "showa", "utsuri"][row],
       }));
@@ -288,8 +293,8 @@ export async function startPondRenderer(options: StartOptions) {
       height: pondTexture.height,
       fish: fishDefinitions,
       flies: [
-        { id: "fly-0", position: { x: 580, y: 285 }, orbitX: 240, orbitY: 90, phase: 0.4, speed: 0.021, color: 0x56d7c8 },
-        { id: "fly-1", position: { x: 1040, y: 560 }, orbitX: 190, orbitY: 115, phase: 2.7, speed: 0.019, color: 0xe8a64f },
+        { id: "fly-0", position: screenToWorld(window.innerWidth * 0.72, window.innerHeight * 0.25), orbitX: 240, orbitY: 90, phase: 0.4, speed: 0.021, color: 0x56d7c8 },
+        { id: "fly-1", position: screenToWorld(window.innerWidth * 0.33, window.innerHeight * 0.36), orbitX: 190, orbitY: 115, phase: 2.7, speed: 0.019, color: 0xe8a64f },
       ],
       isWater: isWaterWorld,
     });
@@ -312,9 +317,31 @@ export async function startPondRenderer(options: StartOptions) {
       const container = new THREE.Group();
       container.add(shadow, fishSprite);
       fishLayer.add(container);
+      const bonk = pixels(9, 180);
+      const glyphs = [
+        ["010", "111", "010", "101", "000"],
+        ["100", "100", "110", "101", "110"],
+        ["000", "000", "010", "101", "010"],
+        ["000", "000", "110", "101", "101"],
+        ["100", "101", "110", "101", "101"],
+        ["010", "111", "010", "101", "000"],
+      ];
+      for (const shadowPass of [true, false]) {
+        glyphs.forEach((glyph, letter) => glyph.forEach((row, y) => {
+          for (let x = 0; x < row.length; x += 1) {
+            if (row[x] === "1") bonk.rectangle((letter * 4 + x - 11.5) * 2 + (shadowPass ? 1 : 0),
+              y * 2 + (shadowPass ? 1 : 0), 2, 2, shadowPass ? 0x173d3c : 0xffefb0);
+          }
+        }));
+      }
+      const stars = pixels(9.1, 24);
+      const status = new THREE.Group();
+      status.add(bonk, stars);
+      status.visible = false;
+      stage.add(status);
       fishVisuals.set(fish.id, {
         container, sprite: fishSprite, shadow, animation, alpha: fish.alpha,
-        baseScaleX: fish.displayWidth, baseScaleY: fish.displayWidth, lastWake: 0,
+        baseScaleX: fish.displayWidth, baseScaleY: fish.displayWidth, lastWake: 0, surfaced: false, status, bonk, stars,
       });
     }
 
@@ -325,14 +352,21 @@ export async function startPondRenderer(options: StartOptions) {
       { id: "fly-1", color: 0xe8a64f },
     ]) {
       const wings = pixels(6);
-      wings.rectangle(-2, -5, 5, 2, 0xe3fff5, 0.7);
-      wings.rectangle(-1, 3, 5, 2, 0xe3fff5, 0.7);
-      wings.rectangle(1, -3, 4, 2, 0x9de9df, 0.58);
-      wings.rectangle(2, 1, 4, 2, 0x9de9df, 0.58);
+      wings.rectangle(-6, -9, 10, 3, 0xe3fff5, 0.78);
+      wings.rectangle(-6, 6, 10, 3, 0xe3fff5, 0.78);
+      wings.rectangle(-2, -6, 8, 2, 0x9de9df, 0.66);
+      wings.rectangle(-2, 4, 8, 2, 0x9de9df, 0.66);
+      wings.rectangle(-5, -8, 6, 1, 0xffffff, 0.82);
+      wings.rectangle(-5, 7, 6, 1, 0xffffff, 0.82);
       const body = pixels(6);
-      body.rectangle(-5, -1, 11, 2, fly.color);
-      body.rectangle(5, -2, 3, 4, 0x173d3c);
-      body.rectangle(-7, 0, 3, 1, 0xf4da82);
+      for (let segment = 0; segment < 5; segment += 1) {
+        body.rectangle(-14 + segment * 3, -1, 2, 2, segment % 2 ? 0x173d3c : fly.color);
+      }
+      body.rectangle(0, -2, 7, 4, fly.color);
+      body.rectangle(6, -3, 3, 2, 0x173d3c);
+      body.rectangle(6, 1, 3, 2, 0x173d3c);
+      body.rectangle(7, -2, 1, 1, 0xf4fff1);
+      body.rectangle(7, 1, 1, 1, 0xf4fff1);
       const container = new THREE.Group();
       container.add(wings, body);
       insectLayer.add(container);
@@ -377,7 +411,7 @@ export async function startPondRenderer(options: StartOptions) {
     const addRipple = (x: number, y: number, size = 132, strength = 1) => {
       const speed = 145 + strength * 45;
       ripples.push({ x, y, size, strength, speed, born: performance.now(), life: size / speed * 1000 + 180 });
-      if (ripples.length > 2) ripples.shift();
+      if (ripples.length > POND_RIPPLE_CAPACITY) ripples.shift();
       host.dataset.rippleCount = String(ripples.length);
     };
 
@@ -561,7 +595,10 @@ export async function startPondRenderer(options: StartOptions) {
       catScreen = contact;
       catContainer.position.set(Math.round(contact.x), Math.round(contact.y - lift), 0);
       catContainer.rotation.z += pondAngleDelta(catContainer.rotation.z, next.cat.surfaceAngle + aimLean) * Math.min(1, delta * 12);
-      catSprite.scale.set(catBaseScale.x * renderedFacing * next.cat.squashX, catBaseScale.y * next.cat.squashY, 1);
+      const breathing = next.cat.grounded && next.cat.routine === "resting"
+        ? Math.sin(simulationNow * 0.0018) * 0.009 * motionScale
+        : 0;
+      catSprite.scale.set(catBaseScale.x * renderedFacing * (next.cat.squashX - breathing * 0.4), catBaseScale.y * (next.cat.squashY + breathing), 1);
       catSprite.position.y = (0.5 - contactY) * catSprite.scale.y;
       catTurnSprite.scale.set(catBaseScale.x * next.cat.squashX, catBaseScale.y * next.cat.squashY, 1);
       catTurnSprite.position.y = (0.5 - CAT_TURN_CONTACT_Y) * catTurnSprite.scale.y;
@@ -615,7 +652,10 @@ export async function startPondRenderer(options: StartOptions) {
         if (event.type === "takeoff") catPounceCount += 1;
         if (event.type === "ambient-ripple") {
           const point = worldToScreen(event.position);
-          if (isWaterScreen(point.x, point.y)) addRing(point.x, point.y, 20 + event.strength * 22, 1100, 0xb4e8d5);
+          if (isWaterScreen(point.x, point.y)) {
+            addRing(point.x, point.y, 20 + event.strength * 22, 1100, 0xb4e8d5);
+            if (!reduced) addRipple(point.x, point.y, 65, event.strength * 0.3);
+          }
         } else if (event.type === "food-dropped") {
           foodDroppedCount += 1;
           lastFoodDropped = { ...event.position };
@@ -650,7 +690,7 @@ export async function startPondRenderer(options: StartOptions) {
         const visual = foodVisuals.get(food.id) ?? createFoodVisual(food.id);
         const point = worldToScreen(food.position);
         const fall = Math.pow(1 - food.dropProgress, 2) * (reduced ? 5 : 22);
-        visual.container.position.set(Math.round(point.x), Math.round(point.y), 0);
+        visual.container.position.set(point.x, point.y, 0);
         visual.group.position.y = -fall;
         visual.group.scale.setScalar((0.76 + food.pelletSize / 13) * (food.state === "depleted" ? 0.72 : 1));
         visual.shadow.material.opacity = food.state === "dropping" ? 0.12 + food.dropProgress * 0.5 : 0.7;
@@ -679,13 +719,14 @@ export async function startPondRenderer(options: StartOptions) {
         const dy = base.y - pointer.screen.y;
         const distance = Math.max(1, Math.hypot(dx, dy));
         const reaction = pointerInfluence * Math.max(0, 1 - distance / 145);
-        const targetX = dx / distance * reaction * 6 + environment.wind * 0.55;
-        const targetY = dy / distance * reaction * 3.5;
+        const drift = Math.sin(simulationNow * 0.0012 + element.phase);
+        const targetX = dx / distance * reaction * 6 + environment.wind * 2.5 + drift * 2;
+        const targetY = dy / distance * reaction * 3.5 + Math.cos(simulationNow * 0.0009 + element.phase) * 1.5;
         element.offset.x += (targetX - element.offset.x) * Math.min(1, delta * 5.2);
         element.offset.y += (targetY - element.offset.y) * Math.min(1, delta * 5.2);
         element.container.position.set(Math.round(base.x + element.offset.x), Math.round(base.y + element.offset.y), 0);
         element.container.rotation.z = element.offset.x * 0.008;
-        element.container.material.opacity = 0.45 + reaction * 0.34;
+        element.container.material.opacity = 0.38 + drift * 0.18 + reaction * 0.34;
       }
 
       midgeLayer.clear();
@@ -699,35 +740,76 @@ export async function startPondRenderer(options: StartOptions) {
         const visual = flyVisuals.get(fly.id);
         if (!visual) continue;
         const point = worldToScreen(fly.position);
-        visual.container.position.set(Math.round(point.x), Math.round(point.y), 0);
-        visual.container.rotation.z += pondAngleDelta(visual.container.rotation.z, fly.heading) * Math.min(1, delta * 5);
-        visual.wings.scale.y = 0.45 + Math.abs(Math.sin(fly.wingPhase)) * (fly.reacting ? 1.1 : 0.75);
+        visual.container.position.set(point.x, point.y, 0);
+        visual.container.scale.setScalar(1 + fly.lift * 0.008);
+        const speed = Math.hypot(fly.velocity.x, fly.velocity.y);
+        if (speed > 2) visual.container.rotation.z += pondAngleDelta(visual.container.rotation.z, fly.heading) * (1 - Math.exp(-delta * 8));
+        visual.wings.scale.y = 0.35 + Math.abs(Math.sin(fly.wingPhase)) * fly.wingActivity * (fly.reacting ? 1.1 : 0.75);
       }
 
       for (const fish of frame.fish) {
         const visual = fishVisuals.get(fish.id);
         if (!visual) continue;
         const point = worldToScreen(fish.position);
-        visual.container.position.set(Math.round(point.x), Math.round(point.y), 0);
+        visual.container.position.set(point.x, point.y, 0);
         const order = 2 + point.y / (1 + Math.abs(point.y)) * 0.1;
         visual.shadow.renderOrder = order;
         visual.sprite.renderOrder = order + 1e-9;
-        visual.container.rotation.z += pondAngleDelta(visual.container.rotation.z, fish.heading + Math.PI / 2) * Math.min(1, delta * (fish.reacting ? 8 : fish.goal ? 4.5 : 2.2));
-        visual.animation.speed = 0.032 + Math.min(0.026, Math.hypot(fish.velocity.x, fish.velocity.y) / 13 * 0.014);
-        const depthAlpha = fish.state === "feeding" ? 0.98 : fish.state === "circling" ? 0.93 : fish.alpha;
+        const speed = Math.hypot(fish.velocity.x, fish.velocity.y);
+        visual.container.rotation.z = fish.heading + Math.PI / 2;
+        const effort = Math.min(2.5, fish.speedScale);
+        visual.animation.speed = (0.012 + effort * 0.025) * motionScale;
+        const depthAlpha = Math.min(0.98, fish.alpha + (0.5 - fish.depth) * 0.55);
         visual.alpha += (depthAlpha - visual.alpha) * Math.min(1, delta * 4);
         visual.sprite.material.opacity = visual.alpha;
         visual.shadow.material.opacity = visual.alpha;
-        visual.sprite.material.color.setHex(fish.state === "feeding" ? 0xf4fff3 : 0xe8fff9);
+        visual.sprite.material.color.setHex(fish.stun ? 0xd4d5ef : fish.state === "feeding" ? 0xf4fff3 : 0xe8fff9);
         animate(visual.animation, delta);
         const peck = fish.state === "feeding" ? 1 - Math.abs(fish.feedingPulse * 2 - 1) * 0.055 : 1;
-        visual.sprite.scale.set(visual.baseScaleX * peck, visual.baseScaleY * (2 - peck), 1);
-        if (now - visual.lastWake > 230 + fish.displayWidth * 2) {
+        const stroke = fish.stun ? 0.12 : fish.activity === "gliding" ? 0.25 : Math.min(1.6, effort);
+        const flex = Math.sin(fish.swimPhase) * 0.035 * stroke;
+        visual.sprite.rotation.z = Math.sin(fish.swimPhase) * 0.065 * stroke + Math.max(-0.12, Math.min(0.12, fish.turnRate * 0.055));
+        const depthScale = 0.9 + (1 - fish.depth) * 0.18;
+        visual.sprite.scale.set(visual.baseScaleX * viewScale * (peck + flex) * depthScale, visual.baseScaleY * viewScale * (2 - peck - flex * 0.5) * depthScale, 1);
+        visual.shadow.scale.setScalar((0.86 + fish.depth * 0.24) * viewScale);
+        visual.status.visible = fish.stun !== null;
+        if (fish.stun) {
+          const headOffset = fish.displayWidth * viewScale * depthScale * 0.43;
+          visual.status.position.set(point.x + Math.cos(fish.heading) * headOffset,
+            point.y + Math.sin(fish.heading) * headOffset - 14, 0);
+          visual.bonk.position.y = -22 - Math.min(1, fish.stun.elapsed / 1.3) * (reduced ? 0 : 10);
+          visual.bonk.material.opacity = Math.max(0, 1 - fish.stun.elapsed / 1.3);
+          visual.stars.clear();
+          for (let index = 0; index < 3; index += 1) {
+            const angle = index / 3 * Math.PI * 2 + (reduced ? 0 : fish.stun.elapsed * 4);
+            const x = Math.round(Math.cos(angle) * 15);
+            const y = Math.round(Math.sin(angle) * 6);
+            visual.stars.rectangle(x - 1, y - 4, 2, 3, 0xffdb72);
+            visual.stars.rectangle(x - 5, y - 1, 10, 2, 0xffdb72);
+            visual.stars.rectangle(x - 3, y + 1, 6, 2, 0xffdb72);
+            visual.stars.rectangle(x - 4, y + 3, 2, 2, 0xffdb72);
+            visual.stars.rectangle(x + 2, y + 3, 2, 2, 0xffdb72);
+            visual.stars.rectangle(x - 1, y - 1, 2, 2, 0xfff8d3);
+          }
+          visual.stars.material.opacity = Math.min(1, fish.stun.remaining / 0.35);
+        }
+        const surfaced = fish.depth < 0.18;
+        if (surfaced && !visual.surfaced && !reduced) {
+          addRing(point.x, point.y, fish.displayWidth * 0.34, 1100, 0xd9fff0);
+          addRipple(point.x, point.y, fish.displayWidth * 1.3, 0.45);
+        }
+        visual.surfaced = surfaced;
+        if (!reduced && speed > 9 && (fish.depth < 0.4 || fish.reacting) && now - visual.lastWake > 240 / Math.max(0.65, effort)) {
           const tail = worldToScreen({
             x: fish.position.x - Math.cos(fish.heading) * fish.displayWidth * 0.22,
             y: fish.position.y - Math.sin(fish.heading) * fish.displayWidth * 0.22,
           });
-          addParticle(tail.x, tail.y, -Math.cos(fish.heading) * 4, -Math.sin(fish.heading) * 4 - 2, 820, 2, 0x9be4d7);
+          for (const side of [-1, 1]) {
+            addParticle(tail.x, tail.y,
+              -Math.cos(fish.heading) * speed * 0.2 + Math.sin(fish.heading) * side * 9,
+              -Math.sin(fish.heading) * speed * 0.2 - Math.cos(fish.heading) * side * 9,
+              850, 2, 0x9be4d7);
+          }
           visual.lastWake = now;
         }
       }
@@ -763,11 +845,12 @@ export async function startPondRenderer(options: StartOptions) {
         return true;
       });
       ripples = ripples.filter((ripple) => now - ripple.born < ripple.life);
-      for (let index = 0; index < 2; index += 1) {
+      for (let index = 0; index < POND_RIPPLE_CAPACITY; index += 1) {
         const ripple = ripples[index];
         if (ripple) {
           water.uniforms.rippleCenters.value[index].set(ripple.x, ripple.y, ripple.size, 1.2 + ripple.strength * 3.8);
-          water.uniforms.rippleWaves.value[index].set((now - ripple.born) / 1000, ripple.speed, 22 + ripple.size * 0.16, 1);
+          const age = (now - ripple.born) / 1000;
+          water.uniforms.rippleWaves.value[index].set(age, ripple.speed, 22 + ripple.size * 0.16, Math.exp(-age * 1.4));
         } else {
           water.uniforms.rippleWaves.value[index].w = 0;
         }
@@ -781,6 +864,10 @@ export async function startPondRenderer(options: StartOptions) {
         }).join(";");
         host.dataset.fishWorldPositions = frame.fish.map((fish) => `${fish.position.x.toFixed(2)},${fish.position.y.toFixed(2)}`).join(";");
         host.dataset.fishReacting = String(frame.fish.some((fish) => fish.reacting));
+        host.dataset.fishActivities = frame.fish.map((fish) => `${fish.id}:${fish.activity}`).join(";");
+        host.dataset.fishStuns = frame.fish.flatMap((fish) => fish.stun
+          ? [`${fish.id}:${fish.stun.remaining.toFixed(2)}:${fish.stun.serial}`] : []).join(";");
+        host.dataset.fishHeadings = frame.fish.map((fish) => fish.heading.toFixed(3)).join(";");
         host.dataset.fishWaterViolation = String(frame.fish.some((fish) => !isWaterWorld(fish.position.x, fish.position.y)));
         host.dataset.fishMaxStep = Math.max(...frame.fish.map((fish) => fish.maxStep)).toFixed(2);
         host.dataset.fishAverageSpeed = (
