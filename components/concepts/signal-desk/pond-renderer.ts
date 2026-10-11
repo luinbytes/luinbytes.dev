@@ -766,11 +766,9 @@ export async function startPondRenderer(options: StartOptions) {
         visual.sprite.material.color.setHex(fish.stun ? 0xd4d5ef : fish.state === "feeding" ? 0xf4fff3 : 0xe8fff9);
         animate(visual.animation, delta);
         const peck = fish.state === "feeding" ? 1 - Math.abs(fish.feedingPulse * 2 - 1) * 0.055 : 1;
-        const stroke = fish.stun ? 0.12 : fish.activity === "gliding" ? 0.25 : Math.min(1.6, effort);
-        const flex = Math.sin(fish.swimPhase) * 0.035 * stroke;
-        visual.sprite.rotation.z = Math.sin(fish.swimPhase) * 0.065 * stroke + Math.max(-0.12, Math.min(0.12, fish.turnRate * 0.055));
+        visual.sprite.rotation.z = 0;
         const depthScale = 0.9 + (1 - fish.depth) * 0.18;
-        visual.sprite.scale.set(visual.baseScaleX * viewScale * (peck + flex) * depthScale, visual.baseScaleY * viewScale * (2 - peck - flex * 0.5) * depthScale, 1);
+        visual.sprite.scale.set(visual.baseScaleX * viewScale * peck * depthScale, visual.baseScaleY * viewScale * (2 - peck) * depthScale, 1);
         visual.shadow.scale.setScalar((0.86 + fish.depth * 0.24) * viewScale);
         visual.status.visible = fish.stun !== null;
         if (fish.stun) {
