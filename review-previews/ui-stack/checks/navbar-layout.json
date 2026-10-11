@@ -1,0 +1,35 @@
+[
+  {
+    "width": 320,
+    "radius": "20px",
+    "cardRadius": "12px",
+    "inset": [
+      73,
+      8,
+      54
+    ],
+    "overflow": 0
+  },
+  {
+    "width": 390,
+    "radius": "20px",
+    "cardRadius": "12px",
+    "inset": [
+      108,
+      8,
+      54
+    ],
+    "overflow": 0
+  },
+  {
+    "width": 1440,
+    "radius": "20px",
+    "cardRadius": "12px",
+    "inset": [
+      8,
+      8,
+      8
+    ],
+    "overflow": 0
+  }
+]

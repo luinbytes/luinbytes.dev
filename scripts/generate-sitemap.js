@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 
-const fs = require('fs');
-const path = require('path');
-const { execFileSync } = require('child_process');
-const { siteUrl } = require('../site.config.json');
+import fs from 'node:fs';
+import path from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
-const projectRoot = path.join(__dirname, '..');
+const projectRoot = fileURLToPath(new URL('..', import.meta.url));
+const { siteUrl } = JSON.parse(fs.readFileSync(path.join(projectRoot, 'site.config.json'), 'utf8'));
 const outputPath = path.join(projectRoot, 'public/sitemap.xml');
 
 const staticPages = ['', '/pip'];

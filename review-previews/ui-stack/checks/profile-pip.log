@@ -1,0 +1,15 @@
+
+> luinbytes-site@0.1.0 test:pip
+> node --test tests/pip-contact.test.mts
+
+✔ normalizes an optional @ prefix and returns Pip's Telegram target (2.148367ms)
+✔ encodes the exact Telegram target in the remote QR URL (0.309593ms)
+✔ returns null for blank and invalid Telegram handles (0.527446ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 234.378287

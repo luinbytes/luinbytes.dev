@@ -1,7 +1,3 @@
-"use client";
-
-import Image from "next/image";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowDown, ArrowUpRight, AudioLines, Github, Globe2, Mail, MapPin } from "lucide-react";
@@ -16,6 +12,7 @@ import { PondEnvironment } from "./pond-environment";
 import { ProfileCard } from "./profile-card";
 import { PipFace } from "@/components/pip/pip-logo";
 import { PipFeature } from "@/components/pip/pip-feature";
+import { Button } from "@/components/ui/button";
 import projectStyles from "./project-explorer.module.css";
 import styles from "./signal-desk.module.css";
 
@@ -83,12 +80,13 @@ function ProjectArtwork({ project }: { project: PortfolioProject }) {
 
   return (
     <div className={`${projectStyles.projectMedia} ${projectStyles[`media${project.id.replaceAll("-", "")}`]}`}>
-      <Image
+      <img
         src={project.image}
         alt={project.imageAlt ?? `${project.name} project artwork`}
-        fill
+        style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
         sizes="(max-width: 820px) 92vw, 48vw"
-        priority={project.id === "orchid-android"}
+        loading={project.id === "orchid-android" ? "eager" : "lazy"}
+        fetchPriority={project.id === "orchid-android" ? "high" : "auto"}
       />
     </div>
   );
@@ -108,19 +106,24 @@ function ProjectNavigation({
       {portfolioProjects.map((project) => {
         const active = project.id === activeId;
         return (
-          <motion.button
-            type="button"
+          <Button
+            asChild
+            variant="ghost"
             key={project.id}
-            onClick={() => onSelect(project.id)}
             className={active ? projectStyles.activeProject : ""}
-            aria-pressed={active}
-            whileTap={reduced ? undefined : { scale: 0.985 }}
-            transition={{ duration: 0.1 }}
           >
-            {active && <motion.i className={projectStyles.projectMarker} layoutId="project-marker" transition={{ duration: reduced ? 0 : 0.24, ease: EASE_OUT }} />}
-            <strong>{project.name}</strong>
-            <small>{project.category}</small>
-          </motion.button>
+            <motion.button
+              type="button"
+              onClick={() => onSelect(project.id)}
+              aria-pressed={active}
+              whileTap={reduced ? undefined : { scale: 0.985 }}
+              transition={{ duration: 0.1 }}
+            >
+              {active && <motion.i className={projectStyles.projectMarker} layoutId="project-marker" transition={{ duration: reduced ? 0 : 0.24, ease: EASE_OUT }} />}
+              <strong>{project.name}</strong>
+              <small>{project.category}</small>
+            </motion.button>
+          </Button>
         );
       })}
     </div>
@@ -168,13 +171,13 @@ function ProjectPanel({ project, reduced }: { project: PortfolioProject; reduced
               {project.proof?.map((item) => <span key={item}>{item}</span>)}
             </div>
             <div className={projectStyles.projectActions}>
-              <a href={project.href} target="_blank" rel="noreferrer">
+              <Button asChild variant="secondary"><a href={project.href} target="_blank" rel="noreferrer">
                 View project <ArrowUpRight aria-hidden="true" />
-              </a>
+              </a></Button>
               {project.secondaryHref && (
-                <a href={project.secondaryHref} target="_blank" rel="noreferrer">
+                <Button asChild variant="outline"><a href={project.secondaryHref} target="_blank" rel="noreferrer">
                   {project.secondaryLabel} <ArrowUpRight aria-hidden="true" />
-                </a>
+                </a></Button>
               )}
             </div>
           </motion.div>
@@ -247,7 +250,7 @@ export function SignalDesk() {
         </a>
         <nav aria-label="Portfolio navigation">
           <a href="#work">Work</a>
-          <Link href="/pip" className={styles.pipNavLink}><PipFace /> Pip</Link>
+          <a href="/pip" className={styles.pipNavLink}><PipFace /> Pip</a>
           <a href="#about">About</a>
           <a href="#contact">Contact</a>
         </nav>

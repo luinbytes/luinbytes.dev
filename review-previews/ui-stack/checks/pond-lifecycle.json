@@ -1,0 +1,846 @@
+{
+  "base_url": "http://127.0.0.1:3005",
+  "scope": "Built export in isolated Chromium contexts. No repository writes, builds, installations or server starts.",
+  "cases": {
+    "failed_artwork_503": {
+      "status": "PASS",
+      "page_errors": [],
+      "console": [
+        {
+          "type": "warning",
+          "text": "[.WebGL-0x10c047a3000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+        },
+        {
+          "type": "warning",
+          "text": "[.WebGL-0x10c047a3000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+        },
+        {
+          "type": "warning",
+          "text": "[.WebGL-0x10c047a3000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+        },
+        {
+          "type": "warning",
+          "text": "[.WebGL-0x10c047a3000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+        }
+      ],
+      "failed_requests": [
+        {
+          "url": "http://127.0.0.1:3005/images/portfolio/pixel-pond-world.webp",
+          "failure": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3005/images/portfolio/pixel-koi-atlas.webp",
+          "failure": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3005/images/portfolio/pixel-pond-foreground.webp",
+          "failure": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3005/images/portfolio/pixel-pond-water-layer.webp",
+          "failure": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3005/images/portfolio/pixel-tabby-turn-atlas.webp",
+          "failure": "net::ERR_ABORTED"
+        }
+      ],
+      "scripts": [
+        {
+          "url": "http://127.0.0.1:3005/assets/index-B5gGjLeM.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:3005/assets/pond-renderer-BTu1onqc.js",
+          "status": 200
+        }
+      ],
+      "intercepted_requests": [
+        "http://127.0.0.1:3005/images/portfolio/pixel-koi-atlas.webp"
+      ],
+      "final": {
+        "contexts": [
+          {
+            "id": 1,
+            "attached": false,
+            "lost": true,
+            "loseCalls": 1,
+            "extensionWrapped": true,
+            "pondRafsScheduled": 0,
+            "pondRafsPending": 0,
+            "pondRafsCancelled": 0,
+            "pondRafsCancelledWhilePending": 0,
+            "pondRafsFiredAfterLoss": 0
+          }
+        ],
+        "fetches": [
+          {
+            "url": "/images/portfolio/pixel-pond-world.webp",
+            "index": 0,
+            "state": "resolved",
+            "startedAt": 479.89999985694885,
+            "aborted": true,
+            "status": 200,
+            "finishedAt": 498.7999999523163,
+            "abortedAt": 505
+          },
+          {
+            "url": "/images/portfolio/water-displacement.jpg",
+            "index": 1,
+            "state": "resolved",
+            "startedAt": 481.59999990463257,
+            "aborted": true,
+            "status": 200,
+            "finishedAt": 498.39999985694885,
+            "abortedAt": 505
+          },
+          {
+            "url": "/images/portfolio/pixel-koi-atlas.webp",
+            "index": 2,
+            "state": "resolved",
+            "startedAt": 481.7999999523163,
+            "aborted": true,
+            "status": 503,
+            "finishedAt": 504.59999990463257,
+            "abortedAt": 505
+          },
+          {
+            "url": "/images/portfolio/pixel-pond-foreground.webp",
+            "index": 3,
+            "state": "rejected",
+            "startedAt": 482,
+            "aborted": true,
+            "abortedAt": 505,
+            "error": "AbortError",
+            "finishedAt": 507.5
+          },
+          {
+            "url": "/images/portfolio/pixel-pond-water-layer.webp",
+            "index": 4,
+            "state": "rejected",
+            "startedAt": 482.09999990463257,
+            "aborted": true,
+            "abortedAt": 505,
+            "error": "AbortError",
+            "finishedAt": 507.5
+          },
+          {
+            "url": "/images/portfolio/pixel-tabby-atlas.webp",
+            "index": 5,
+            "state": "resolved",
+            "startedAt": 482.19999980926514,
+            "aborted": true,
+            "status": 200,
+            "finishedAt": 499.09999990463257,
+            "abortedAt": 505
+          },
+          {
+            "url": "/images/portfolio/pixel-tabby-turn-atlas.webp",
+            "index": 6,
+            "state": "rejected",
+            "startedAt": 482.2999999523163,
+            "aborted": true,
+            "abortedAt": 505,
+            "error": "AbortError",
+            "finishedAt": 507.5
+          }
+        ],
+        "pendingObjectUrls": 0,
+        "maxCanvasCount": 0,
+        "renderer": "fallback",
+        "host": {
+          "pondState": "fallback",
+          "rippleCount": "0",
+          "ringCount": "0",
+          "wakeCount": "0",
+          "fishCount": "0",
+          "foodCount": "0",
+          "foodDroppedCount": "0",
+          "foodExpiredCount": "0",
+          "fishFedCount": "0",
+          "primaryImpactCount": "0",
+          "foodAffordance": "false",
+          "pondElementCount": "0",
+          "insectCount": "0",
+          "catCount": "0",
+          "catState": "idle",
+          "catPounceCount": "0",
+          "catBapCount": "0",
+          "catEmptyBapCount": "0",
+          "catWaterViolation": "false",
+          "catRotation": "0.000",
+          "fishReacting": "false",
+          "fishWaterViolation": "false",
+          "motion": "reduced",
+          "fallbackReason": "Unable to load pond artwork (503)"
+        },
+        "canvasCount": 0
+      },
+      "accessible_heading_visible": true,
+      "pip_navigation_visible": true
+    },
+    "held_loading_reduced_motion_change": {
+      "status": "PASS",
+      "page_errors": [],
+      "console": [],
+      "failed_requests": [
+        {
+          "url": "http://127.0.0.1:3005/images/portfolio/pixel-koi-atlas.webp",
+          "failure": "net::ERR_ABORTED"
+        }
+      ],
+      "scripts": [
+        {
+          "url": "http://127.0.0.1:3005/assets/index-B5gGjLeM.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:3005/assets/pond-renderer-BTu1onqc.js",
+          "status": 200
+        }
+      ],
+      "intercepted_requests": [
+        "http://127.0.0.1:3005/images/portfolio/pixel-koi-atlas.webp",
+        "http://127.0.0.1:3005/images/portfolio/pixel-koi-atlas.webp",
+        "http://127.0.0.1:3005/images/portfolio/pixel-koi-atlas.webp"
+      ],
+      "held_loading": {
+        "contexts": [
+          {
+            "id": 1,
+            "attached": false,
+            "lost": false,
+            "loseCalls": 0,
+            "extensionWrapped": false,
+            "pondRafsScheduled": 0,
+            "pondRafsPending": 0,
+            "pondRafsCancelled": 0,
+            "pondRafsCancelledWhilePending": 0,
+            "pondRafsFiredAfterLoss": 0
+          }
+        ],
+        "fetches": [
+          {
+            "url": "/images/portfolio/pixel-pond-world.webp",
+            "index": 0,
+            "state": "resolved",
+            "startedAt": 294.90000009536743,
+            "aborted": false,
+            "status": 200,
+            "finishedAt": 414.40000009536743
+          },
+          {
+            "url": "/images/portfolio/water-displacement.jpg",
+            "index": 1,
+            "state": "resolved",
+            "startedAt": 296.80000019073486,
+            "aborted": false,
+            "status": 200,
+            "finishedAt": 413.60000014305115
+          },
+          {
+            "url": "/images/portfolio/pixel-koi-atlas.webp",
+            "index": 2,
+            "state": "pending",
+            "startedAt": 297.10000014305115,
+            "aborted": false
+          },
+          {
+            "url": "/images/portfolio/pixel-pond-foreground.webp",
+            "index": 3,
+            "state": "resolved",
+            "startedAt": 297.2000000476837,
+            "aborted": false,
+            "status": 200,
+            "finishedAt": 414.60000014305115
+          },
+          {
+            "url": "/images/portfolio/pixel-pond-water-layer.webp",
+            "index": 4,
+            "state": "resolved",
+            "startedAt": 297.30000019073486,
+            "aborted": false,
+            "status": 200,
+            "finishedAt": 414.2000000476837
+          },
+          {
+            "url": "/images/portfolio/pixel-tabby-atlas.webp",
+            "index": 5,
+            "state": "resolved",
+            "startedAt": 297.40000009536743,
+            "aborted": false,
+            "status": 200,
+            "finishedAt": 413.80000019073486
+          },
+          {
+            "url": "/images/portfolio/pixel-tabby-turn-atlas.webp",
+            "index": 6,
+            "state": "resolved",
+            "startedAt": 297.5,
+            "aborted": false,
+            "status": 200,
+            "finishedAt": 413.90000009536743
+          }
+        ],
+        "pendingObjectUrls": 6,
+        "maxCanvasCount": 0,
+        "renderer": "fallback",
+        "host": {
+          "pondState": "loading",
+          "rippleCount": "0",
+          "ringCount": "0",
+          "wakeCount": "0",
+          "fishCount": "0",
+          "foodCount": "0",
+          "foodDroppedCount": "0",
+          "foodExpiredCount": "0",
+          "fishFedCount": "0",
+          "primaryImpactCount": "0",
+          "foodAffordance": "false",
+          "pondElementCount": "0",
+          "insectCount": "0",
+          "catCount": "0",
+          "catState": "idle",
+          "catPounceCount": "0",
+          "catBapCount": "0",
+          "catEmptyBapCount": "0",
+          "catWaterViolation": "false",
+          "catRotation": "0.000",
+          "fishReacting": "false",
+          "fishWaterViolation": "false",
+          "motion": "reduced"
+        },
+        "canvasCount": 0
+      },
+      "after_loading_cancel": {
+        "contexts": [
+          {
+            "id": 1,
+            "attached": false,
+            "lost": true,
+            "loseCalls": 1,
+            "extensionWrapped": true,
+            "pondRafsScheduled": 0,
+            "pondRafsPending": 0,
+            "pondRafsCancelled": 0,
+            "pondRafsCancelledWhilePending": 0,
+            "pondRafsFiredAfterLoss": 0
+          },
+          {
+            "id": 2,
+            "attached": true,
+            "lost": false,
+            "loseCalls": 0,
+            "extensionWrapped": false,
+            "pondRafsScheduled": 7,
+            "pondRafsPending": 1,
+            "pondRafsCancelled": 0,
+            "pondRafsCancelledWhilePending": 0,
+            "pondRafsFiredAfterLoss": 0
+          }
+        ],
+        "fetches": [
+          {
+            "url": "/images/portfolio/pixel-pond-world.webp",
+            "index": 0,
+            "state": "resolved",
+            "startedAt": 294.90000009536743,
+            "aborted": true,
+            "status": 200,
+            "finishedAt": 414.40000009536743,
+            "abortedAt": 525.3000001907349
+          },
+          {
+            "url": "/images/portfolio/water-displacement.jpg",
+            "index": 1,
+            "state": "resolved",
+            "startedAt": 296.80000019073486,
+            "aborted": true,
+            "status": 200,
+            "finishedAt": 413.60000014305115,
+            "abortedAt": 525.3000001907349
+          },
+          {
+            "url": "/images/portfolio/pixel-koi-atlas.webp",
+            "index": 2,
+            "state": "rejected",
+            "startedAt": 297.10000014305115,
+            "aborted": true,
+            "abortedAt": 525.3000001907349,
+            "error": "AbortError",
+            "finishedAt": 528.6000001430511
+          },
+          {
+            "url": "/images/portfolio/pixel-pond-foreground.webp",
+            "index": 3,
+            "state": "resolved",
+            "startedAt": 297.2000000476837,
+            "aborted": true,
+            "status": 200,
+            "finishedAt": 414.60000014305115,
+            "abortedAt": 525.3000001907349
+          },
+          {
+            "url": "/images/portfolio/pixel-pond-water-layer.webp",
+            "index": 4,
+            "state": "resolved",
+            "startedAt": 297.30000019073486,
+            "aborted": true,
+            "status": 200,
+            "finishedAt": 414.2000000476837,
+            "abortedAt": 525.3000001907349
+          },
+          {
+            "url": "/images/portfolio/pixel-tabby-atlas.webp",
+            "index": 5,
+            "state": "resolved",
+            "startedAt": 297.40000009536743,
+            "aborted": true,
+            "status": 200,
+            "finishedAt": 413.80000019073486,
+            "abortedAt": 525.3000001907349
+          },
+          {
+            "url": "/images/portfolio/pixel-tabby-turn-atlas.webp",
+            "index": 6,
+            "state": "resolved",
+            "startedAt": 297.5,
+            "aborted": true,
+            "status": 200,
+            "finishedAt": 413.90000009536743,
+            "abortedAt": 525.3000001907349
+          },
+          {
+            "url": "/images/portfolio/pixel-pond-world.webp",
+            "index": 7,
+            "state": "resolved",
+            "startedAt": 540.3000001907349,
+            "aborted": false,
+            "status": 200,
+            "finishedAt": 566.8000001907349
+          },
+          {
+            "url": "/images/portfolio/water-displacement.jpg",
+            "index": 8,
+            "state": "resolved",
+            "startedAt": 540.6000001430511,
+            "aborted": false,
+            "status": 200,
+            "finishedAt": 566.6000001430511
+          },
+          {
+            "url": "/images/portfolio/pixel-koi-atlas.webp",
+            "index": 9,
+            "state": "resolved",
+            "startedAt": 541,
+            "aborted": false,
+            "status": 200,
+            "finishedAt": 567.1000001430511
+          },
+          {
+            "url": "/images/portfolio/pixel-pond-foreground.webp",
+            "index": 10,
+            "state": "resolved",
+            "startedAt": 541.1000001430511,
+            "aborted": false,
+            "status": 200,
+            "finishedAt": 574.1000001430511
+          },
+          {
+            "url": "/images/portfolio/pixel-pond-water-layer.webp",
+            "index": 11,
+            "state": "resolved",
+            "startedAt": 541.5,
+            "aborted": false,
+            "status": 200,
+            "finishedAt": 567.7000000476837
+          },
+          {
+            "url": "/images/portfolio/pixel-tabby-atlas.webp",
+            "index": 12,
+            "state": "resolved",
+            "startedAt": 541.9000000953674,
+            "aborted": false,
+            "status": 200,
+            "finishedAt": 567.3000001907349
+          },
+          {
+            "url": "/images/portfolio/pixel-tabby-turn-atlas.webp",
+            "index": 13,
+            "state": "resolved",
+            "startedAt": 542.2000000476837,
+            "aborted": false,
+            "status": 200,
+            "finishedAt": 567.6000001430511
+          }
+        ],
+        "pendingObjectUrls": 0,
+        "maxCanvasCount": 1,
+        "renderer": "three",
+        "host": {
+          "pondState": "running",
+          "rippleCount": "0",
+          "ringCount": "1",
+          "wakeCount": "48",
+          "fishCount": "20",
+          "foodCount": "0",
+          "foodDroppedCount": "0",
+          "foodExpiredCount": "0",
+          "fishFedCount": "0",
+          "primaryImpactCount": "0",
+          "foodAffordance": "false",
+          "pondElementCount": "10",
+          "insectCount": "14",
+          "catCount": "1",
+          "catState": "idle",
+          "catPounceCount": "0",
+          "catBapCount": "0",
+          "catEmptyBapCount": "0",
+          "catWaterViolation": "false",
+          "catRotation": "0.000",
+          "fishReacting": "false",
+          "fishWaterViolation": "false",
+          "motion": "full",
+          "fishLogic": "authoritative-seeded-world-steering",
+          "worldModel": "seeded-routine-rock-target-food-environment"
+        },
+        "canvasCount": 1
+      },
+      "held_route_release": "continued after original fetch abort",
+      "after_running_cancel": {
+        "contexts": [
+          {
+            "id": 1,
+            "attached": false,
+            "lost": true,
+            "loseCalls": 1,
+            "extensionWrapped": true,
+            "pondRafsScheduled": 0,
+            "pondRafsPending": 0,
+            "pondRafsCancelled": 0,
+            "pondRafsCancelledWhilePending": 0,
+            "pondRafsFiredAfterLoss": 0
+          },
+          {
+            "id": 2,
+            "attached": false,
+            "lost": true,
+            "loseCalls": 1,
+            "extensionWrapped": true,
+            "pondRafsScheduled": 27,
+            "pondRafsPending": 0,
+            "pondRafsCancelled": 2,
+            "pondRafsCancelledWhilePending": 1,
+            "pondRafsFiredAfterLoss": 0
+          },
+          {
+            "id": 3,
+            "attached": true,
+            "lost": false,
+            "loseCalls": 0,
+            "extensionWrapped": false,
+            "pondRafsScheduled": 10,
+            "pondRafsPending": 1,
+            "pondRafsCancelled": 0,
+            "pondRafsCancelledWhilePending": 0,
+            "pondRafsFiredAfterLoss": 0
+          }
+        ],
+        "fetches": [
+          {
+            "url": "/images/portfolio/pixel-pond-world.webp",
+            "index": 0,
+            "state": "resolved",
+            "startedAt": 294.90000009536743,
+            "aborted": true,
+            "status": 200,
+            "finishedAt": 414.40000009536743,
+            "abortedAt": 525.3000001907349
+          },
+          {
+            "url": "/images/portfolio/water-displacement.jpg",
+            "index": 1,
+            "state": "resolved",
+            "startedAt": 296.80000019073486,
+            "aborted": true,
+            "status": 200,
+            "finishedAt": 413.60000014305115,
+            "abortedAt": 525.3000001907349
+          },
+          {
+            "url": "/images/portfolio/pixel-koi-atlas.webp",
+            "index": 2,
+            "state": "rejected",
+            "startedAt": 297.10000014305115,
+            "aborted": true,
+            "abortedAt": 525.3000001907349,
+            "error": "AbortError",
+            "finishedAt": 528.6000001430511
+          },
+          {
+            "url": "/images/portfolio/pixel-pond-foreground.webp",
+            "index": 3,
+            "state": "resolved",
+            "startedAt": 297.2000000476837,
+            "aborted": true,
+            "status": 200,
+            "finishedAt": 414.60000014305115,
+            "abortedAt": 525.3000001907349
+          },
+          {
+            "url": "/images/portfolio/pixel-pond-water-layer.webp",
+            "index": 4,
+            "state": "resolved",
+            "startedAt": 297.30000019073486,
+            "aborted": true,
+            "status": 200,
+            "finishedAt": 414.2000000476837,
+            "abortedAt": 525.3000001907349
+          },
+          {
+            "url": "/images/portfolio/pixel-tabby-atlas.webp",
+            "index": 5,
+            "state": "resolved",
+            "startedAt": 297.40000009536743,
+            "aborted": true,
+            "status": 200,
+            "finishedAt": 413.80000019073486,
+            "abortedAt": 525.3000001907349
+          },
+          {
+            "url": "/images/portfolio/pixel-tabby-turn-atlas.webp",
+            "index": 6,
+            "state": "resolved",
+            "startedAt": 297.5,
+            "aborted": true,
+            "status": 200,
+            "finishedAt": 413.90000009536743,
+            "abortedAt": 525.3000001907349
+          },
+          {
+            "url": "/images/portfolio/pixel-pond-world.webp",
+            "index": 7,
+            "state": "resolved",
+            "startedAt": 540.3000001907349,
+            "aborted": true,
+            "status": 200,
+            "finishedAt": 566.8000001907349,
+            "abortedAt": 3287.2000000476837
+          },
+          {
+            "url": "/images/portfolio/water-displacement.jpg",
+            "index": 8,
+            "state": "resolved",
+            "startedAt": 540.6000001430511,
+            "aborted": true,
+            "status": 200,
+            "finishedAt": 566.6000001430511,
+            "abortedAt": 3287.2000000476837
+          },
+          {
+            "url": "/images/portfolio/pixel-koi-atlas.webp",
+            "index": 9,
+            "state": "resolved",
+            "startedAt": 541,
+            "aborted": true,
+            "status": 200,
+            "finishedAt": 567.1000001430511,
+            "abortedAt": 3287.2000000476837
+          },
+          {
+            "url": "/images/portfolio/pixel-pond-foreground.webp",
+            "index": 10,
+            "state": "resolved",
+            "startedAt": 541.1000001430511,
+            "aborted": true,
+            "status": 200,
+            "finishedAt": 574.1000001430511,
+            "abortedAt": 3287.2000000476837
+          },
+          {
+            "url": "/images/portfolio/pixel-pond-water-layer.webp",
+            "index": 11,
+            "state": "resolved",
+            "startedAt": 541.5,
+            "aborted": true,
+            "status": 200,
+            "finishedAt": 567.7000000476837,
+            "abortedAt": 3287.2000000476837
+          },
+          {
+            "url": "/images/portfolio/pixel-tabby-atlas.webp",
+            "index": 12,
+            "state": "resolved",
+            "startedAt": 541.9000000953674,
+            "aborted": true,
+            "status": 200,
+            "finishedAt": 567.3000001907349,
+            "abortedAt": 3287.2000000476837
+          },
+          {
+            "url": "/images/portfolio/pixel-tabby-turn-atlas.webp",
+            "index": 13,
+            "state": "resolved",
+            "startedAt": 542.2000000476837,
+            "aborted": true,
+            "status": 200,
+            "finishedAt": 567.6000001430511,
+            "abortedAt": 3287.2000000476837
+          },
+          {
+            "url": "/images/portfolio/pixel-pond-world.webp",
+            "index": 14,
+            "state": "resolved",
+            "startedAt": 3319.5,
+            "aborted": false,
+            "status": 200,
+            "finishedAt": 3327.300000190735
+          },
+          {
+            "url": "/images/portfolio/water-displacement.jpg",
+            "index": 15,
+            "state": "resolved",
+            "startedAt": 3319.800000190735,
+            "aborted": false,
+            "status": 200,
+            "finishedAt": 3325.7000000476837
+          },
+          {
+            "url": "/images/portfolio/pixel-koi-atlas.webp",
+            "index": 16,
+            "state": "resolved",
+            "startedAt": 3319.9000000953674,
+            "aborted": false,
+            "status": 200,
+            "finishedAt": 3355
+          },
+          {
+            "url": "/images/portfolio/pixel-pond-foreground.webp",
+            "index": 17,
+            "state": "resolved",
+            "startedAt": 3320,
+            "aborted": false,
+            "status": 200,
+            "finishedAt": 3333.2000000476837
+          },
+          {
+            "url": "/images/portfolio/pixel-pond-water-layer.webp",
+            "index": 18,
+            "state": "resolved",
+            "startedAt": 3320.2000000476837,
+            "aborted": false,
+            "status": 200,
+            "finishedAt": 3338.9000000953674
+          },
+          {
+            "url": "/images/portfolio/pixel-tabby-atlas.webp",
+            "index": 19,
+            "state": "resolved",
+            "startedAt": 3320.2000000476837,
+            "aborted": false,
+            "status": 200,
+            "finishedAt": 3335.300000190735
+          },
+          {
+            "url": "/images/portfolio/pixel-tabby-turn-atlas.webp",
+            "index": 20,
+            "state": "resolved",
+            "startedAt": 3320.300000190735,
+            "aborted": false,
+            "status": 200,
+            "finishedAt": 3341.2000000476837
+          }
+        ],
+        "pendingObjectUrls": 0,
+        "maxCanvasCount": 1,
+        "renderer": "three",
+        "host": {
+          "pondState": "running",
+          "rippleCount": "0",
+          "ringCount": "1",
+          "wakeCount": "32",
+          "fishCount": "20",
+          "foodCount": "0",
+          "foodDroppedCount": "0",
+          "foodExpiredCount": "0",
+          "fishFedCount": "0",
+          "primaryImpactCount": "0",
+          "foodAffordance": "false",
+          "pondElementCount": "10",
+          "insectCount": "7",
+          "catCount": "1",
+          "catState": "idle",
+          "catPounceCount": "0",
+          "catBapCount": "0",
+          "catEmptyBapCount": "0",
+          "catWaterViolation": "false",
+          "catRotation": "0.000",
+          "fishReacting": "false",
+          "fishWaterViolation": "false",
+          "motion": "reduced",
+          "fishLogic": "authoritative-seeded-world-steering",
+          "worldModel": "seeded-routine-rock-target-food-environment",
+          "fishPositions": "1050.5,294.5;392.5,627.6;805.1,289.5;1160.4,556.5;558.9,168.3;266.8,428.5;865.8,637.9;603.6,560.1;987.6,418.6;709.7,742.7;483.7,340.7;1158.8,566.7;965.3,525.4;1173.0,368.4;1074.3,332.5;1232.1,545.8;804.5,597.4;424.8,228.5;1060.8,727.9;313.6,565.1",
+          "fishWorldPositions": "1151.68,327.24;437.64,688.67;885.29,321.84;1270.90,611.60;618.23,190.30;301.18,472.69;951.17,699.87;666.70,615.51;1083.38,461.87;781.80,813.62;536.64,377.44;1269.19,622.69;1059.20,577.78;1284.58,407.43;1177.45,368.48;1348.70,599.91;884.74,655.98;472.67,255.63;1162.78,797.50;352.04,620.91",
+          "fishMaxStep": "6.94",
+          "fishAverageSpeed": "15.87",
+          "visibleAnchorIds": "south-stone-top,reed-step-top,moss-step-top,broad-shelf-top,lower-shelf-top,fern-stone-top,east-island-top",
+          "foodMaxCount": "0",
+          "fishFoodStates": "fish-0:cruising:none;fish-1:cruising:none;fish-2:cruising:none;fish-3:cruising:none;fish-4:cruising:none;fish-5:cruising:none;fish-6:cruising:none;fish-7:cruising:none;fish-8:cruising:none;fish-9:cruising:none;fish-10:cruising:none;fish-11:cruising:none;fish-12:cruising:none;fish-13:cruising:none;fish-14:cruising:none;fish-15:cruising:none;fish-16:cruising:none;fish-17:cruising:none;fish-18:cruising:none;fish-19:cruising:none",
+          "catRoutine": "watching",
+          "catPosition": "1175.3,842.6",
+          "catAimScreen": "1101.5,833.4",
+          "catFacing": "-1",
+          "catOverWater": "false",
+          "catAnchor": "lower-shelf-top",
+          "catRock": "lower-shelf",
+          "catDestination": "none",
+          "catTarget": "none",
+          "catTargetType": "none",
+          "catGrounded": "true",
+          "catReason": "initialised",
+          "catAim": "1207.0,912.0",
+          "foodEntities": "",
+          "foodReservations": "",
+          "pondCamera": "793.000,496.000,0.92156,0.92156",
+          "touchGesture": "none",
+          "frame": "24",
+          "pondSeed": "lifecycle-cancellation",
+          "waterOffset": "729.53,454.25;6.00,3.27"
+        },
+        "canvasCount": 1
+      },
+      "accessible_heading_visible": true
+    }
+  },
+  "limitations": [
+    "Instrumentation retains context references and observes explicit context loss and requestAnimationFrame bookkeeping. It does not prove browser heap or driver memory reclamation.",
+    "The initial cancelled generation has no pond animation frame before artwork completes. RAF cancellation is verified separately for a running generation.",
+    "This does not verify physical devices or other browser engines."
+  ],
+  "browser_version": "149.0.7827.55",
+  "provenance": [
+    {
+      "asset": "index-B5gGjLeM.js",
+      "sha256": "d27dbfaf390d0aa3bb0ff22f72a55bcfbfbf1ae43bf0497d07d12d19748dbaf0",
+      "matches_local_export": true
+    },
+    {
+      "asset": "pond-renderer-BTu1onqc.js",
+      "sha256": "1d8f64b1efa801ee367b8a03e3410cc92338ad42432708bc1da4de56aa488071",
+      "matches_local_export": true
+    }
+  ],
+  "harness_note": "An initial probe read data-frame before the renderer published its 12-frame diagnostics and stopped with a harness KeyError. The corrected probe waits for publication before asserting advancing frames. Final instrumentation separately counts cancellations made while a RAF is pending. The final run completed both cases.",
+  "source_mapping": {
+    "effect_cleanup": "components/concepts/signal-desk/pond-environment.tsx:66",
+    "dispose": "components/concepts/signal-desk/pond-renderer.ts:79",
+    "context_release": "components/concepts/signal-desk/pond-renderer.ts:130",
+    "cancelled_loading_guard": "components/concepts/signal-desk/pond-renderer.ts:139",
+    "asset_loading": "components/concepts/signal-desk/pond-three.ts:10"
+  }
+}

@@ -1,102 +1,10 @@
-import type { Metadata } from "next";
-import { Pixelify_Sans, Space_Grotesk, Space_Mono } from "next/font/google";
-import "./globals.css";
-import siteConfig from "@/site.config.json";
+import type { ReactNode } from "react";
 
-const { siteUrl } = siteConfig;
-const shareCardUrl = `${siteUrl}/share-cards/luinbytes-dev-pond.png`;
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
-  variable: "--font-space-grotesk",
-  display: "swap",
-});
-
-const pixelify = Pixelify_Sans({
-  subsets: ["latin"],
-  weight: ["400", "700"],
-  variable: "--font-pixelify",
-  display: "swap",
-});
-
-const spaceMono = Space_Mono({
-  subsets: ["latin"],
-  weight: ["400", "700"],
-  variable: "--font-space-mono",
-  display: "swap",
-});
-
-export const metadata: Metadata = {
-  title: {
-    default: "Lu | Software Engineer",
-    template: "%s | Lu",
-  },
-  description:
-    "Lu makes stubborn software behave: Orchid.ai's native Android app, agent systems, Linux tools, and practical software.",
-  metadataBase: new URL(siteUrl),
-  alternates: { canonical: siteUrl },
-  twitter: {
-    card: "summary_large_image",
-    title: "Lu | Software Engineer",
-    description:
-      "I make stubborn software behave. Native Android, agent systems, Linux tools, and practical software.",
-    creator: "@x6c75",
-    images: [{ url: shareCardUrl, alt: "Lu | Software Engineer" }],
-  },
-  openGraph: {
-    type: "website",
-    locale: "en_GB",
-    url: siteUrl,
-    title: "Lu | Software Engineer",
-    description:
-      "I make stubborn software behave. Native Android, agent systems, Linux tools, and practical software.",
-    siteName: "Luinbytes",
-    images: [
-      {
-        url: shareCardUrl,
-        width: 1200,
-        height: 630,
-        type: "image/png",
-        alt: "Lu | Software Engineer",
-      },
-    ],
-  },
-  keywords: [
-    "Software Engineer",
-    "Next.js",
-    "TypeScript",
-    "Android",
-    "Kotlin",
-    "Orchid.ai",
-    "AI Agents",
-    "HomeBot",
-    "Rakazo",
-    "Linux",
-    "PipeWire",
-    "CLI Tool",
-    "Open Source",
-  ],
-};
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className="scroll-smooth" data-scroll-behavior="smooth">
-      <body
-        className={`${spaceGrotesk.variable} ${pixelify.variable} ${spaceMono.variable} font-body antialiased`}
-      >
-        <a
-          href="#main"
-          className="skip-link"
-        >
-          Skip to content
-        </a>
-        <main id="main" tabIndex={-1}>{children}</main>
-      </body>
-    </html>
+    <>
+      <a href="#main" className="skip-link">Skip to content</a>
+      <main id="main" tabIndex={-1}>{children}</main>
+    </>
   );
 }

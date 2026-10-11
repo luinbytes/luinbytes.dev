@@ -1,6 +1,3 @@
-"use client";
-
-import Image from "next/image";
 import { useEffect, useRef } from "react";
 
 import styles from "./profile-card.module.css";
@@ -207,7 +204,7 @@ export function ProfileCard({ reducedMotion, compact = false }: { reducedMotion:
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.uniform2f(view, x, 1 - y);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-      if (process.env.NODE_ENV !== "production") canvas.dataset.foilView = `${x.toFixed(3)},${y.toFixed(3)}`;
+      canvas.dataset.foilView = `${x.toFixed(3)},${y.toFixed(3)}`;
     };
 
     const stopSpring = () => {
@@ -245,7 +242,7 @@ export function ProfileCard({ reducedMotion, compact = false }: { reducedMotion:
     const setView = (x: number, y: number, immediate = false) => {
       targetX = Math.max(0, Math.min(1, x));
       targetY = Math.max(0, Math.min(1, y));
-      if (process.env.NODE_ENV !== "production") canvas.dataset.foilTarget = `${targetX.toFixed(3)},${targetY.toFixed(3)}`;
+      canvas.dataset.foilTarget = `${targetX.toFixed(3)},${targetY.toFixed(3)}`;
       if (immediate) {
         stopSpring();
         currentX = targetX;
@@ -310,13 +307,16 @@ export function ProfileCard({ reducedMotion, compact = false }: { reducedMotion:
 
   useEffect(() => {
     const card = cardRef.current;
-    if (!card) return;
+    const portrait = foilCanvasRef.current?.parentElement;
+    if (!card || !portrait) return;
 
     let frame = 0;
-    let pending: { x: number; y: number; strength: number } | null = null;
+    let pending: { x: number; y: number; foilX: number; foilY: number; strength: number; foilActive: boolean } | null = null;
     let visible = true;
+    let activeTouchPointer: number | null = null;
 
     const settle = (immediate = false) => {
+      activeTouchPointer = null;
       pending = null;
       if (frame) cancelAnimationFrame(frame);
       frame = 0;
@@ -328,47 +328,77 @@ export function ProfileCard({ reducedMotion, compact = false }: { reducedMotion:
       card.style.setProperty("--profile-foil-opacity", "0.46");
       card.style.setProperty("--profile-hue", "0deg");
       card.style.setProperty("--profile-press", "1");
-      foilDrawRef.current(0.38, 0.56, immediate || reducedMotion);
+      foilDrawRef.current(0.38, 0.56, true);
     };
 
-    const applyLight = (x: number, y: number, strength: number) => {
+    const applyLight = (x: number, y: number, foilX: number, foilY: number, strength: number, foilActive: boolean) => {
+      const highlightX = foilActive ? foilX : 0.5;
+      const highlightY = foilActive ? foilY : 0.5;
       card.style.setProperty("--profile-motion", "55ms");
       card.style.setProperty("--profile-tilt-x", `${((0.5 - y) * 7 * strength).toFixed(2)}deg`);
       card.style.setProperty("--profile-tilt-y", `${((x - 0.5) * 9 * strength).toFixed(2)}deg`);
-      card.style.setProperty("--profile-foil-x", `${((0.5 - x) * 16).toFixed(1)}px`);
-      card.style.setProperty("--profile-foil-y", `${((0.5 - y) * 12).toFixed(1)}px`);
-      card.style.setProperty("--profile-foil-opacity", `${(0.46 + 0.3 * strength).toFixed(2)}`);
-      card.style.setProperty("--profile-hue", `${((x + y - 1) * 20).toFixed(1)}deg`);
-      foilDrawRef.current(x, y);
+      card.style.setProperty("--profile-foil-x", `${((0.5 - highlightX) * 16).toFixed(1)}px`);
+      card.style.setProperty("--profile-foil-y", `${((0.5 - highlightY) * 12).toFixed(1)}px`);
+      card.style.setProperty("--profile-foil-opacity", `${(0.46 + (foilActive ? 0.3 * strength : 0)).toFixed(2)}`);
+      card.style.setProperty("--profile-hue", `${((highlightX + highlightY - 1) * 20).toFixed(1)}deg`);
+      foilDrawRef.current(foilActive ? foilX : 0.38, foilActive ? foilY : 0.56, !foilActive);
     };
 
-    const queueLight = (x: number, y: number, strength: number) => {
-      pending = { x: Math.max(0, Math.min(1, x)), y: Math.max(0, Math.min(1, y)), strength };
+    const queueLight = (x: number, y: number, foilX: number, foilY: number, strength: number, foilActive: boolean) => {
+      pending = {
+        x: Math.max(0, Math.min(1, x)),
+        y: Math.max(0, Math.min(1, y)),
+        foilX: Math.max(0, Math.min(1, foilX)),
+        foilY: Math.max(0, Math.min(1, foilY)),
+        strength,
+        foilActive,
+      };
       if (frame || !visible || document.hidden) return;
       frame = requestAnimationFrame(() => {
         frame = 0;
         if (!pending) return;
-        applyLight(pending.x, pending.y, pending.strength);
+        applyLight(pending.x, pending.y, pending.foilX, pending.foilY, pending.strength, pending.foilActive);
         pending = null;
       });
     };
 
+    const updatePointer = (event: PointerEvent) => {
+      const cardBounds = card.getBoundingClientRect();
+      const portraitBounds = portrait.getBoundingClientRect();
+      queueLight(
+        (event.clientX - cardBounds.left) / cardBounds.width,
+        (event.clientY - cardBounds.top) / cardBounds.height,
+        (event.clientX - portraitBounds.left) / portraitBounds.width,
+        (event.clientY - portraitBounds.top) / portraitBounds.height,
+        1,
+        event.clientX >= portraitBounds.left && event.clientX <= portraitBounds.right
+          && event.clientY >= portraitBounds.top && event.clientY <= portraitBounds.bottom,
+      );
+    };
+
     const onPointerMove = (event: PointerEvent) => {
-      if (reducedMotion || event.pointerType === "touch" || event.pointerType === "pen") return;
-      const bounds = card.getBoundingClientRect();
-      queueLight((event.clientX - bounds.left) / bounds.width, (event.clientY - bounds.top) / bounds.height, 1);
+      if (reducedMotion || (event.pointerType === "touch" && activeTouchPointer !== event.pointerId)) return;
+      updatePointer(event);
     };
     const onPointerDown = (event: PointerEvent) => {
-      if (!reducedMotion && event.pointerType !== "touch" && event.button === 0) card.style.setProperty("--profile-press", "0.985");
+      if (reducedMotion) return;
+      if (event.pointerType === "touch") activeTouchPointer = event.pointerId;
+      if (event.button === 0) card.style.setProperty("--profile-press", "0.985");
+      updatePointer(event);
     };
-    const onPointerUp = () => card.style.setProperty("--profile-press", "1");
+    const onPointerUp = (event: PointerEvent) => {
+      card.style.setProperty("--profile-press", "1");
+      if (event.type === "pointercancel" || (event.pointerType === "touch" && activeTouchPointer === event.pointerId)) {
+        settle();
+      }
+    };
     const onPointerLeave = () => settle();
     const onResize = () => settle(true);
     const onOrientation = (event: DeviceOrientationEvent) => {
       if (event.gamma === null || event.beta === null) return;
       const x = 0.5 + Math.max(-18, Math.min(18, event.gamma)) / 90;
       const y = 0.5 + Math.max(-24, Math.min(24, event.beta - 45)) / 120;
-      queueLight(x, y, 0.48);
+      queueLight(x, y, x, y, 0.48, false);
     };
     const onVisibilityChange = () => {
       if (document.hidden) settle(true);
@@ -404,6 +434,7 @@ export function ProfileCard({ reducedMotion, compact = false }: { reducedMotion:
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("resize", onResize);
       if (useOrientation) window.removeEventListener("deviceorientation", onOrientation);
+      activeTouchPointer = null;
     };
   }, [reducedMotion]);
 
@@ -411,7 +442,7 @@ export function ProfileCard({ reducedMotion, compact = false }: { reducedMotion:
     <div ref={cardRef} className={`${styles.profileTilt} ${compact ? styles.compact : ""}`}>
       <div className={styles.profileLine}>
         <span className={styles.profilePortrait}>
-          <Image src="/images/portfolio/lu-avatar.jpg" alt="Lu's illustrated avatar wearing a pink cap" width={72} height={72} priority />
+          <img src="/images/portfolio/lu-avatar.jpg" alt="Lu's illustrated avatar wearing a pink cap" width={72} height={72} loading="eager" fetchPriority="high" />
           <canvas ref={foilCanvasRef} className={styles.profileFoilCanvas} width={72} height={72} aria-hidden="true" />
         </span>
         <span className={styles.profileDetails}>

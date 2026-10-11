@@ -1,0 +1,179 @@
+
+> luinbytes-site@0.1.0 test:e2e
+> npm run build && python3 -m unittest discover -s tests/browser -p '*_test.py' -v
+
+
+> luinbytes-site@0.1.0 prebuild
+> node scripts/generate-sitemap.js
+
+Generated sitemap with 2 URLs to /Users/luinbytes/src/luinbytes.dev/public/sitemap.xml
+
+> luinbytes-site@0.1.0 build
+> tsc --noEmit && vite build && vite build --ssr app/entry-server.tsx && node scripts/prerender.mjs
+
+vite v8.3.3 building client environment for production...
+transforming...
+✓ 2273 modules transformed.
+rendering chunks...
+computing gzip size...
+out/index.html                                                   0.54 kB │ gzip:   0.34 kB
+out/assets/pixelify-sans-cyrillic-wght-normal-BfQLqnEI.woff2     5.06 kB
+out/assets/pixelify-sans-latin-ext-wght-normal-CsF3XSp0.woff2    8.20 kB
+out/assets/pixelify-sans-latin-wght-normal-Cbhn5ptY.woff2       12.01 kB
+out/assets/space-mono-latin-400-normal-_3DlpgIW.woff            12.31 kB
+out/assets/space-mono-latin-700-normal-D7A851RN.woff            12.41 kB
+out/assets/space-mono-latin-400-normal-Rg4St2Dn.woff2           16.52 kB
+out/assets/space-mono-latin-700-normal-mWgeinG7.woff2           16.72 kB
+out/assets/manrope-latin-variable-DHIcAJRg.woff2                24.83 kB
+out/assets/index-CsTMNmbw.css                                   84.05 kB │ gzip:  16.17 kB
+out/assets/pip-web-search-renderer-DW_Gtxbx.js                   2.81 kB │ gzip:   1.33 kB
+out/assets/pond-renderer-BtJT7y69.js                           125.36 kB │ gzip:  38.93 kB
+out/assets/index-RcDZswnI.js                                   433.97 kB │ gzip: 140.52 kB
+out/assets/three.module-GL8TDBX5.js                            555.86 kB │ gzip: 139.71 kB
+
+[plugin builtin:vite-reporter]
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 1.13s
+vite v8.3.3 building ssr environment for production...
+transforming...
+✓ 35 modules transformed.
+rendering chunks...
+computing gzip size...
+.prerender/assets/pip-web-search-renderer-B5WE7ogP.js    5.75 kB │ gzip:  1.77 kB
+.prerender/entry-server.js                              89.00 kB │ gzip: 21.39 kB
+.prerender/assets/pond-renderer-CZdHM-jA.js            109.93 kB │ gzip: 27.38 kB
+
+✓ built in 368ms
+Prerendered 3 pages to out.
+test_sitemap_exposes_the_portfolio_and_pip (browser_test.GeneratedArtifactTests.test_sitemap_exposes_the_portfolio_and_pip) ... ok
+test_browsing_demo_keeps_its_fallback_when_webgl_fails (browser_test.PipRouteTests.test_browsing_demo_keeps_its_fallback_when_webgl_fails) ... ok
+test_browsing_demo_renders_and_preserves_manual_pause (browser_test.PipRouteTests.test_browsing_demo_renders_and_preserves_manual_pause) ... ok
+test_browsing_demo_respects_reduced_motion (browser_test.PipRouteTests.test_browsing_demo_respects_reduced_motion) ... FAIL
+test_pip_page_fits_mobile_viewports_and_exposes_keyboard_skip_and_nav (browser_test.PipRouteTests.test_pip_page_fits_mobile_viewports_and_exposes_keyboard_skip_and_nav) ... ok
+test_pip_page_has_static_content_and_configured_telegram_contact (browser_test.PipRouteTests.test_pip_page_has_static_content_and_configured_telegram_contact) ... ok
+test_pip_page_remains_readable_without_javascript (browser_test.PipRouteTests.test_pip_page_remains_readable_without_javascript) ... ok
+test_telegram_contact_copy_reports_success_and_failure (browser_test.PipRouteTests.test_telegram_contact_copy_reports_success_and_failure) ... ok
+test_telegram_qr_uses_the_same_target_and_reports_remote_failure (browser_test.PipRouteTests.test_telegram_qr_uses_the_same_target_and_reports_remote_failure) ... ok
+test_food_drop_reservation_and_feeding (browser_test.PortfolioTests.test_food_drop_reservation_and_feeding) ... ok
+test_hero_copy_does_not_block_pointer_water_reaction (browser_test.PortfolioTests.test_hero_copy_does_not_block_pointer_water_reaction) ... ok
+test_homepage_is_responsive_and_routes_featured_work (browser_test.PortfolioTests.test_homepage_is_responsive_and_routes_featured_work) ... ok
+test_homepage_pip_link_works_without_javascript (browser_test.PortfolioTests.test_homepage_pip_link_works_without_javascript) ... ok
+test_homepage_pip_section_fits_320px_with_reduced_motion (browser_test.PortfolioTests.test_homepage_pip_section_fits_320px_with_reduced_motion) ... ok
+test_homepage_pip_section_roundtrips_to_pip_and_back (browser_test.PortfolioTests.test_homepage_pip_section_roundtrips_to_pip_and_back) ... ok
+test_homepage_preserves_layout_and_world_state_across_viewport_matrix (browser_test.PortfolioTests.test_homepage_preserves_layout_and_world_state_across_viewport_matrix) ... ok
+test_loading_shows_only_the_pond_then_fades_in_the_live_ecosystem (browser_test.PortfolioTests.test_loading_shows_only_the_pond_then_fades_in_the_live_ecosystem) ... ok
+test_mobile_navigation_hero_viewport_and_system_color_modes (browser_test.PortfolioTests.test_mobile_navigation_hero_viewport_and_system_color_modes) ... ok
+test_mobile_touch_disturbs_the_shared_pond (browser_test.PortfolioTests.test_mobile_touch_disturbs_the_shared_pond) ... FAIL
+test_navigation_and_bordered_controls_keep_their_visual_hierarchy (browser_test.PortfolioTests.test_navigation_and_bordered_controls_keep_their_visual_hierarchy) ... ok
+test_pause_resize_and_remount_keep_world_state_bounded (browser_test.PortfolioTests.test_pause_resize_and_remount_keep_world_state_bounded) ... ok
+test_pointer_stirs_the_pond (browser_test.PortfolioTests.test_pointer_stirs_the_pond) ... ok
+test_profile_card_foil_is_square_pointer_driven_and_motion_safe (browser_test.PortfolioTests.test_profile_card_foil_is_square_pointer_driven_and_motion_safe) ... ok
+test_reduced_motion_preserves_the_ecosystem_at_low_speed (browser_test.PortfolioTests.test_reduced_motion_preserves_the_ecosystem_at_low_speed) ... ok
+test_removed_routes_use_the_pond_not_found_page (browser_test.PortfolioTests.test_removed_routes_use_the_pond_not_found_page) ... ok
+test_webgl_failure_uses_the_art_directed_fallback (browser_test.PortfolioTests.test_webgl_failure_uses_the_art_directed_fallback) ... ok
+test_exited_child_reports_its_owned_log_without_probing_http (browser_test.ServerStartupTests.test_exited_child_reports_its_owned_log_without_probing_http) ... ok
+test_editable_source_contains_the_original_card_copy (browser_test.ShareCardStaticExportTests.test_editable_source_contains_the_original_card_copy) ... ok
+test_every_scoped_route_exports_a_production_large_image_card (browser_test.ShareCardStaticExportTests.test_every_scoped_route_exports_a_production_large_image_card) ... ok
+
+======================================================================
+FAIL: test_browsing_demo_respects_reduced_motion (browser_test.PipRouteTests.test_browsing_demo_respects_reduced_motion)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/luinbytes/src/luinbytes.dev/tests/browser/browser_test.py", line 455, in test_browsing_demo_respects_reduced_motion
+    expect(demo).to_have_attribute("data-playback", "paused")
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/private/tmp/lu-pip-validation-venv/lib/python3.14/site-packages/playwright/sync_api/_generated.py", line 21794, in to_have_attribute
+    self._sync(
+    ~~~~~~~~~~^
+        self._impl_obj.to_have_attribute(
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+        )
+        ^
+    )
+    ^
+  File "/private/tmp/lu-pip-validation-venv/lib/python3.14/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
+    return task.result()
+           ~~~~~~~~~~~^^
+  File "/private/tmp/lu-pip-validation-venv/lib/python3.14/site-packages/playwright/_impl/_assertions.py", line 338, in to_have_attribute
+    await self._expect_impl(
+    ...<7 lines>...
+    )
+  File "/private/tmp/lu-pip-validation-venv/lib/python3.14/site-packages/playwright/_impl/_assertions.py", line 126, in _expect_impl
+    _record_soft_or_raise(
+    ~~~~~~~~~~~~~~~~~~~~~^
+        AssertionError(
+        ^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        self._is_soft,
+        ^^^^^^^^^^^^^^
+    )
+    ^
+  File "/private/tmp/lu-pip-validation-venv/lib/python3.14/site-packages/playwright/_impl/_assertions.py", line 60, in _record_soft_or_raise
+    raise error
+AssertionError: Locator expected to have attribute 'paused'
+Actual value: playing
+Call log:
+  - Expect "to_have_attribute" with timeout 5000ms
+  - waiting for get_by_test_id("pip-browser-demo")
+    14 × locator resolved to <div data-phase="search" class="_demo_ui8e1_1" data-renderer="three" data-playback="playing" data-testid="pip-browser-demo">…</div>
+       - unexpected value "playing"
+
+Aria snapshot:
+- text: Illustrative demo
+- button "Pause browsing demo": Pause
+
+======================================================================
+FAIL: test_mobile_touch_disturbs_the_shared_pond (browser_test.PortfolioTests.test_mobile_touch_disturbs_the_shared_pond)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/luinbytes/src/luinbytes.dev/tests/browser/browser_test.py", line 1761, in test_mobile_touch_disturbs_the_shared_pond
+    page.wait_for_function(
+    ~~~~~~~~~~~~~~~~~~~~~~^
+        "Number(document.querySelector('[data-pond-state]')?.dataset.foodDroppedCount) > 0"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/private/tmp/lu-pip-validation-venv/lib/python3.14/site-packages/playwright/sync_api/_generated.py", line 12594, in wait_for_function
+    self._sync(
+    ~~~~~~~~~~^
+        self._impl_obj.wait_for_function(
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+        )
+        ^
+    )
+    ^
+  File "/private/tmp/lu-pip-validation-venv/lib/python3.14/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
+    return task.result()
+           ~~~~~~~~~~~^^
+  File "/private/tmp/lu-pip-validation-venv/lib/python3.14/site-packages/playwright/_impl/_page.py", line 1144, in wait_for_function
+    return await self._main_frame.wait_for_function(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/private/tmp/lu-pip-validation-venv/lib/python3.14/site-packages/playwright/_impl/_frame.py", line 932, in wait_for_function
+    await self._channel.send("waitForFunction", self._timeout, params)
+  File "/private/tmp/lu-pip-validation-venv/lib/python3.14/site-packages/playwright/_impl/_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/private/tmp/lu-pip-validation-venv/lib/python3.14/site-packages/playwright/_impl/_connection.py", line 563, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.TimeoutError: Page.wait_for_function: Timeout 30000ms exceeded.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/luinbytes/src/luinbytes.dev/tests/browser/browser_test.py", line 1771, in test_mobile_touch_disturbs_the_shared_pond
+    self.fail(f"Double-tap did not commit food: {detail}")
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Double-tap did not commit food: {'gesture': 'single-tap-impact', 'requested': None, 'frame': '720', 'state': 'running', 'touch_events': [{'type': 'pointerdown', 'time': 2257.2999999523163, 'x': 311.6000061035156, 'y': 208.60000610351562, 'target': 'DIV'}, {'type': 'pointerup', 'time': 2257.5999999046326, 'x': 311.6000061035156, 'y': 208.60000610351562, 'target': 'DIV'}, {'type': 'pointerdown', 'time': 3284.7999999523163, 'x': 311.6000061035156, 'y': 208.60000610351562, 'target': 'DIV'}, {'type': 'pointerup', 'time': 3285, 'x': 311.6000061035156, 'y': 208.60000610351562, 'target': 'DIV'}, {'type': 'pointerdown', 'time': 3731.5, 'x': 311.6000061035156, 'y': 208.60000610351562, 'target': 'DIV'}, {'type': 'pointerup', 'time': 3731.7000000476837, 'x': 311.6000061035156, 'y': 208.60000610351562, 'target': 'DIV'}]}
+
+----------------------------------------------------------------------
+Ran 29 tests in 208.640s
+
+FAILED (failures=2)
