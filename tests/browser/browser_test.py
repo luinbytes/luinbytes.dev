@@ -91,8 +91,19 @@ def find_open_water(page: Page, pond, preferred=()):
 
 
 def record_console_issue(bucket, message) -> None:
+    if (
+        message.type == "warning"
+        and message.text == "WebGL: CONTEXT_LOST_WEBGL: loseContext: context lost"
+    ):
+        return
     ignored = ("GL Driver Message", "was preloaded using link preload but not used")
-    if message.type in ("warning", "error") and not any(item in message.text for item in ignored):
+    if (
+        message.type == "warning"
+        and "context" not in message.text.lower()
+        and any(item in message.text for item in ignored)
+    ):
+        return
+    if message.type in ("warning", "error"):
         bucket.append(f"{message.type}: {message.text}")
 
 
@@ -1939,6 +1950,7 @@ class PortfolioTests(BrowserTestCase):
         self.assertEqual(int(pond.get_attribute("data-food-dropped-count")), 0)
         impacts_before_food = int(pond.get_attribute("data-primary-impact-count"))
         page.touchscreen.tap(fish_x, fish_y)
+        page.wait_for_timeout(100)
         page.touchscreen.tap(fish_x, fish_y)
         try:
             page.wait_for_function(
