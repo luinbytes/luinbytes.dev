@@ -1,23 +1,57 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Manrope";
+  src: url("./fonts/manrope-latin-variable.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+}
+
 @theme inline {
-  --font-display: var(--font-pixelify), system-ui, sans-serif;
-  --font-body: var(--font-space-grotesk), system-ui, sans-serif;
+  --font-display: var(--font-manrope), system-ui, sans-serif;
+  --font-body: var(--font-manrope), system-ui, sans-serif;
   --font-mono: var(--font-space-mono), monospace;
+  --color-background: var(--site-bg);
+  --color-foreground: var(--site-text);
+  --color-primary: var(--site-accent);
+  --color-primary-foreground: var(--site-contrast);
+  --color-secondary: var(--site-surface-soft);
+  --color-secondary-foreground: var(--site-text);
+  --color-muted: var(--site-surface-soft);
+  --color-muted-foreground: var(--site-muted);
+  --color-border: var(--site-border);
+  --color-ring: var(--site-accent);
+  --radius-lg: var(--site-radius);
 }
 
 :root {
+  --font-manrope: "Manrope";
+  --font-pixelify: "Pixelify Sans Variable";
+  --font-space-mono: "Space Mono";
   color-scheme: dark;
-  --site-bg: #071e1c;
-  --site-surface: #0c2a27;
-  --site-surface-soft: #133731;
-  --site-text: #eff7f1;
-  --site-muted: #b2c8bd;
-  --site-accent: #b9dfb0;
-  --site-border: #47675b;
-  --site-contrast: #18342c;
-  --site-shadow: 0 20px 64px #02151126;
-  /* Layer order: pond -2, water input -1, content 1, navigation 30, skip link 40. */
+  --site-bg: #252031;
+  --site-surface: #332a43;
+  --site-surface-soft: #3d3150;
+  --site-text: #f4edf9;
+  --site-muted: #cfc0dd;
+  --site-accent: #9984cf;
+  --site-border: rgb(235 223 255 / .2);
+  --site-contrast: #1b1227;
+  --site-radius: 24px;
+  --site-control-radius: 999px;
+  --ui-duration: 280ms;
+  --ui-ease: cubic-bezier(.2,.9,.25,1.4);
+  --glass-fill: rgb(37 28 53 / .3);
+  --glass-top: rgb(226 211 255 / .14);
+  --glass-bottom: rgb(20 15 32 / .05);
+  --glass-edge: rgb(235 223 255 / .2);
+  --glass-rim: rgb(243 234 255 / .37);
+  --glass-selected: rgb(153 132 207 / .22);
+  --site-shadow: 0 12px 30px rgb(13 7 28 / .2), 0 2px 5px rgb(13 7 28 / .12);
+  --glass-shadow: var(--site-shadow), inset 0 1px 0 var(--glass-rim), inset 0 -1px 1px rgb(15 8 25 / .2);
+  --glass-panel-shadow: var(--site-shadow), inset 0 1px 1px rgb(243 234 255 / .3), inset 0 -1px 1px rgb(15 8 25 / .2);
+  --site-panel-bg: linear-gradient(135deg, rgb(69 54 90 / .93), rgb(37 28 53 / .94));
   --layer-content: 1;
   --layer-navigation: 30;
   --layer-skip-link: 40;
@@ -26,24 +60,34 @@
 @media (prefers-color-scheme: light) {
   :root {
     color-scheme: light;
-    --site-bg: #edf3ed;
-    --site-surface: #f6f9f3;
-    --site-surface-soft: #e0ebe0;
-    --site-text: #18342c;
-    --site-muted: #536a5e;
-    --site-accent: #315e45;
-    --site-border: #a5b8a7;
-    --site-contrast: #f6f9f3;
-    --site-shadow: 0 20px 64px #173c2312;
+    --site-bg: #eee8f3;
+    --site-surface: #f5f0fa;
+    --site-surface-soft: #e6ddf0;
+    --site-text: #35223f;
+    --site-muted: #66516f;
+    --site-accent: #754eaa;
+    --site-border: rgb(91 65 113 / .18);
+    --site-contrast: #fff;
+    --glass-fill: rgb(255 255 255 / .16);
+    --glass-top: rgb(255 255 255 / .46);
+    --glass-bottom: rgb(255 255 255 / .05);
+    --glass-edge: rgb(91 65 113 / .18);
+    --glass-rim: rgb(255 255 255 / .8);
+    --glass-selected: rgb(153 132 207 / .18);
+    --site-shadow: 0 12px 30px rgb(70 40 95 / .08), 0 2px 5px rgb(63 40 80 / .04);
+    --glass-shadow: var(--site-shadow), inset 0 1px 0 var(--glass-rim), inset 0 -1px 1px rgb(71 47 87 / .1);
+    --glass-panel-shadow: var(--site-shadow), inset 0 1px 1px rgb(255 255 255 / .88), inset 0 -1px 1px rgb(71 47 87 / .09);
+    --site-panel-bg: linear-gradient(135deg, rgb(249 245 253 / .96), rgb(238 232 243 / .94));
   }
 }
 
 html, body { width: 100%; margin: 0; }
 html { scrollbar-color: var(--site-muted) var(--site-bg); }
-body { color: var(--site-text); background: var(--site-bg); }
+body { color: var(--site-text); background: var(--site-bg); font-family: var(--font-body); }
 *, *::before, *::after { box-sizing: border-box; }
 button, input, textarea, select { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
+[data-slot="button"] { min-height: 44px; }
 ::selection { color: var(--site-contrast); background: var(--site-accent); }
 :where(a, button, input, textarea, select, [tabindex]):focus-visible {
   outline: 3px solid var(--site-accent);
@@ -55,7 +99,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
   left: 12px;
   z-index: var(--layer-skip-link);
   padding: 14px 20px;
-  border-radius: 10px;
+  border-radius: var(--site-control-radius);
   color: var(--site-contrast);
   background: var(--site-accent);
   transform: translateY(calc(-100% - 20px));

@@ -1,0 +1,17 @@
+[
+  {
+    "route": "/",
+    "status": 200,
+    "sha256": "15988ee3c1efd1f7610325c8e282c2956d6e49ec033e7a592cbd35bebfa8a1e3"
+  },
+  {
+    "route": "/pip",
+    "status": 200,
+    "sha256": "80cb7f282a748d7839afeab35c57d5d99f070d593adea4aac724d02740859b3e"
+  },
+  {
+    "route": "/404",
+    "status": 404,
+    "sha256": "8ee13d386b92efbfc4715547d04b404a51026207ac30d2ffc90099f2d8d59512"
+  }
+]

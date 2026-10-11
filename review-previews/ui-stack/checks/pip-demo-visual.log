@@ -1,0 +1,73 @@
+{
+  "layouts": [
+    {
+      "width": 320,
+      "overflow": false,
+      "renderer": "three",
+      "phase": "postage",
+      "playback": "paused",
+      "canvasCount": 1,
+      "targetContained": true,
+      "theme": "dark"
+    },
+    {
+      "width": 390,
+      "overflow": false,
+      "renderer": "three",
+      "phase": "postage",
+      "playback": "paused",
+      "canvasCount": 1,
+      "targetContained": true,
+      "theme": "dark"
+    },
+    {
+      "width": 1440,
+      "overflow": false,
+      "renderer": "three",
+      "phase": "postage",
+      "playback": "paused",
+      "canvasCount": 1,
+      "targetContained": true,
+      "theme": "dark"
+    },
+    {
+      "width": 320,
+      "overflow": false,
+      "renderer": "three",
+      "phase": "postage",
+      "playback": "paused",
+      "canvasCount": 1,
+      "targetContained": true,
+      "theme": "light"
+    },
+    {
+      "width": 390,
+      "overflow": false,
+      "renderer": "three",
+      "phase": "postage",
+      "playback": "paused",
+      "canvasCount": 1,
+      "targetContained": true,
+      "theme": "light"
+    },
+    {
+      "width": 1440,
+      "overflow": false,
+      "renderer": "three",
+      "phase": "postage",
+      "playback": "paused",
+      "canvasCount": 1,
+      "targetContained": true,
+      "theme": "light"
+    }
+  ],
+  "pageErrors": [],
+  "contextLoss": "PASS",
+  "videoPath": "/tmp/lu-pip-animation-video/page@4b1fb075c490fe2131d8313f92c10294.webm",
+  "videoCrop": {
+    "x": 81,
+    "y": 212.59375,
+    "width": 312.234375,
+    "height": 324
+  }
+}

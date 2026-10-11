@@ -1,0 +1,232 @@
+{
+  "homepage": {
+    "output": "/private/tmp/lu-home-card-verified.png",
+    "dimensions": [
+      1200,
+      630
+    ],
+    "bytes": 765482,
+    "sha256": "60bddd42c8ecc43ac42f94933f15af50cb71c7039574b4d203be4fb2dc46b811",
+    "copy": [
+      "INDEPENDENT SOFTWARE / FIELD NOTES",
+      "ROOT / 01",
+      "luinbytes.dev",
+      "I get annoyed, then I build the missing thing.",
+      "ANDROID APPS \u00b7 LINUX TOOLS \u00b7 GAME SYSTEMS \u00b7 AUTOMATION",
+      "6c75",
+      "LU / SOFTWARE ENGINEER",
+      "BUILD / VERIFY / SHIP"
+    ],
+    "text_boxes": [
+      {
+        "text": "INDEPENDENT SOFTWARE / FIELD NOTES",
+        "x": 67,
+        "y": 48.5,
+        "width": 359.53125,
+        "height": 25,
+        "top": 48.5,
+        "right": 426.53125,
+        "bottom": 73.5,
+        "left": 67
+      },
+      {
+        "text": "ROOT / 01",
+        "x": 1039.359375,
+        "y": 48.5,
+        "width": 93.640625,
+        "height": 25,
+        "top": 48.5,
+        "right": 1133,
+        "bottom": 73.5,
+        "left": 1039.359375
+      },
+      {
+        "text": "luinbytes.dev",
+        "x": 64,
+        "y": 135,
+        "width": 453.8125,
+        "height": 108,
+        "top": 135,
+        "right": 517.8125,
+        "bottom": 243,
+        "left": 64
+      },
+      {
+        "text": "I get annoyed, then I build the missing thing.",
+        "x": 64,
+        "y": 270,
+        "width": 525,
+        "height": 75.375,
+        "top": 270,
+        "right": 589,
+        "bottom": 345.375,
+        "left": 64
+      },
+      {
+        "text": "ANDROID APPS \u00b7 LINUX TOOLS \u00b7 GAME SYSTEMS \u00b7 AUTOMATION",
+        "x": 64,
+        "y": 478,
+        "width": 495.734375,
+        "height": 19.5,
+        "top": 478,
+        "right": 559.734375,
+        "bottom": 497.5,
+        "left": 64
+      },
+      {
+        "text": "6c75",
+        "x": 620,
+        "y": 295,
+        "width": 445.578125,
+        "height": 236,
+        "top": 295,
+        "right": 1065.578125,
+        "bottom": 531,
+        "left": 620
+      },
+      {
+        "text": "LU / SOFTWARE ENGINEER",
+        "x": 64,
+        "y": 550,
+        "width": 201.96875,
+        "height": 19.5,
+        "top": 550,
+        "right": 265.96875,
+        "bottom": 569.5,
+        "left": 64
+      },
+      {
+        "text": "BUILD / VERIFY / SHIP",
+        "x": 943.21875,
+        "y": 550,
+        "width": 192.78125,
+        "height": 19.5,
+        "top": 550,
+        "right": 1136,
+        "bottom": 569.5,
+        "left": 943.21875
+      }
+    ]
+  },
+  "pip": {
+    "output": "/private/tmp/lu-pip-card-verified.png",
+    "dimensions": [
+      1200,
+      630
+    ],
+    "bytes": 217269,
+    "sha256": "9fe6ecee74c23d6d28563260672f6fabfa76c34c2fbb3db1d234c0e24f136395",
+    "copy": [
+      "PIP / TELEGRAM AGENT",
+      "A LITTLE SOMETHING BY LU",
+      "pip.",
+      "YOUR TELEGRAM MATE",
+      "A little help, one message away.",
+      "SEARCH",
+      "REMINDERS",
+      "EVERYDAY LIFE",
+      "WARM / SHORT / EASYGOING"
+    ],
+    "text_boxes": [
+      {
+        "text": "PIP / TELEGRAM AGENT",
+        "x": 969.90625,
+        "y": 50.5,
+        "width": 166.09375,
+        "height": 17,
+        "top": 50.5,
+        "right": 1136,
+        "bottom": 67.5,
+        "left": 969.90625
+      },
+      {
+        "text": "A LITTLE SOMETHING BY LU",
+        "x": 72,
+        "y": 143,
+        "width": 515,
+        "height": 17,
+        "top": 143,
+        "right": 587,
+        "bottom": 160,
+        "left": 72
+      },
+      {
+        "text": "pip.",
+        "x": 72,
+        "y": 185,
+        "width": 515,
+        "height": 96.71875,
+        "top": 185,
+        "right": 587,
+        "bottom": 281.71875,
+        "left": 72
+      },
+      {
+        "text": "YOUR TELEGRAM MATE",
+        "x": 72,
+        "y": 306.71875,
+        "width": 515,
+        "height": 43,
+        "top": 306.71875,
+        "right": 587,
+        "bottom": 349.71875,
+        "left": 72
+      },
+      {
+        "text": "A little help, one message away.",
+        "x": 72,
+        "y": 367.71875,
+        "width": 405,
+        "height": 27.546875,
+        "top": 367.71875,
+        "right": 477,
+        "bottom": 395.265625,
+        "left": 72
+      },
+      {
+        "text": "SEARCH",
+        "x": 72,
+        "y": 426.265625,
+        "width": 63.53125,
+        "height": 33,
+        "top": 426.265625,
+        "right": 135.53125,
+        "bottom": 459.265625,
+        "left": 72
+      },
+      {
+        "text": "REMINDERS",
+        "x": 143.53125,
+        "y": 426.265625,
+        "width": 84.28125,
+        "height": 33,
+        "top": 426.265625,
+        "right": 227.8125,
+        "bottom": 459.265625,
+        "left": 143.53125
+      },
+      {
+        "text": "EVERYDAY LIFE",
+        "x": 235.8125,
+        "y": 426.265625,
+        "width": 111.96875,
+        "height": 33,
+        "top": 426.265625,
+        "right": 347.78125,
+        "bottom": 459.265625,
+        "left": 235.8125
+      },
+      {
+        "text": "WARM / SHORT / EASYGOING",
+        "x": 754.984375,
+        "y": 576,
+        "width": 182.703125,
+        "height": 16,
+        "top": 576,
+        "right": 937.6875,
+        "bottom": 592,
+        "left": 754.984375
+      }
+    ]
+  }
+}

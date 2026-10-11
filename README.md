@@ -20,21 +20,21 @@ keeps its Telegram, copy-handle, and on-demand QR contact paths.
 
 ## Stack
 
-- Next.js 16 with static export for GitHub Pages
+- Vite 8 with React prerendering for GitHub Pages
 - React 19 and TypeScript
-- CSS Modules with shared theme tokens and Tailwind CSS v4
+- ui-stack shadcn/Radix components, Lavender Glass tokens, CSS Modules, and Tailwind CSS v4
 - Framer Motion for interface motion
-- PixiJS and Yuka for the procedural pond ecosystem
+- Three.js and Yuka for the procedural pond ecosystem
 - Lucide React for interface icons
 
 ## Development
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:5173](http://localhost:5173).
 
 Run the production checks:
 
@@ -42,6 +42,7 @@ Run the production checks:
 npm run lint
 npm run build
 npm run test:pip
+npm run test:pond
 ```
 
 The browser suite uses Python Playwright. Install its dependency and Chromium once, then run:
@@ -53,6 +54,8 @@ npm run test:e2e
 ```
 
 `npm run test:e2e:setup` runs both setup commands. Set `E2E_PORT` to use a specific isolated test-server port; otherwise the harness allocates one.
+
+`npm run preview` serves the built `out` directory at http://127.0.0.1:3004 with real 404 responses. The browser suite uses this production export.
 
 The `/pip` page is exported with the rest of the site and keeps its contact action
 available as static, readable HTML. Its Telegram target is defined in
@@ -88,13 +91,12 @@ python3 scripts/generate-pip-share-card.py
 python3 -m unittest discover -s tests/browser -p '*_test.py' -k ShareCardStaticExportTests -v
 ```
 
-The generators embed fonts from the built site, render offline, and check loaded
+The generators embed the original card fonts from installed Fontsource packages, render offline, and check loaded
 fonts plus a 32px text-safe inset. Review both PNGs at full size and at typical
 embed size before updating the expected SHA-256 values in
-`ShareCardStaticExportTests` to the generators' printed values. The static-export
-test rebuilds and checks the metadata, asset dimensions/hash and absence of old
+`ShareCardStaticExportTests` to the generators' printed values. The browser suite builds once and checks the metadata, asset dimensions/hash and absence of old
 image references in exported HTML. Normal Pages builds need no Python, browser,
-image service or runtime route: Next.js simply exports the checked-in PNGs.
+image service or runtime route: Vite copies the checked-in PNGs into the static export.
 
 ## Credits
 

@@ -15,7 +15,7 @@
 }
 
 .pondImage,
-.pixiHost,
+.pondHost,
 .pondGrade,
 .surfaceLight {
   position: absolute;
@@ -31,17 +31,17 @@
   image-rendering: pixelated;
 }
 
-.pixiHost {
+.pondHost {
   z-index: 1;
   opacity: 0;
   transition: opacity 760ms cubic-bezier(0.22, 0.72, 0.24, 1);
 }
 
-.pond[data-renderer="pixi"] .pixiHost {
+.pond[data-renderer="three"] .pondHost {
   opacity: 1;
 }
 
-.pixiCanvas {
+.pondCanvas {
   display: block;
   width: 100%;
   height: 100%;
@@ -69,7 +69,7 @@
   animation: glint 11s ease-in-out infinite alternate;
 }
 
-.pond[data-renderer="pixi"] .surfaceLight {
+.pond[data-renderer="three"] .surfaceLight {
   opacity: 0.16;
   animation: none;
 }
@@ -87,7 +87,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pixiHost {
+  .pondHost {
     transition: none;
   }
 
