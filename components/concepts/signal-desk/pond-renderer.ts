@@ -35,7 +35,7 @@ type StartOptions = {
   signal: AbortSignal;
 };
 
-type KoiTestPose = { row: number; column: number; heading: number };
+type KoiTestPose = { row: number; column: number; heading: number; feedingPulse?: number };
 type AtlasFrameBounds = { top: number; height: number };
 
 type Particle = { x: number; y: number; vx: number; vy: number; born: number; life: number; size: number; color: number };
@@ -801,7 +801,8 @@ export async function startPondRenderer(options: StartOptions) {
         visual.shadow.material.opacity = visual.alpha;
         visual.sprite.material.color.setHex(fish.stun ? 0xd4d5ef : fish.state === "feeding" ? 0xf4fff3 : 0xe8fff9);
         animate(visual.animation, delta);
-        const peck = fish.state === "feeding" ? 1 - Math.abs(fish.feedingPulse * 2 - 1) * 0.055 : 1;
+        const feedingPulse = testPose?.feedingPulse ?? (fish.state === "feeding" ? fish.feedingPulse : null);
+        const peck = feedingPulse === null ? 1 : 1 - Math.abs(feedingPulse * 2 - 1) * 0.055;
         visual.sprite.rotation.z = 0;
         const depthScale = testPose ? 1 : 0.9 + (1 - fish.depth) * 0.18;
         visual.sprite.position.y = visual.frameOffsetY * viewScale * depthScale;
