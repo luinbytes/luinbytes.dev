@@ -35,10 +35,13 @@ type StartOptions = {
   signal: AbortSignal;
 };
 
+type KoiTestPose = { row: number; column: number; heading: number };
+type AtlasFrameBounds = { top: number; height: number };
+
 type Particle = { x: number; y: number; vx: number; vy: number; born: number; life: number; size: number; color: number };
 type Ring = { x: number; y: number; born: number; life: number; radius: number; color: number };
 type Ripple = { x: number; y: number; size: number; strength: number; speed: number; born: number; life: number };
-type AtlasAnimation = { texture: THREE.Texture; frames: readonly number[]; row: number; progress: number; speed: number; frame: number };
+type AtlasAnimation = { texture: THREE.Texture; frames: readonly number[]; row: number; bounds?: AtlasFrameBounds; progress: number; speed: number; frame: number };
 type FishVisual = {
   container: THREE.Group;
   sprite: PondSprite;
@@ -47,6 +50,7 @@ type FishVisual = {
   alpha: number;
   baseScaleX: number;
   baseScaleY: number;
+  frameOffsetY: number;
   lastWake: number;
   surfaced: boolean;
   status: THREE.Group;
@@ -64,9 +68,17 @@ const CAT_FRAME_CONTACT_Y = [
 ] as const;
 const CAT_TURN_CONTACT_Y = 255 / 320;
 const CAT_TURN_DURATION = 420;
+// The painted koi overlap uniform row edges; these bounds retain full heads and avoid adjacent-row artwork.
+const KOI_ROW_BOUNDS: readonly AtlasFrameBounds[] = [
+  { top: 0, height: 292 },
+  { top: 300, height: 308 },
+  { top: 612, height: 308 },
+  { top: 914, height: 342 },
+];
 
 export async function startPondRenderer(options: StartOptions) {
   const { pond, host, interaction, reduced } = options;
+  const testPose = (window as Window & { __POND_TEST_KOI__?: KoiTestPose }).__POND_TEST_KOI__;
   if (options.signal.aborted) return () => {};
   host.dataset.pondState = "loading";
   host.dataset.motion = reduced ? "reduced" : "full";
@@ -109,7 +121,12 @@ export async function startPondRenderer(options: StartOptions) {
 
   try {
     const canvas = document.createElement("canvas");
-    const context = canvas.getContext("webgl2", { alpha: true, antialias: false, powerPreference: "high-performance" });
+    const context = canvas.getContext("webgl2", {
+      alpha: true,
+      antialias: false,
+      powerPreference: "high-performance",
+      preserveDrawingBuffer: Boolean(testPose),
+    });
     if (!context) {
       fallback("webgl-unavailable");
       return dispose;
@@ -189,7 +206,7 @@ export async function startPondRenderer(options: StartOptions) {
     const animate = (animation: AtlasAnimation, delta: number) => {
       animation.progress = (animation.progress + delta * 60 * animation.speed) % animation.frames.length;
       animation.frame = Math.floor(animation.progress);
-      setAtlasFrame(animation.texture, animation.frames[animation.frame], animation.row, 4, 4);
+      setAtlasFrame(animation.texture, animation.frames[animation.frame], animation.row, 4, 4, animation.bounds);
     };
     const background = sprite(pondTexture, 0);
     const foreground = sprite(foregroundTexture, 4);
@@ -271,8 +288,9 @@ export async function startPondRenderer(options: StartOptions) {
       [2, 58, 0.8, 0.86, -2.2, 13, 0.74], [3, 42, 0.18, 0.62, 1.9, 10, 0.62],
     ] as const;
     const mobileScale = window.innerWidth < 720 ? 0.8 : 1;
-    const fishDefinitions: FishDefinition[] = fishSource
-      .slice(0, window.innerWidth < 720 ? 14 : 20)
+    const fishDefinitions: FishDefinition[] = (testPose
+      ? [[testPose.row, 160, 0.74, 0.45, testPose.heading, 0, 1] as const]
+      : fishSource.slice(0, window.innerWidth < 720 ? 14 : 20))
       .map(([row, displayWidth, x, y, heading, cruise, alpha], index) => ({
         id: `fish-${index}`,
         row,
@@ -286,6 +304,16 @@ export async function startPondRenderer(options: StartOptions) {
         alpha,
         species: ["kohaku", "ogon", "showa", "utsuri"][row],
       }));
+    if (testPose) {
+      const point = worldToScreen(fishDefinitions[0].position);
+      host.dataset.koiTest = JSON.stringify({
+        row: testPose.row,
+        column: testPose.column,
+        x: point.x,
+        y: point.y,
+        size: fishDefinitions[0].displayWidth * viewScale,
+      });
+    }
     const pondSeed = new URLSearchParams(window.location.search).get("pond-seed")?.trim() || "6c75";
     const simulation = createPondSimulation({
       seed: pondSeed,
@@ -306,7 +334,8 @@ export async function startPondRenderer(options: StartOptions) {
       const fishSprite = sprite(koiAtlas, 2, true);
       fishSprite.scale.set(fish.displayWidth, fish.displayWidth, 1);
       const animation: AtlasAnimation = {
-        texture: fishSprite.material.map!, frames: [1, 0, 1, 2, 3, 2], row: fish.row,
+        texture: fishSprite.material.map!, frames: testPose ? [testPose.column] : [1, 0, 1, 2, 3, 2], row: fish.row,
+        bounds: KOI_ROW_BOUNDS[fish.row],
         speed: 0.038 + fish.row * 0.003, progress: fish.row % 6, frame: 0,
       };
       animate(animation, 0);
@@ -339,9 +368,16 @@ export async function startPondRenderer(options: StartOptions) {
       status.add(bonk, stars);
       status.visible = false;
       stage.add(status);
+      const sourceCellHeight = koiAtlas.height / 4;
+      const frameBounds = KOI_ROW_BOUNDS[fish.row];
+      const sourceCellCenter = (fish.row + 0.5) * sourceCellHeight;
+      const frameCenter = frameBounds.top + frameBounds.height / 2;
       fishVisuals.set(fish.id, {
         container, sprite: fishSprite, shadow, animation, alpha: fish.alpha,
-        baseScaleX: fish.displayWidth, baseScaleY: fish.displayWidth, lastWake: 0, surfaced: false, status, bonk, stars,
+        baseScaleX: fish.displayWidth,
+        baseScaleY: fish.displayWidth * frameBounds.height / sourceCellHeight,
+        frameOffsetY: (sourceCellCenter - frameCenter) * fish.displayWidth / sourceCellHeight,
+        lastWake: 0, surfaced: false, status, bonk, stars,
       });
     }
 
@@ -750,24 +786,25 @@ export async function startPondRenderer(options: StartOptions) {
       for (const fish of frame.fish) {
         const visual = fishVisuals.get(fish.id);
         if (!visual) continue;
-        const point = worldToScreen(fish.position);
+        const point = worldToScreen(testPose ? fishDefinitions[0].position : fish.position);
         visual.container.position.set(point.x, point.y, 0);
         const order = 2 + point.y / (1 + Math.abs(point.y)) * 0.1;
         visual.shadow.renderOrder = order;
         visual.sprite.renderOrder = order + 1e-9;
         const speed = Math.hypot(fish.velocity.x, fish.velocity.y);
-        visual.container.rotation.z = fish.heading + Math.PI / 2;
+        visual.container.rotation.z = (testPose?.heading ?? fish.heading) + Math.PI / 2;
         const effort = Math.min(2.5, fish.speedScale);
         visual.animation.speed = (0.012 + effort * 0.025) * motionScale;
-        const depthAlpha = Math.min(0.98, fish.alpha + (0.5 - fish.depth) * 0.55);
-        visual.alpha += (depthAlpha - visual.alpha) * Math.min(1, delta * 4);
+        const depthAlpha = testPose ? 1 : Math.min(0.98, fish.alpha + (0.5 - fish.depth) * 0.55);
+        visual.alpha = testPose ? 1 : visual.alpha + (depthAlpha - visual.alpha) * Math.min(1, delta * 4);
         visual.sprite.material.opacity = visual.alpha;
         visual.shadow.material.opacity = visual.alpha;
         visual.sprite.material.color.setHex(fish.stun ? 0xd4d5ef : fish.state === "feeding" ? 0xf4fff3 : 0xe8fff9);
         animate(visual.animation, delta);
         const peck = fish.state === "feeding" ? 1 - Math.abs(fish.feedingPulse * 2 - 1) * 0.055 : 1;
         visual.sprite.rotation.z = 0;
-        const depthScale = 0.9 + (1 - fish.depth) * 0.18;
+        const depthScale = testPose ? 1 : 0.9 + (1 - fish.depth) * 0.18;
+        visual.sprite.position.y = visual.frameOffsetY * viewScale * depthScale;
         visual.sprite.scale.set(visual.baseScaleX * viewScale * peck * depthScale, visual.baseScaleY * viewScale * (2 - peck) * depthScale, 1);
         visual.shadow.scale.setScalar((0.86 + fish.depth * 0.24) * viewScale);
         visual.status.visible = fish.stun !== null;
@@ -919,6 +956,11 @@ export async function startPondRenderer(options: StartOptions) {
         host.dataset.waterOffset = `${(window.innerWidth / 2 + current.ax).toFixed(2)},${(window.innerHeight / 2 + current.ay).toFixed(2)};${water.uniforms.currentA.value.z.toFixed(2)},${water.uniforms.currentB.value.w.toFixed(2)}`;
       }
     };
+
+    if (testPose) {
+      for (const child of stage.children) child.visible = child === fishLayer;
+      for (const visual of fishVisuals.values()) visual.shadow.visible = false;
+    }
 
     let previousTime: number | null = null;
     const draw = (now: number) => {

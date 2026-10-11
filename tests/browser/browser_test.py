@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import json
+import math
 import os
 import re
 import signal
@@ -370,6 +371,111 @@ class BrowserTestCase(unittest.TestCase):
         if cls.playwright is not None:
             cls.playwright.stop()
         cls.stop_server()
+
+
+class KoiAtlasBrowserTests(BrowserTestCase):
+    def test_all_koi_atlas_frames_match_reviewed_references(self) -> None:
+        browser = self.playwright.chromium.launch()
+        self.addCleanup(browser.close)
+        context = browser.new_context(viewport={"width": 1280, "height": 800})
+        context.add_init_script(
+            """(() => {
+                const query = new URLSearchParams(location.search);
+                const row = Number(query.get('test-koi-row'));
+                const column = Number(query.get('test-koi-column'));
+                const heading = Number(query.get('test-koi-heading') ?? 0);
+                if (Number.isInteger(row) && Number.isInteger(column)) {
+                    window.__POND_TEST_KOI__ = { row, column, heading };
+                }
+            })()"""
+        )
+        page = context.new_page()
+
+        # Compare each variety and frame to the reviewed rendering, not just the affected row.
+        def compare_reference(actual: str, reference_name: str) -> dict:
+            reference = Path(__file__).parent / "references" / reference_name
+            encoded = base64.b64encode(reference.read_bytes()).decode("ascii")
+            result = page.evaluate(
+                """async ({ actual, reference }) => {
+                    const decode = async source => {
+                        const image = new Image();
+                        image.src = source;
+                        await image.decode();
+                        const surface = document.createElement('canvas');
+                        surface.width = image.width;
+                        surface.height = image.height;
+                        const context = surface.getContext('2d', { willReadFrequently: true });
+                        context.drawImage(image, 0, 0);
+                        return { width: image.width, height: image.height, pixels: context.getImageData(0, 0, image.width, image.height).data };
+                    };
+                    const [rendered, reviewed] = await Promise.all([decode(actual), decode(reference)]);
+                    if (rendered.width !== reviewed.width || rendered.height !== reviewed.height) {
+                        return { dimensionsMatch: false, compared: 0, different: 0 };
+                    }
+                    let compared = 0;
+                    let different = 0;
+                    for (let index = 0; index < rendered.pixels.length; index += 4) {
+                        if (rendered.pixels[index + 3] === 0 && reviewed.pixels[index + 3] === 0) continue;
+                        compared += 1;
+                        if ([0, 1, 2, 3].some(channel => Math.abs(rendered.pixels[index + channel] - reviewed.pixels[index + channel]) > 3)) {
+                            different += 1;
+                        }
+                    }
+                    return { dimensionsMatch: true, compared, different };
+                }""",
+                {
+                    "actual": actual,
+                    "reference": f"data:image/png;base64,{encoded}",
+                },
+            )
+            self.assertTrue(result["dimensionsMatch"], reference_name)
+            self.assertLessEqual(
+                result["different"],
+                max(12, int(result["compared"] * 0.001)),
+                f"{reference_name}: {result['different']} of {result['compared']} visible pixels differ",
+            )
+            return result
+
+        for row in (2, 0, 1, 3):
+            for column in range(4):
+                page.goto(
+                    f"{self.base_url}/?pond-seed=koi-tail-61&test-koi-row={row}&test-koi-column={column}",
+                    wait_until="networkidle",
+                )
+                pond = page.locator("[data-pond-state]")
+                expect(pond).to_have_attribute("data-pond-state", "running", timeout=15000)
+                page.wait_for_function("document.querySelector('[data-pond-state]')?.dataset.koiTest")
+                page.wait_for_function("Number(document.querySelector('[data-pond-state]').dataset.frame) >= 3")
+                screenshot = page.screenshot()
+                (SCREENSHOTS / f"koi-desktop-after-row{row}-column{column}.png").write_bytes(screenshot)
+                canvas_image = page.locator("[data-pond-state] canvas").evaluate("canvas => canvas.toDataURL('image/png')")
+                (SCREENSHOTS / f"koi-reference-candidate-row{row}-desktop-column{column}.png").write_bytes(
+                    base64.b64decode(canvas_image.partition(",")[2])
+                )
+                reference_name = f"koi-row{row}-desktop-column{column}.png"
+                print(f"desktop row {row} column {column} reference: {compare_reference(canvas_image, reference_name)}")
+
+        page.set_viewport_size({"width": 390, "height": 844})
+        headings = [0, math.pi / 4, math.pi / 2, -math.pi / 4]
+        for column, heading in enumerate(headings):
+            page.goto(
+                f"{self.base_url}/?pond-seed=koi-tail-61&test-koi-row=2&test-koi-column={column}&test-koi-heading={heading}",
+                wait_until="networkidle",
+            )
+            pond = page.locator("[data-pond-state]")
+            expect(pond).to_have_attribute("data-pond-state", "running", timeout=15000)
+            page.wait_for_function("document.querySelector('[data-pond-state]')?.dataset.koiTest")
+            page.wait_for_function("Number(document.querySelector('[data-pond-state]').dataset.frame) >= 3")
+            screenshot = page.screenshot()
+            (SCREENSHOTS / f"koi-mobile-after-row2-column{column}.png").write_bytes(screenshot)
+            canvas_image = page.locator("[data-pond-state] canvas").evaluate("canvas => canvas.toDataURL('image/png')")
+            (SCREENSHOTS / f"koi-reference-candidate-mobile-column{column}.png").write_bytes(
+                base64.b64decode(canvas_image.partition(",")[2])
+            )
+            print(
+                f"mobile row 2 column {column} reference: "
+                f"{compare_reference(canvas_image, f'koi-row2-mobile-column{column}.png')}"
+            )
 
 
 class PipRouteTests(BrowserTestCase):
