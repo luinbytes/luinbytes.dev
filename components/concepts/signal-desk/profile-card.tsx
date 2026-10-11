@@ -311,7 +311,7 @@ export function ProfileCard({ reducedMotion, compact = false }: { reducedMotion:
     if (!card || !portrait) return;
 
     let frame = 0;
-    let pending: { x: number; y: number; foilX: number; foilY: number; strength: number } | null = null;
+    let pending: { x: number; y: number; foilX: number; foilY: number; strength: number; foilActive: boolean } | null = null;
     let visible = true;
     let activeTouchPointer: number | null = null;
 
@@ -328,33 +328,36 @@ export function ProfileCard({ reducedMotion, compact = false }: { reducedMotion:
       card.style.setProperty("--profile-foil-opacity", "0.46");
       card.style.setProperty("--profile-hue", "0deg");
       card.style.setProperty("--profile-press", "1");
-      foilDrawRef.current(0.38, 0.56, immediate || reducedMotion);
+      foilDrawRef.current(0.38, 0.56, true);
     };
 
-    const applyLight = (x: number, y: number, foilX: number, foilY: number, strength: number) => {
+    const applyLight = (x: number, y: number, foilX: number, foilY: number, strength: number, foilActive: boolean) => {
+      const highlightX = foilActive ? foilX : 0.5;
+      const highlightY = foilActive ? foilY : 0.5;
       card.style.setProperty("--profile-motion", "55ms");
       card.style.setProperty("--profile-tilt-x", `${((0.5 - y) * 7 * strength).toFixed(2)}deg`);
       card.style.setProperty("--profile-tilt-y", `${((x - 0.5) * 9 * strength).toFixed(2)}deg`);
-      card.style.setProperty("--profile-foil-x", `${((0.5 - foilX) * 16).toFixed(1)}px`);
-      card.style.setProperty("--profile-foil-y", `${((0.5 - foilY) * 12).toFixed(1)}px`);
-      card.style.setProperty("--profile-foil-opacity", `${(0.46 + 0.3 * strength).toFixed(2)}`);
-      card.style.setProperty("--profile-hue", `${((foilX + foilY - 1) * 20).toFixed(1)}deg`);
-      foilDrawRef.current(foilX, foilY);
+      card.style.setProperty("--profile-foil-x", `${((0.5 - highlightX) * 16).toFixed(1)}px`);
+      card.style.setProperty("--profile-foil-y", `${((0.5 - highlightY) * 12).toFixed(1)}px`);
+      card.style.setProperty("--profile-foil-opacity", `${(0.46 + (foilActive ? 0.3 * strength : 0)).toFixed(2)}`);
+      card.style.setProperty("--profile-hue", `${((highlightX + highlightY - 1) * 20).toFixed(1)}deg`);
+      foilDrawRef.current(foilActive ? foilX : 0.38, foilActive ? foilY : 0.56, !foilActive);
     };
 
-    const queueLight = (x: number, y: number, foilX: number, foilY: number, strength: number) => {
+    const queueLight = (x: number, y: number, foilX: number, foilY: number, strength: number, foilActive: boolean) => {
       pending = {
         x: Math.max(0, Math.min(1, x)),
         y: Math.max(0, Math.min(1, y)),
         foilX: Math.max(0, Math.min(1, foilX)),
         foilY: Math.max(0, Math.min(1, foilY)),
         strength,
+        foilActive,
       };
       if (frame || !visible || document.hidden) return;
       frame = requestAnimationFrame(() => {
         frame = 0;
         if (!pending) return;
-        applyLight(pending.x, pending.y, pending.foilX, pending.foilY, pending.strength);
+        applyLight(pending.x, pending.y, pending.foilX, pending.foilY, pending.strength, pending.foilActive);
         pending = null;
       });
     };
@@ -368,6 +371,8 @@ export function ProfileCard({ reducedMotion, compact = false }: { reducedMotion:
         (event.clientX - portraitBounds.left) / portraitBounds.width,
         (event.clientY - portraitBounds.top) / portraitBounds.height,
         1,
+        event.clientX >= portraitBounds.left && event.clientX <= portraitBounds.right
+          && event.clientY >= portraitBounds.top && event.clientY <= portraitBounds.bottom,
       );
     };
 
@@ -393,7 +398,7 @@ export function ProfileCard({ reducedMotion, compact = false }: { reducedMotion:
       if (event.gamma === null || event.beta === null) return;
       const x = 0.5 + Math.max(-18, Math.min(18, event.gamma)) / 90;
       const y = 0.5 + Math.max(-24, Math.min(24, event.beta - 45)) / 120;
-      queueLight(x, y, x, y, 0.48);
+      queueLight(x, y, x, y, 0.48, false);
     };
     const onVisibilityChange = () => {
       if (document.hidden) settle(true);

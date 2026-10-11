@@ -2,14 +2,17 @@
   "starting_head": "632154cd4718a652d23cec69e88108d957854c4a",
   "method": "Production Chromium suite on uncommitted follow-up; source hashes identify tested inputs",
   "sources": {
-    "components/concepts/signal-desk/profile-card.tsx": "4ef3379768949fc1a9124efd517c3a39c50c17999c208b7125d9663ac5e5876d",
+    "components/concepts/signal-desk/profile-card.tsx": "893b78a15516d8c570c56781d0dcb476d5b8ccc4dabe6766e8fad70199ee5172",
     "components/concepts/signal-desk/profile-card.module.css": "239e9c1348108dfb38715907eb067bc11b3104483770fd5eb951f833a2db8da9",
-    "tests/browser/browser_test.py": "6a98418a4dd6b7844f9bea93c2ee2950d6df6655c9333431699e098f5c4fc718"
+    "tests/browser/browser_test.py": "05e3dc1e7440b286e9d47acf133da5827c0332371b519b6b3affcab83edfda36"
   },
   "swarm": {
     "implementation": "PASS with Chromium DOM-dispatched touch evidence",
     "test_worker": "Interrupted before delivering edits; parent completed the test",
-    "comment_review": "PASS static component diff; tests later inspected by parent"
+    "comment_review": "PASS static component diff; tests later inspected by parent",
+    "theme_check": "PASS pinned commit comparison; no palette changes"
   },
-  "manual_gap": "Physical iPad touch and orientation sensors not verified"
+  "manual_gap": "Physical iPad touch and orientation sensors not verified",
+  "followup_starting_head": "f7a8de6a60926244d05070abd2dae6041126fbdc",
+  "recording": "Corrected T3 clip uses dark appearance, 2x zoom, normal playback speed and cursor highlight"
 }

@@ -16,7 +16,7 @@ transforming...
 ✓ 2270 modules transformed.
 rendering chunks...
 computing gzip size...
-out/index.html                                                   0.54 kB │ gzip:   0.34 kB
+out/index.html                                                   0.54 kB │ gzip:   0.33 kB
 out/assets/pixelify-sans-cyrillic-wght-normal-BfQLqnEI.woff2     5.06 kB
 out/assets/pixelify-sans-latin-ext-wght-normal-CsF3XSp0.woff2    8.20 kB
 out/assets/pixelify-sans-latin-wght-normal-Cbhn5ptY.woff2       12.01 kB
@@ -26,7 +26,7 @@ out/assets/space-mono-latin-400-normal-Rg4St2Dn.woff2           16.52 kB
 out/assets/space-mono-latin-700-normal-mWgeinG7.woff2           16.72 kB
 out/assets/manrope-latin-variable-DHIcAJRg.woff2                24.83 kB
 out/assets/index-DVpptHqS.css                                   78.50 kB │ gzip:  15.05 kB
-out/assets/index-WJQ5emhS.js                                   425.28 kB │ gzip: 137.83 kB
+out/assets/index-BduSQTsu.js                                   425.43 kB │ gzip: 137.89 kB
 out/assets/pond-renderer-BTu1onqc.js                           647.47 kB │ gzip: 168.12 kB
 
 [plugin builtin:vite-reporter] 
@@ -34,16 +34,16 @@ out/assets/pond-renderer-BTu1onqc.js                           647.47 kB │ gzi
 - Using dynamic import() to code-split the application
 - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
 - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
-✓ built in 1.02s
+✓ built in 869ms
 vite v8.3.3 building ssr environment for production...
 transforming...
 ✓ 32 modules transformed.
 rendering chunks...
 computing gzip size...
-.prerender/entry-server.js                    74.18 kB │ gzip: 17.97 kB
+.prerender/entry-server.js                    74.57 kB │ gzip: 18.06 kB
 .prerender/assets/pond-renderer-CZdHM-jA.js  109.93 kB │ gzip: 27.38 kB
 
-✓ built in 338ms
+✓ built in 231ms
 Prerendered 3 pages to out.
 test_sitemap_exposes_the_portfolio_and_pip (browser_test.GeneratedArtifactTests.test_sitemap_exposes_the_portfolio_and_pip) ... ok
 test_pip_page_fits_mobile_viewports_and_exposes_keyboard_skip_and_nav (browser_test.PipRouteTests.test_pip_page_fits_mobile_viewports_and_exposes_keyboard_skip_and_nav) ... ok
@@ -73,6 +73,6 @@ test_editable_source_contains_the_original_card_copy (browser_test.ShareCardStat
 test_every_scoped_route_exports_a_production_large_image_card (browser_test.ShareCardStaticExportTests.test_every_scoped_route_exports_a_production_large_image_card) ... ok
 
 ----------------------------------------------------------------------
-Ran 26 tests in 127.054s
+Ran 26 tests in 153.517s
 
 OK

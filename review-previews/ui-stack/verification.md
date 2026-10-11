@@ -65,3 +65,11 @@ The implementation worker checked the local Vite page with Chromium and browser-
 The parent inspected production screenshots at 320px, 390px, and 1440px. T3 recorded real mouse sweeps at 2× preview zoom. A 25-second crop at normal playback speed was shared in this thread. The recording proves browser mouse behavior, not physical touch or sensor behavior.
 
 PASS. The final production export passes all 26 browser tests, including the strengthened profile-card check. Lint, build, 11 pond tests, and 3 Pip tests pass. The [browser log](checks/profile-browser.log) retains the rebuilt export and test results. [Source hashes and Swarm coverage](checks/profile-motion.json) identify the tested uncommitted inputs. All additional preview servers and the owned T3 tab were stopped.
+
+## Recording feedback correction
+
+The first recording still let card-wide pointer movement update the avatar foil. User review caught this missed boundary. The follow-up gates foil input to the avatar bounds and cancels its spring immediately outside those bounds or when the pointer leaves the card. Card-wide axis tilt remains. A production browser check now moves across the text and asserts that both the foil target and rendered view remain at the neutral value.
+
+The first recording used system light appearance. A static Swarm check confirmed that theme values had not changed between `632154cd4718a652d23cec69e88108d957854c4a` and `f7a8de6a60926244d05070abd2dae6041126fbdc`. The corrected T3 recording explicitly uses dark appearance and reads `--site-bg` as `#252031`. The 2× close-up includes a cursor highlight and stays at normal playback speed. The dark Lavender theme and its system-light variant remain in the stylesheet.
+
+PASS. The final avatar-boundary correction and immediate exit reset pass lint, production build, and all 26 browser tests. The retained profile browser log now contains this final run. The unchanged pond and Pip domain contracts passed their separate suites earlier in this follow-up. The user accepted the corrected recording before raising the separate navbar corner-shape question. That question is under read-only How investigation.

@@ -1512,6 +1512,21 @@ class PortfolioTests(BrowserTestCase):
             const [x, y] = target.split(',').map(Number);
             return Math.abs(x - 0.5) < 0.06 && Math.abs(y - 0.5) < 0.06;
         }""")
+        card.dispatch_event("pointerleave")
+        page.wait_for_function("""() => document.querySelector('[class*="profilePortrait"] canvas')
+            .dataset.foilView === '0.380,0.560'""")
+        wait_for_settle()
+        page.mouse.move(card_box["x"] + card_box["width"] - 12, card_box["y"] + 12)
+        wait_for_tilt()
+        page.wait_for_function("""() => {
+            const canvas = document.querySelector('[class*="profilePortrait"] canvas');
+            return canvas.dataset.foilTarget === '0.380,0.560'
+                && canvas.dataset.foilView === '0.380,0.560';
+        }""")
+        foil_view = portrait.locator("canvas").get_attribute("data-foil-view")
+        page.mouse.move(card_box["x"] + card_box["width"] - 30, card_box["y"] + 20)
+        page.wait_for_timeout(200)
+        self.assertEqual(portrait.locator("canvas").get_attribute("data-foil-view"), foil_view)
         page.mouse.move(card_box["x"] + card_box["width"] + 40, card_box["y"])
         wait_for_settle()
 
