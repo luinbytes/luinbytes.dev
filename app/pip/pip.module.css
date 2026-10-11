@@ -354,7 +354,7 @@
   font-size: 25px;
 }
 
-.featureLead p,
+.featureLead > p,
 .featureRow p {
   max-width: 48ch;
   margin: 9px 0 0;

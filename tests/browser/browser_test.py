@@ -373,6 +373,113 @@ class BrowserTestCase(unittest.TestCase):
 
 
 class PipRouteTests(BrowserTestCase):
+    def test_browsing_demo_renders_and_preserves_manual_pause(self) -> None:
+        browser = self.playwright.chromium.launch()
+        context = browser.new_context(viewport={"width": 1440, "height": 900})
+        page = context.new_page()
+        page.goto(f"{self.base_url}/pip", wait_until="networkidle")
+        demo = page.get_by_test_id("pip-browser-demo")
+        demo.scroll_into_view_if_needed()
+        expect(demo).to_have_attribute("data-renderer", "three", timeout=15000)
+        expect(demo).to_have_attribute("data-playback", "playing")
+        self.assertEqual(demo.locator("canvas").count(), 1)
+        expect(demo.locator("canvas")).to_be_visible()
+        first_phase = demo.get_attribute("data-phase")
+        page.wait_for_function(
+            "phase => document.querySelector('[data-testid=pip-browser-demo]').dataset.phase !== phase",
+            arg=first_phase,
+            timeout=12000,
+        )
+        demo.get_by_role("button", name="Pause browsing demo", exact=True).click()
+        expect(demo).to_have_attribute("data-playback", "paused")
+        paused_phase = demo.get_attribute("data-phase")
+        page.locator("header").scroll_into_view_if_needed()
+        page.wait_for_timeout(3500)
+        demo.scroll_into_view_if_needed()
+        page.wait_for_timeout(3500)
+        self.assertEqual(demo.get_attribute("data-phase"), paused_phase)
+        expect(demo).to_have_attribute("data-playback", "paused")
+        demo.screenshot(path=SCREENSHOTS / "pip-browsing-demo-1440.png")
+        demo.get_by_role("button", name="Play browsing demo", exact=True).click()
+        expect(demo).to_have_attribute("data-playback", "playing")
+        page.wait_for_function(
+            "phase => document.querySelector('[data-testid=pip-browser-demo]').dataset.phase !== phase",
+            arg=paused_phase,
+            timeout=12000,
+        )
+        expect(demo).to_have_attribute("data-phase", "postage", timeout=12000)
+        demo.get_by_role("button", name="Pause browsing demo", exact=True).click()
+        for width in (320, 390, 1440):
+            page.set_viewport_size({"width": width, "height": 900})
+            demo.scroll_into_view_if_needed()
+            bounds = demo.locator("[data-demo-browser]").bounding_box()
+            target = demo.locator("[data-demo-target]").bounding_box()
+            self.assertIsNotNone(bounds)
+            self.assertIsNotNone(target)
+            self.assertGreaterEqual(target["x"], bounds["x"])
+            self.assertLessEqual(target["x"] + target["width"], bounds["x"] + bounds["width"])
+            self.assertLessEqual(target["y"] + target["height"], bounds["y"] + bounds["height"])
+        demo.get_by_role("button", name="Play browsing demo", exact=True).click()
+        page.locator("header").scroll_into_view_if_needed()
+        expect(demo).to_have_attribute("data-playback", "paused")
+        demo.scroll_into_view_if_needed()
+        expect(demo).to_have_attribute("data-playback", "playing")
+        page.goto(f"{self.base_url}/", wait_until="networkidle")
+        page.goto(f"{self.base_url}/pip", wait_until="networkidle")
+        demo.scroll_into_view_if_needed()
+        expect(demo).to_have_attribute("data-renderer", "three", timeout=15000)
+        self.assertEqual(demo.locator("canvas").count(), 1)
+        context.close()
+        browser.close()
+
+    def test_browsing_demo_respects_reduced_motion(self) -> None:
+        browser = self.playwright.chromium.launch()
+        context = browser.new_context(
+            viewport={"width": 320, "height": 844}, reduced_motion="reduce"
+        )
+        page = context.new_page()
+        page.goto(f"{self.base_url}/pip", wait_until="networkidle")
+        demo = page.get_by_test_id("pip-browser-demo")
+        demo.scroll_into_view_if_needed()
+        expect(demo).to_have_attribute("data-playback", "paused")
+        self.assertEqual(demo.locator("canvas").count(), 0)
+        phase = demo.get_attribute("data-phase")
+        page.wait_for_timeout(1000)
+        self.assertEqual(demo.get_attribute("data-phase"), phase)
+        self.assertLessEqual(page.evaluate("document.documentElement.scrollWidth"), 320)
+        demo.screenshot(path=SCREENSHOTS / "pip-browsing-demo-reduced-320.png")
+        page.emulate_media(reduced_motion="no-preference")
+        expect(demo).to_have_attribute("data-renderer", "three", timeout=15000)
+        expect(demo).to_have_attribute("data-playback", "playing")
+        page.emulate_media(reduced_motion="reduce")
+        expect(demo).to_have_attribute("data-playback", "paused")
+        context.close()
+        browser.close()
+
+    def test_browsing_demo_keeps_its_fallback_when_webgl_fails(self) -> None:
+        browser = self.playwright.chromium.launch()
+        context = browser.new_context(viewport={"width": 390, "height": 844})
+        context.add_init_script(
+            """const original = HTMLCanvasElement.prototype.getContext;
+            HTMLCanvasElement.prototype.getContext = function(kind, ...args) {
+                if (kind === 'webgl' || kind === 'webgl2' || kind === 'experimental-webgl') return null;
+                return original.call(this, kind, ...args);
+            };"""
+        )
+        page = context.new_page()
+        page.goto(f"{self.base_url}/pip", wait_until="networkidle")
+        demo = page.get_by_test_id("pip-browser-demo")
+        demo.scroll_into_view_if_needed()
+        expect(demo).to_have_attribute("data-renderer", "fallback", timeout=15000)
+        expect(demo).to_have_attribute("data-playback", "paused")
+        self.assertEqual(demo.locator("canvas").count(), 0)
+        expect(demo.locator("[data-demo-stage]")).to_be_visible()
+        self.assertGreater(demo.locator("svg").count(), 0)
+        self.assertLessEqual(page.evaluate("document.documentElement.scrollWidth"), 390)
+        demo.screenshot(path=SCREENSHOTS / "pip-browsing-demo-fallback-390.png")
+        context.close()
+        browser.close()
+
     def test_pip_page_has_static_content_and_configured_telegram_contact(self) -> None:
         browser = self.playwright.chromium.launch()
         page = browser.new_page(viewport={"width": 1440, "height": 900})

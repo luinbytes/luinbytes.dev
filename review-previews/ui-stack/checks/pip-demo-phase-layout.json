@@ -1,0 +1,212 @@
+[
+  {
+    "phase": "search",
+    "width": 320,
+    "visible": true,
+    "bottom": -7.90625,
+    "theme": "dark"
+  },
+  {
+    "phase": "search",
+    "width": 390,
+    "visible": true,
+    "bottom": -0.59375,
+    "theme": "dark"
+  },
+  {
+    "phase": "search",
+    "width": 1440,
+    "visible": true,
+    "bottom": -14.59375,
+    "theme": "dark"
+  },
+  {
+    "phase": "search",
+    "width": 320,
+    "visible": true,
+    "bottom": -7.90625,
+    "theme": "light"
+  },
+  {
+    "phase": "search",
+    "width": 390,
+    "visible": true,
+    "bottom": -0.59375,
+    "theme": "light"
+  },
+  {
+    "phase": "search",
+    "width": 1440,
+    "visible": true,
+    "bottom": -14.59375,
+    "theme": "light"
+  },
+  {
+    "phase": "product",
+    "width": 320,
+    "visible": true,
+    "bottom": -59.5,
+    "theme": "dark"
+  },
+  {
+    "phase": "product",
+    "width": 390,
+    "visible": true,
+    "bottom": -53.59375,
+    "theme": "dark"
+  },
+  {
+    "phase": "product",
+    "width": 1440,
+    "visible": true,
+    "bottom": -53.59375,
+    "theme": "dark"
+  },
+  {
+    "phase": "product",
+    "width": 320,
+    "visible": true,
+    "bottom": -59.5,
+    "theme": "light"
+  },
+  {
+    "phase": "product",
+    "width": 390,
+    "visible": true,
+    "bottom": -53.59375,
+    "theme": "light"
+  },
+  {
+    "phase": "product",
+    "width": 1440,
+    "visible": true,
+    "bottom": -53.59375,
+    "theme": "light"
+  },
+  {
+    "phase": "addcart",
+    "width": 320,
+    "visible": true,
+    "bottom": -19.5,
+    "theme": "dark"
+  },
+  {
+    "phase": "addcart",
+    "width": 390,
+    "visible": true,
+    "bottom": -13.59375,
+    "theme": "dark"
+  },
+  {
+    "phase": "addcart",
+    "width": 1440,
+    "visible": true,
+    "bottom": -13.59375,
+    "theme": "dark"
+  },
+  {
+    "phase": "addcart",
+    "width": 320,
+    "visible": true,
+    "bottom": -19.5,
+    "theme": "light"
+  },
+  {
+    "phase": "addcart",
+    "width": 390,
+    "visible": true,
+    "bottom": -13.59375,
+    "theme": "light"
+  },
+  {
+    "phase": "addcart",
+    "width": 1440,
+    "visible": true,
+    "bottom": -13.59375,
+    "theme": "light"
+  },
+  {
+    "phase": "postage",
+    "width": 320,
+    "visible": true,
+    "bottom": -17.8125,
+    "theme": "dark"
+  },
+  {
+    "phase": "postage",
+    "width": 390,
+    "visible": true,
+    "bottom": -16.625,
+    "theme": "dark"
+  },
+  {
+    "phase": "postage",
+    "width": 1440,
+    "visible": true,
+    "bottom": -16.625,
+    "theme": "dark"
+  },
+  {
+    "phase": "postage",
+    "width": 320,
+    "visible": true,
+    "bottom": -17.8125,
+    "theme": "light"
+  },
+  {
+    "phase": "postage",
+    "width": 390,
+    "visible": true,
+    "bottom": -16.625,
+    "theme": "light"
+  },
+  {
+    "phase": "postage",
+    "width": 1440,
+    "visible": true,
+    "bottom": -16.625,
+    "theme": "light"
+  },
+  {
+    "phase": "review",
+    "width": 320,
+    "visible": true,
+    "bottom": -19.5,
+    "theme": "dark"
+  },
+  {
+    "phase": "review",
+    "width": 390,
+    "visible": true,
+    "bottom": -13.59375,
+    "theme": "dark"
+  },
+  {
+    "phase": "review",
+    "width": 1440,
+    "visible": true,
+    "bottom": -13.59375,
+    "theme": "dark"
+  },
+  {
+    "phase": "review",
+    "width": 320,
+    "visible": true,
+    "bottom": -19.5,
+    "theme": "light"
+  },
+  {
+    "phase": "review",
+    "width": 390,
+    "visible": true,
+    "bottom": -13.59375,
+    "theme": "light"
+  },
+  {
+    "phase": "review",
+    "width": 1440,
+    "visible": true,
+    "bottom": -13.59375,
+    "theme": "light"
+  }
+]

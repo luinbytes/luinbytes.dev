@@ -1,0 +1,350 @@
+.demo {
+  width: 100%;
+  margin-top: 14px;
+}
+.stage {
+  height: 280px;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: radial-gradient(
+    ellipse at 50% 60%,
+    var(--glass-selected),
+    transparent 70%
+  );
+}
+.stage canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  pointer-events: none;
+}
+.browser {
+  position: absolute;
+  left: 29%;
+  top: 10%;
+  width: 69%;
+  height: 77%;
+  border: 1px solid var(--glass-rim);
+  border-radius: 14px;
+  background: var(--site-surface);
+  box-shadow:
+    var(--site-shadow),
+    inset 0 1px var(--glass-rim);
+  overflow: hidden;
+  z-index: 1;
+}
+.chrome {
+  height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--site-border);
+  color: var(--site-muted);
+}
+.chrome i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--site-accent);
+  opacity: 0.6;
+}
+.chrome > span {
+  flex: 1;
+  text-align: center;
+  font-size: 8px;
+  letter-spacing: 0.03em;
+}
+.chrome svg {
+  width: 11px;
+  height: 11px;
+}
+.content {
+  padding: 14px;
+  color: var(--site-text);
+  font-size: 10px;
+}
+.heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.heading span {
+  color: var(--site-muted);
+  font-size: 8px;
+}
+.heading svg {
+  width: 13px;
+  height: 13px;
+  color: var(--site-accent);
+}
+.search {
+  height: 27px;
+  padding: 6px 8px;
+  border: 1px solid var(--site-accent);
+  border-radius: 6px;
+  font-size: 9px;
+  margin-bottom: 12px;
+}
+.product {
+  display: grid;
+  grid-template-columns: 32% 1fr;
+  gap: 12px;
+  align-items: center;
+}
+.productArt {
+  display: grid;
+  place-items: center;
+  height: 82px;
+  border: 1px solid var(--site-border);
+  background: var(--glass-selected);
+  border-radius: 9px;
+}
+.book,
+.smallBook {
+  border-radius: 3px;
+  background: linear-gradient(100deg, #a38e61 8%, #dec998 12%, #c8b07d);
+  box-shadow: 3px 5px 8px #0002;
+}
+.book {
+  width: 32px;
+  height: 47px;
+  transform: rotate(-9deg);
+}
+.book::after {
+  content: "";
+  display: block;
+  width: 16px;
+  height: 1px;
+  margin: 19px auto;
+  background: #887447;
+}
+.product strong,
+.cart strong {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-bottom: 7px;
+}
+.skeleton,
+.shortSkeleton {
+  height: 4px;
+  border-radius: 4px;
+  background: var(--site-border);
+  margin-bottom: 5px;
+  width: 85%;
+}
+.shortSkeleton {
+  width: 55%;
+}
+.product small,
+.cart small {
+  display: block;
+  color: var(--site-muted);
+  font-size: 9px;
+  margin: 8px 0;
+}
+.action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 27px;
+  padding: 5px 9px;
+  border: 1px solid var(--glass-rim);
+  background: var(--site-accent);
+  color: var(--site-contrast);
+  border-radius: 7px;
+  font-size: 9px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.cart {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 0;
+  border-block: 1px solid var(--site-border);
+}
+.cart > div:last-child {
+  flex: 1;
+}
+.smallBook {
+  width: 26px;
+  height: 37px;
+  flex-shrink: 0;
+}
+.bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+  margin-top: 15px;
+}
+.bottom small {
+  font-size: 8px;
+  color: var(--site-muted);
+}
+.field {
+  color: var(--site-muted);
+  font-size: 8px;
+  margin-top: 6px;
+}
+.field span {
+  display: block;
+  min-height: 24px;
+  padding: 5px 7px;
+  margin-top: 3px;
+  border: 1px solid var(--site-border);
+  border-radius: 5px;
+  color: var(--site-text);
+  font-size: 9px;
+}
+.field [data-typed] {
+  border-color: var(--site-accent);
+}
+.fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+.content:has(.fields) {
+  padding-block: 8px;
+  line-height: 1.2;
+}
+.content:has(.fields) .heading {
+  margin-bottom: 4px;
+}
+.content:has(.fields) .field {
+  margin-top: 4px;
+}
+.content:has(.fields) .field span {
+  min-height: 22px;
+  padding-block: 4px;
+}
+.content:has(.fields) .bottom {
+  margin-top: 6px;
+}
+.done {
+  text-align: center;
+  padding-top: 13px;
+}
+.seal {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  background: var(--glass-selected);
+  color: var(--site-accent);
+  border: 1px solid var(--site-border);
+  border-radius: 50%;
+  margin: 0 auto 12px;
+}
+.seal svg {
+  width: 22px;
+  height: 22px;
+}
+.done strong {
+  font-size: 14px;
+}
+.done p {
+  font-size: 10px;
+  color: var(--site-muted);
+  margin: 8px 0 18px;
+}
+.done .skeleton,
+.done .shortSkeleton {
+  margin-inline: auto;
+}
+.companion {
+  position: absolute;
+  top: 28%;
+  left: 2%;
+  width: 22%;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 3;
+}
+.companion svg {
+  width: 85%;
+  color: var(--site-accent);
+  filter: drop-shadow(0 6px 8px #1b122720);
+}
+.companion span {
+  font-size: 10px;
+  line-height: 1.4;
+  text-align: center;
+  color: var(--site-muted);
+  max-width: 11ch;
+}
+.status {
+  position: absolute;
+  bottom: 4%;
+  left: 29%;
+  right: 2%;
+  font-size: 10px;
+  color: var(--site-muted);
+  text-align: center;
+}
+.caption {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  color: var(--site-muted);
+  font-size: 10px;
+}
+.caption button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--site-border);
+  border-radius: 999px;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 5px 10px;
+  color: var(--site-text);
+  background: var(--glass-fill);
+  font: inherit;
+  cursor: pointer;
+}
+.caption button svg {
+  width: 11px;
+  height: 11px;
+}
+.caption button:focus-visible {
+  outline: 2px solid var(--site-accent);
+  outline-offset: 3px;
+}
+@media (max-width: 370px) {
+  .content {
+    padding: 11px 9px;
+  }
+  .product {
+    gap: 8px;
+  }
+  .product strong,
+  .cart strong {
+    font-size: 9px;
+  }
+  .action {
+    padding-inline: 7px;
+    font-size: 8px;
+  }
+  .companion span {
+    font-size: 9px;
+  }
+  .heading {
+    font-size: 10px;
+  }
+}

@@ -81,3 +81,12 @@ The user approved the How recommendation. The navbar now uses a local 20px radiu
 Parent-observed T3 checks pass at 1440px, 320px, and 390px. The desktop radius and inset were read from computed styles and bounding boxes. Both narrow layouts keep all navigation links in the viewport with zero horizontal overflow. The parent inspected fresh dark-appearance screenshots at all three widths. Final production browser verification is pending.
 
 PASS. The final navbar adjustment passes lint, production build, and all 26 browser tests. [Browser results](checks/navbar-browser.log) and [computed geometry](checks/navbar-layout.json) retain the checks. Fresh production captures cover [desktop](screenshots/navbar-1440-dark.png), [320px](screenshots/navbar-320-dark.png), and [390px](screenshots/navbar-390-dark.png). The parent inspected all captures. The independent comment review found no issues in the three changed CSS declarations. All owned preview servers and tabs were stopped.
+
+
+## Pip browsing illustration
+
+Lu selected the "Pip beside you" draft. The Web search card now includes a large Pip avatar beside a miniature shopping browser. A typed timeline drives searching, opening a result, adding to the basket, postage details, checkout review, and completion. HTML retains readable static content while a lazy Three layer renders the bezel, cursor, and click ripple. The existing feature copy and shared theme remain.
+
+PASS. The final production build and all 29 browser tests pass. Lint and all 3 Pip contact contracts pass. The new checks exercise actual phase progression, manual pause through offscreen suspension, automatic resume, route remount, live reduced-motion changes, and unavailable WebGL. A separate rendered context-loss probe verifies static fallback with no page errors. All 30 action-phase, viewport, and theme combinations keep their targets inside the browser.
+
+The parent inspected both-theme captures at 320px, 390px, and 1440px. An independent source review found no remaining concrete issues after the pause-intent and narrow-form fixes. The initial failed run and resulting reduced-motion fix are retained in the [design and evidence notes](pip-animation.md). [Final browser results](checks/pip-demo-browser.log), [geometry](checks/pip-demo-phase-layout.json), and a [normal-speed clip](videos/pip-beside-you.mp4) make the result reviewable. Physical iPad Safari smoothness remains unverified. All owned loopback validation servers stop after their checks.

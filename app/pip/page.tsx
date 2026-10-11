@@ -1,6 +1,7 @@
 import { ArrowUpRight, Bell, Compass, Heart, Search, Send, Smile, Sparkles } from "lucide-react";
 import { getPipContact } from "@/lib/pip";
 import { PipFace, PipLogo } from "@/components/pip/pip-logo";
+import { PipWebSearchDemo } from "@/components/pip/pip-web-search-demo";
 import { Button } from "@/components/ui/button";
 import { PipContact } from "./pip-contact";
 import styles from "./pip.module.css";
@@ -107,6 +108,7 @@ export default function PipPage() {
               <Search aria-hidden="true" className={styles.featureIcon} strokeWidth={1.6} />
               <h3>Web search</h3>
               <p>Ask a quick question or follow a curiosity. Pip searches the web and brings back useful links.</p>
+              <PipWebSearchDemo />
             </article>
             <ul className={styles.featureList}>
               {features.map(({ icon: Icon, title: featureTitle, text }) => (
