@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import json
+import math
 import os
 import re
 import signal
@@ -90,8 +91,19 @@ def find_open_water(page: Page, pond, preferred=()):
 
 
 def record_console_issue(bucket, message) -> None:
+    if (
+        message.type == "warning"
+        and message.text == "WebGL: CONTEXT_LOST_WEBGL: loseContext: context lost"
+    ):
+        return
     ignored = ("GL Driver Message", "was preloaded using link preload but not used")
-    if message.type in ("warning", "error") and not any(item in message.text for item in ignored):
+    if (
+        message.type == "warning"
+        and "context" not in message.text.lower()
+        and any(item in message.text for item in ignored)
+    ):
+        return
+    if message.type in ("warning", "error"):
         bucket.append(f"{message.type}: {message.text}")
 
 
@@ -370,6 +382,201 @@ class BrowserTestCase(unittest.TestCase):
         if cls.playwright is not None:
             cls.playwright.stop()
         cls.stop_server()
+
+
+class KoiAtlasBrowserTests(BrowserTestCase):
+    def koi_page(self):
+        browser = self.playwright.chromium.launch()
+        self.addCleanup(browser.close)
+        context = browser.new_context(viewport={"width": 1280, "height": 800})
+        context.add_init_script(
+            """(() => {
+                const query = new URLSearchParams(location.search);
+                const row = Number(query.get('test-koi-row'));
+                const column = Number(query.get('test-koi-column'));
+                const heading = Number(query.get('test-koi-heading') ?? 0);
+                if (Number.isInteger(row) && Number.isInteger(column)) {
+                    const feedingPulse = query.has('test-koi-feeding') ? 0 : undefined;
+                    window.__POND_TEST_KOI__ = { row, column, heading, feedingPulse };
+                }
+            })()"""
+        )
+        return context.new_page()
+
+    def capture_koi(self, page, name):
+        pond = page.locator("[data-pond-state]")
+        expect(pond).to_have_attribute("data-pond-state", "running", timeout=15000)
+        page.wait_for_function("document.querySelector('[data-pond-state]')?.dataset.koiTest")
+        page.wait_for_function("Number(document.querySelector('[data-pond-state]').dataset.frame) >= 3")
+        page.screenshot(path=SCREENSHOTS / f"{name}.png")
+        canvas_image = pond.locator("canvas").evaluate("canvas => canvas.toDataURL('image/png')")
+        (SCREENSHOTS / f"{name}-candidate.png").write_bytes(base64.b64decode(canvas_image.partition(",")[2]))
+        return canvas_image
+
+    def test_koi_preserve_source_silhouettes_and_swimming_pivot(self) -> None:
+        page = self.koi_page()
+        source_rows = (
+            ((0, 300), (0, 307), (0, 304), (0, 308)),
+            ((300, 606), (307, 608), (304, 608), (308, 608)),
+            ((606, 909), (608, 911), (608, 912), (608, 910)),
+            ((909, 1256), (911, 1256), (912, 1256), (910, 1256)),
+        )
+        poses = [(row, column, 0, False, False) for row in range(4) for column in range(4)]
+        poses += [(2, column, heading, True, feeding)
+                  for feeding in (False, True)
+                  for column, heading in enumerate((0, math.pi / 4, math.pi / 2, -math.pi / 4))]
+        for row, column, heading, mobile, feeding in poses:
+            with self.subTest(row=row, column=column, heading=heading, mobile=mobile, feeding=feeding):
+                page.set_viewport_size({"width": 390, "height": 844} if mobile else {"width": 1280, "height": 800})
+                page.goto(
+                    f"{self.base_url}/?pond-seed=koi-tail-61&test-koi-row={row}&test-koi-column={column}"
+                    f"&test-koi-heading={heading}" + ("&test-koi-feeding=1" if feeding else ""),
+                    wait_until="networkidle",
+                )
+                name = f"koi-source-row{row}-column{column}-{'mobile' if mobile else 'desktop'}-{'feeding' if feeding else 'swimming'}"
+                self.capture_koi(page, name)
+                result = page.evaluate(
+                    """async ({ row, column, heading, feeding, top, bottom }) => {
+                        const image = new Image();
+                        image.src = '/images/portfolio/pixel-koi-atlas.webp';
+                        await image.decode();
+                        const source = document.createElement('canvas');
+                        source.width = image.width;
+                        source.height = image.height;
+                        const sourceContext = source.getContext('2d');
+                        sourceContext.drawImage(image, 0, 0);
+                        const pixels = sourceContext.getImageData(0, 0, image.width, image.height).data;
+                        const host = document.querySelector('[data-pond-state]');
+                        const pose = JSON.parse(host.dataset.koiTest);
+                        const actual = new Image();
+                        actual.src = host.querySelector('canvas').toDataURL('image/png');
+                        await actual.decode();
+                        const surface = document.createElement('canvas');
+                        surface.width = actual.width;
+                        surface.height = actual.height;
+                        const context = surface.getContext('2d');
+                        context.drawImage(actual, 0, 0);
+                        const rendered = context.getImageData(0, 0, surface.width, surface.height).data;
+                        const angle = heading + Math.PI / 2;
+                        const peck = feeding ? 0.945 : 1;
+                        let different = 0;
+                        let compared = 0;
+                        const sourceMass = { weight: 0, x: 0, y: 0 };
+                        const renderedMass = { weight: 0, x: 0, y: 0 };
+                        for (let y = 0; y < surface.height; y += 1) {
+                            for (let x = 0; x < surface.width; x += 1) {
+                                const dx = (x + 0.5) * innerWidth / surface.width - pose.x;
+                                const dy = (y + 0.5) * innerHeight / surface.height - pose.y;
+                                const sourceX = column * 314 + 157 + (dx * Math.cos(angle) + dy * Math.sin(angle)) * 314 / (pose.size * peck);
+                                const sx = Math.floor(sourceX);
+                                const sourceY = row * 314 + 157 + (-dx * Math.sin(angle) + dy * Math.cos(angle)) * 314 / (pose.size * (2 - peck));
+                                const sy = Math.floor(sourceY);
+                                const expected = sx >= column * 314 && sx < (column + 1) * 314 && sy >= top && sy < bottom
+                                    ? pixels[(sy * image.width + sx) * 4 + 3] : 0;
+                                const alpha = rendered[(y * surface.width + x) * 4 + 3];
+                                if (Math.max(expected, alpha) < 16) continue;
+                                compared += 1;
+                                sourceMass.weight += expected;
+                                sourceMass.x += x * expected;
+                                sourceMass.y += y * expected;
+                                renderedMass.weight += alpha;
+                                renderedMass.x += x * alpha;
+                                renderedMass.y += y * alpha;
+                                if (Math.abs(expected - alpha) <= 3) continue;
+                                let matchesSource = false;
+                                for (let ny = sy - 1; ny <= sy + 1; ny += 1) {
+                                    for (let nx = sx - 1; nx <= sx + 1; nx += 1) {
+                                        const neighbor = nx >= column * 314 && nx < (column + 1) * 314 && ny >= top && ny < bottom
+                                            ? pixels[(ny * image.width + nx) * 4 + 3] : 0;
+                                        if (Math.abs(neighbor - alpha) <= 3) matchesSource = true;
+                                    }
+                                }
+                                if (!matchesSource) different += 1;
+                            }
+                        }
+                        const centerError = Math.hypot(
+                            (sourceMass.x / sourceMass.weight - renderedMass.x / renderedMass.weight) * innerWidth / surface.width,
+                            (sourceMass.y / sourceMass.weight - renderedMass.y / renderedMass.weight) * innerHeight / surface.height,
+                        );
+                        return { compared, different, centerError };
+                    }""",
+                    {"row": row, "column": column, "heading": heading, "feeding": feeding,
+                     "top": source_rows[row][column][0], "bottom": source_rows[row][column][1]},
+                )
+                print(f"source silhouette {name}: {result}")
+                self.assertGreater(result["compared"], 200)
+                self.assertEqual(result["different"], 0, f"{name}: {result}")
+                self.assertLessEqual(result["centerError"], 0.1, f"{name}: {result}")
+
+    def test_all_koi_atlas_frames_match_reviewed_references(self) -> None:
+        page = self.koi_page()
+
+        def compare_reference(actual: str, reference_name: str) -> dict:
+            reference = Path(__file__).parent / "references" / reference_name
+            encoded = base64.b64encode(reference.read_bytes()).decode("ascii")
+            result = page.evaluate(
+                """async ({ actual, reference }) => {
+                    const decode = async source => {
+                        const image = new Image();
+                        image.src = source;
+                        await image.decode();
+                        const surface = document.createElement('canvas');
+                        surface.width = image.width;
+                        surface.height = image.height;
+                        const context = surface.getContext('2d', { willReadFrequently: true });
+                        context.drawImage(image, 0, 0);
+                        return { width: image.width, height: image.height, pixels: context.getImageData(0, 0, image.width, image.height).data };
+                    };
+                    const [rendered, reviewed] = await Promise.all([decode(actual), decode(reference)]);
+                    if (rendered.width !== reviewed.width || rendered.height !== reviewed.height) {
+                        return { dimensionsMatch: false, compared: 0, different: 0 };
+                    }
+                    let compared = 0;
+                    let different = 0;
+                    for (let index = 0; index < rendered.pixels.length; index += 4) {
+                        if (rendered.pixels[index + 3] === 0 && reviewed.pixels[index + 3] === 0) continue;
+                        compared += 1;
+                        if ([0, 1, 2, 3].some(channel => Math.abs(rendered.pixels[index + channel] - reviewed.pixels[index + channel]) > 3)) {
+                            different += 1;
+                        }
+                    }
+                    return { dimensionsMatch: true, compared, different };
+                }""",
+                {
+                    "actual": actual,
+                    "reference": f"data:image/png;base64,{encoded}",
+                },
+            )
+            self.assertTrue(result["dimensionsMatch"], reference_name)
+            self.assertLessEqual(
+                result["different"],
+                max(12, int(result["compared"] * 0.001)),
+                f"{reference_name}: {result['different']} of {result['compared']} visible pixels differ",
+            )
+            return result
+
+        for row in (2, 0, 1, 3):
+            for column in range(4):
+                page.goto(
+                    f"{self.base_url}/?pond-seed=koi-tail-61&test-koi-row={row}&test-koi-column={column}",
+                    wait_until="networkidle",
+                )
+                canvas_image = self.capture_koi(page, f"koi-row{row}-desktop-column{column}")
+                reference_name = f"koi-row{row}-desktop-column{column}.png"
+                print(f"desktop row {row} column {column} reference: {compare_reference(canvas_image, reference_name)}")
+
+        page.set_viewport_size({"width": 390, "height": 844})
+        headings = [0, math.pi / 4, math.pi / 2, -math.pi / 4]
+        for column, heading in enumerate(headings):
+            page.goto(
+                f"{self.base_url}/?pond-seed=koi-tail-61&test-koi-row=2&test-koi-column={column}&test-koi-heading={heading}",
+                wait_until="networkidle",
+            )
+            canvas_image = self.capture_koi(page, f"koi-row2-mobile-column{column}")
+            print(
+                f"mobile row 2 column {column} reference: "
+                f"{compare_reference(canvas_image, f'koi-row2-mobile-column{column}.png')}"
+            )
 
 
 class PipRouteTests(BrowserTestCase):
@@ -1743,6 +1950,7 @@ class PortfolioTests(BrowserTestCase):
         self.assertEqual(int(pond.get_attribute("data-food-dropped-count")), 0)
         impacts_before_food = int(pond.get_attribute("data-primary-impact-count"))
         page.touchscreen.tap(fish_x, fish_y)
+        page.wait_for_timeout(100)
         page.touchscreen.tap(fish_x, fish_y)
         try:
             page.wait_for_function(

@@ -53,9 +53,22 @@ export function createPondSprite(geometry: THREE.BufferGeometry, texture: THREE.
 
 export type PondSprite = ReturnType<typeof createPondSprite>;
 
-export function setAtlasFrame(texture: THREE.Texture, column: number, row: number, columns: number, rows: number) {
-  texture.repeat.set(1 / columns, 1 / rows);
-  texture.offset.set(column / columns, 1 - (row + 1) / rows);
+export function setAtlasFrame(
+  texture: THREE.Texture,
+  column: number,
+  row: number,
+  columns: number,
+  rows: number,
+  bounds?: { top: number; height: number },
+) {
+  if (!bounds) {
+    texture.repeat.set(1 / columns, 1 / rows);
+    texture.offset.set(column / columns, 1 - (row + 1) / rows);
+    return;
+  }
+  const imageHeight = (texture.image as { height: number }).height;
+  texture.repeat.set(1 / columns, bounds.height / imageHeight);
+  texture.offset.set(column / columns, 1 - (bounds.top + bounds.height) / imageHeight);
 }
 
 export class PondPixels extends THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial> {
