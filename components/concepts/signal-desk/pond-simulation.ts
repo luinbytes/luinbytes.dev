@@ -41,6 +41,8 @@ export type FlyDefinition = {
   color: number;
 };
 
+export type FishActivity = "swimming" | "gliding" | "darting" | "surfacing";
+
 export type FishSimulationFrame = {
   id: string;
   row: number;
@@ -54,6 +56,7 @@ export type FishSimulationFrame = {
   turnRate: number;
   speedScale: number;
   depth: number;
+  activity: FishActivity;
   state: FishFoodStateName;
   foodId: string | null;
   goal: PondPoint | null;
@@ -84,6 +87,9 @@ export type PondSimulationFrame = Omit<PondWorldFrame, "fish" | "flies"> & {
 type StartleMemory = { until: number; origin: PondPoint };
 
 type FishMotion = {
+  activity: FishActivity;
+  activityIndex: number;
+  activityRemaining: number;
   heading: number;
   speed: number;
   swimPhase: number;
@@ -157,14 +163,13 @@ const SHORE_ROUTES: readonly PondPoint[] = [
   { x: 1400, y: 810 },
 ];
 
-const OPEN_ROUTES: readonly PondPoint[] = [
-  { x: 420, y: 290 },
-  { x: 720, y: 230 },
-  { x: 900, y: 430 },
-  { x: 670, y: 620 },
-  { x: 420, y: 690 },
-  { x: 1050, y: 310 },
-];
+const IDLE_ACTIVITIES: readonly FishActivity[] = ["swimming", "gliding", "darting", "surfacing"];
+const IDLE_MOTION: Record<FishActivity, { speed: number; duration: readonly [number, number] }> = {
+  swimming: { speed: 1.25, duration: [5, 9] },
+  gliding: { speed: 0.38, duration: [3, 5] },
+  darting: { speed: 2.5, duration: [1.5, 2.4] },
+  surfacing: { speed: 0.65, duration: [2.5, 4] },
+};
 
 const TAU = Math.PI * 2;
 const response = (rate: number, delta: number) => 1 - Math.exp(-rate * delta);
@@ -242,11 +247,19 @@ export function createPondSimulation(options: SimulationOptions) {
 
   const duration = (minimum: number, maximum: number) => minimum + random() * (maximum - minimum);
   const routePoint = (agent: FishAgent) => {
-    const routes = agent.routeVisits % 3 === 2 ? OPEN_ROUTES : SHORE_ROUTES;
+    const visitShore = agent.routeVisits % 4 === 0;
     agent.routeVisits += 1;
-    const candidate = routes[Math.floor(random() * routes.length)];
+    const angle = duration(0, TAU);
+    const radius = duration(170, 420);
+    const candidate = visitShore ? SHORE_ROUTES[Math.floor(random() * SHORE_ROUTES.length)] : {
+      x: agent.vehicle.position.x + Math.cos(angle) * radius,
+      y: agent.vehicle.position.z + Math.sin(angle) * radius,
+    };
     return nearestWater(
-      { x: candidate.x + duration(-46, 46), y: candidate.y + duration(-38, 38) },
+      {
+        x: pondClamp(candidate.x + duration(-46, 46), 60, width - 60),
+        y: pondClamp(candidate.y + duration(-38, 38), 60, height - 60),
+      },
       width,
       height,
       isWater,
@@ -313,9 +326,12 @@ export function createPondSimulation(options: SimulationOptions) {
       wander,
       routeGoal: initial,
       nextRouteAt: 0,
-      routeVisits: Math.floor(random() * 3),
+      routeVisits: Math.floor(random() * 4),
       startle: null,
       motion: {
+        activity: "swimming",
+        activityIndex: Math.floor(random() * IDLE_ACTIVITIES.length),
+        activityRemaining: duration(0.8, 4),
         heading: definition.heading,
         speed: definition.cruise,
         swimPhase: random() * TAU,
@@ -472,6 +488,19 @@ export function createPondSimulation(options: SimulationOptions) {
         ? awayHeading(agent.previous, pointerThreat > catThreat ? input.pointer.position : catOrigin, agent.motion.heading + Math.PI)
         : null;
 
+      const idle = !intent?.goal && totalThreat <= 0.04 &&
+        (intent?.state === "cruising" || intent?.state === "returning-to-cruise");
+      if (idle) {
+        agent.motion.activityRemaining -= input.delta;
+        if (agent.motion.activityRemaining <= 0) {
+          agent.motion.activityIndex = (agent.motion.activityIndex + 1) % IDLE_ACTIVITIES.length;
+          const activity = IDLE_ACTIVITIES[agent.motion.activityIndex];
+          agent.motion.activityRemaining = duration(...IDLE_MOTION[activity].duration);
+          if (activity === "darting") agent.nextRouteAt = 0;
+        }
+      }
+      agent.motion.activity = idle ? IDLE_ACTIVITIES[agent.motion.activityIndex] : "swimming";
+
       agent.pointerFlee.weight += (pointerThreat * 7.4 - agent.pointerFlee.weight) * response(26, input.delta);
       agent.pointerFlee.active = agent.pointerFlee.weight > 0.012;
       agent.catFlee.active = catThreat > 0.012;
@@ -496,12 +525,16 @@ export function createPondSimulation(options: SimulationOptions) {
         agent.goalArrive.weight = 0.9;
         agent.goalArrive.deceleration = 2.8;
         agent.goalArrive.tolerance = 30;
-        agent.wander.weight += (0.38 - agent.wander.weight) * Math.min(1, input.delta * 1.8);
+        const wanderWeight = agent.motion.activity === "darting" ? 0.06 : 0.38;
+        agent.wander.weight += (wanderWeight - agent.wander.weight) * Math.min(1, input.delta * 1.8);
       }
 
       const foodForce = intent?.state === "approaching-food" ? 9 : 0;
       agent.vehicle.maxForce += (7 + foodForce + totalThreat * 70 - agent.vehicle.maxForce) * response(12, input.delta);
-      const speedScale = Math.max(intent?.speedScale ?? 1, totalThreat > 0.04 ? 1 + totalThreat * 2.35 : 0);
+      const speedScale = Math.max(
+        idle ? IDLE_MOTION[agent.motion.activity].speed * agent.motion.variation : intent?.speedScale ?? 1,
+        totalThreat > 0.04 ? 1 + totalThreat * 2.35 : 0,
+      );
       agent.vehicle.maxSpeed +=
         (agent.cruise * speedScale - agent.vehicle.maxSpeed) * response(9, input.delta);
       agent.vehicle.velocity.x += frame.environment.currentA.x * input.delta * 0.018;
@@ -511,6 +544,7 @@ export function createPondSimulation(options: SimulationOptions) {
 
       const aheadDistance = Math.max(36, agent.displayWidth * 0.6 + agent.motion.speed * 0.9);
       agent.motion.shoreHeading = shorelineHeading(agent, agent.motion.escapeHeading ?? agent.motion.heading, aheadDistance);
+      if (agent.motion.shoreHeading !== null) agent.motion.activity = "swimming";
     }
 
     manager.update(input.delta);
@@ -527,7 +561,10 @@ export function createPondSimulation(options: SimulationOptions) {
       const turn = pondClamp(pondAngleDelta(motion.heading, targetHeading), -maxTurnRate * input.delta, maxTurnRate * input.delta);
       motion.heading = Math.atan2(Math.sin(motion.heading + turn), Math.cos(motion.heading + turn));
       motion.turnRate = input.delta > 0 ? turn / input.delta : 0;
-      let targetSpeed = motion.escapeHeading !== null ? agent.vehicle.maxSpeed : Math.max(cruising ? agent.cruise * 0.82 : 0, steeredSpeed);
+      const idle = cruising && !intent?.goal && motion.threat <= 0.04;
+      let targetSpeed = motion.escapeHeading !== null ? agent.vehicle.maxSpeed : idle
+        ? agent.cruise * IDLE_MOTION[motion.activity].speed * motion.variation
+        : Math.max(cruising ? agent.cruise * 0.82 : 0, steeredSpeed);
       if (motion.shoreHeading !== null) {
         targetSpeed = Math.min(targetSpeed, agent.cruise * (0.4 + 0.5 * Math.max(0, Math.cos(pondAngleDelta(motion.heading, targetHeading)))));
       }
@@ -536,7 +573,8 @@ export function createPondSimulation(options: SimulationOptions) {
       motion.speed = pondClamp(motion.speed, 0, agent.cruise * 3.5);
       const recovered = moveInWater(agent, input.delta);
       motion.swimPhase = (motion.swimPhase + input.delta * (2.4 + motion.speed / agent.cruise * 5.5) * motion.variation) % TAU;
-      const targetDepth = motion.threat > 0.1 ? 0.9 : intent?.state === "feeding" ? 0.08 : intent?.goal ? 0.22 : motion.cruiseDepth;
+      const targetDepth = motion.threat > 0.1 ? 0.9 : intent?.state === "feeding" ? 0.08 : intent?.goal ? 0.22
+        : idle && motion.activity === "surfacing" ? 0.05 : motion.cruiseDepth;
       motion.depth += (targetDepth - motion.depth) * response(2.8, input.delta);
       const step = pondDistance(agent.previous, { x: position.x, y: position.z });
       agent.maxStep = Math.max(agent.maxStep, step);
@@ -636,6 +674,7 @@ export function createPondSimulation(options: SimulationOptions) {
           turnRate: agent.motion.turnRate,
           speedScale: agent.motion.speed / agent.cruise,
           depth: agent.motion.depth,
+          activity: agent.motion.activity,
           state: intent.state,
           foodId: intent.foodId,
           goal: intent.goal,

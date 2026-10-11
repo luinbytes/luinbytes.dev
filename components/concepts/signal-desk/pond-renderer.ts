@@ -48,6 +48,7 @@ type FishVisual = {
   baseScaleX: number;
   baseScaleY: number;
   lastWake: number;
+  surfaced: boolean;
 };
 type FlyVisual = { container: THREE.Group; wings: PondPixels };
 type FoodVisual = { container: THREE.Group; group: THREE.Group; pellets: PondPixels[]; shadow: PondPixels };
@@ -278,7 +279,7 @@ export async function startPondRenderer(options: StartOptions) {
           y: pondTexture.height / 2 + (y - 0.5) * (window.innerHeight / viewScale) * 0.88,
         }),
         heading,
-        cruise: Math.round(cruise * 1.35 + 3),
+        cruise: Math.round(cruise * 1.8 + 5),
         alpha,
         species: ["kohaku", "ogon", "showa", "utsuri"][row],
       }));
@@ -289,8 +290,8 @@ export async function startPondRenderer(options: StartOptions) {
       height: pondTexture.height,
       fish: fishDefinitions,
       flies: [
-        { id: "fly-0", position: { x: 580, y: 285 }, orbitX: 240, orbitY: 90, phase: 0.4, speed: 0.021, color: 0x56d7c8 },
-        { id: "fly-1", position: { x: 1040, y: 560 }, orbitX: 190, orbitY: 115, phase: 2.7, speed: 0.019, color: 0xe8a64f },
+        { id: "fly-0", position: screenToWorld(window.innerWidth * 0.72, window.innerHeight * 0.25), orbitX: 240, orbitY: 90, phase: 0.4, speed: 0.021, color: 0x56d7c8 },
+        { id: "fly-1", position: screenToWorld(window.innerWidth * 0.33, window.innerHeight * 0.36), orbitX: 190, orbitY: 115, phase: 2.7, speed: 0.019, color: 0xe8a64f },
       ],
       isWater: isWaterWorld,
     });
@@ -315,7 +316,7 @@ export async function startPondRenderer(options: StartOptions) {
       fishLayer.add(container);
       fishVisuals.set(fish.id, {
         container, sprite: fishSprite, shadow, animation, alpha: fish.alpha,
-        baseScaleX: fish.displayWidth, baseScaleY: fish.displayWidth, lastWake: 0,
+        baseScaleX: fish.displayWidth, baseScaleY: fish.displayWidth, lastWake: 0, surfaced: false,
       });
     }
 
@@ -326,14 +327,21 @@ export async function startPondRenderer(options: StartOptions) {
       { id: "fly-1", color: 0xe8a64f },
     ]) {
       const wings = pixels(6);
-      wings.rectangle(-2, -5, 5, 2, 0xe3fff5, 0.7);
-      wings.rectangle(-1, 3, 5, 2, 0xe3fff5, 0.7);
-      wings.rectangle(1, -3, 4, 2, 0x9de9df, 0.58);
-      wings.rectangle(2, 1, 4, 2, 0x9de9df, 0.58);
+      wings.rectangle(-6, -9, 10, 3, 0xe3fff5, 0.78);
+      wings.rectangle(-6, 6, 10, 3, 0xe3fff5, 0.78);
+      wings.rectangle(-2, -6, 8, 2, 0x9de9df, 0.66);
+      wings.rectangle(-2, 4, 8, 2, 0x9de9df, 0.66);
+      wings.rectangle(-5, -8, 6, 1, 0xffffff, 0.82);
+      wings.rectangle(-5, 7, 6, 1, 0xffffff, 0.82);
       const body = pixels(6);
-      body.rectangle(-5, -1, 11, 2, fly.color);
-      body.rectangle(5, -2, 3, 4, 0x173d3c);
-      body.rectangle(-7, 0, 3, 1, 0xf4da82);
+      for (let segment = 0; segment < 5; segment += 1) {
+        body.rectangle(-14 + segment * 3, -1, 2, 2, segment % 2 ? 0x173d3c : fly.color);
+      }
+      body.rectangle(0, -2, 7, 4, fly.color);
+      body.rectangle(6, -3, 3, 2, 0x173d3c);
+      body.rectangle(6, 1, 3, 2, 0x173d3c);
+      body.rectangle(7, -2, 1, 1, 0xf4fff1);
+      body.rectangle(7, 1, 1, 1, 0xf4fff1);
       const container = new THREE.Group();
       container.add(wings, body);
       insectLayer.add(container);
@@ -619,7 +627,10 @@ export async function startPondRenderer(options: StartOptions) {
         if (event.type === "takeoff") catPounceCount += 1;
         if (event.type === "ambient-ripple") {
           const point = worldToScreen(event.position);
-          if (isWaterScreen(point.x, point.y)) addRing(point.x, point.y, 20 + event.strength * 22, 1100, 0xb4e8d5);
+          if (isWaterScreen(point.x, point.y)) {
+            addRing(point.x, point.y, 20 + event.strength * 22, 1100, 0xb4e8d5);
+            if (!reduced) addRipple(point.x, point.y, 65, event.strength * 0.3);
+          }
         } else if (event.type === "food-dropped") {
           foodDroppedCount += 1;
           lastFoodDropped = { ...event.position };
@@ -683,13 +694,14 @@ export async function startPondRenderer(options: StartOptions) {
         const dy = base.y - pointer.screen.y;
         const distance = Math.max(1, Math.hypot(dx, dy));
         const reaction = pointerInfluence * Math.max(0, 1 - distance / 145);
-        const targetX = dx / distance * reaction * 6 + environment.wind * 0.55;
-        const targetY = dy / distance * reaction * 3.5;
+        const drift = Math.sin(simulationNow * 0.0012 + element.phase);
+        const targetX = dx / distance * reaction * 6 + environment.wind * 2.5 + drift * 2;
+        const targetY = dy / distance * reaction * 3.5 + Math.cos(simulationNow * 0.0009 + element.phase) * 1.5;
         element.offset.x += (targetX - element.offset.x) * Math.min(1, delta * 5.2);
         element.offset.y += (targetY - element.offset.y) * Math.min(1, delta * 5.2);
         element.container.position.set(Math.round(base.x + element.offset.x), Math.round(base.y + element.offset.y), 0);
         element.container.rotation.z = element.offset.x * 0.008;
-        element.container.material.opacity = 0.45 + reaction * 0.34;
+        element.container.material.opacity = 0.38 + drift * 0.18 + reaction * 0.34;
       }
 
       midgeLayer.clear();
@@ -723,23 +735,36 @@ export async function startPondRenderer(options: StartOptions) {
         visual.container.rotation.z += turn * (1 - Math.exp(-delta * (fish.reacting ? 14 : 9)));
         const effort = Math.min(2.5, fish.speedScale);
         visual.animation.speed = (0.012 + effort * 0.025) * motionScale;
-        const depthAlpha = Math.min(0.98, fish.alpha + (0.5 - fish.depth) * 0.28);
+        const depthAlpha = Math.min(0.98, fish.alpha + (0.5 - fish.depth) * 0.55);
         visual.alpha += (depthAlpha - visual.alpha) * Math.min(1, delta * 4);
         visual.sprite.material.opacity = visual.alpha;
         visual.shadow.material.opacity = visual.alpha;
         visual.sprite.material.color.setHex(fish.state === "feeding" ? 0xf4fff3 : 0xe8fff9);
         animate(visual.animation, delta);
         const peck = fish.state === "feeding" ? 1 - Math.abs(fish.feedingPulse * 2 - 1) * 0.055 : 1;
-        const flex = Math.sin(fish.swimPhase) * Math.min(0.018, effort * 0.009);
-        visual.sprite.rotation.z = Math.sin(fish.swimPhase) * 0.018 * Math.min(1, effort) + Math.max(-0.08, Math.min(0.08, fish.turnRate * 0.035));
-        visual.sprite.scale.set(visual.baseScaleX * (peck + flex), visual.baseScaleY * (2 - peck - flex * 0.5), 1);
+        const stroke = fish.activity === "gliding" ? 0.25 : Math.min(1.6, effort);
+        const flex = Math.sin(fish.swimPhase) * 0.035 * stroke;
+        visual.sprite.rotation.z = Math.sin(fish.swimPhase) * 0.065 * stroke + Math.max(-0.12, Math.min(0.12, fish.turnRate * 0.055));
+        const depthScale = 0.9 + (1 - fish.depth) * 0.18;
+        visual.sprite.scale.set(visual.baseScaleX * (peck + flex) * depthScale, visual.baseScaleY * (2 - peck - flex * 0.5) * depthScale, 1);
         visual.shadow.scale.setScalar(0.86 + fish.depth * 0.24);
-        if (!reduced && speed > 9 && now - visual.lastWake > (230 + fish.displayWidth * 2) / Math.max(0.65, effort)) {
+        const surfaced = fish.depth < 0.18;
+        if (surfaced && !visual.surfaced && !reduced) {
+          addRing(point.x, point.y, fish.displayWidth * 0.34, 1100, 0xd9fff0);
+          addRipple(point.x, point.y, fish.displayWidth * 1.3, 0.45);
+        }
+        visual.surfaced = surfaced;
+        if (!reduced && speed > 9 && (fish.depth < 0.4 || fish.reacting) && now - visual.lastWake > 240 / Math.max(0.65, effort)) {
           const tail = worldToScreen({
             x: fish.position.x - Math.cos(fish.heading) * fish.displayWidth * 0.22,
             y: fish.position.y - Math.sin(fish.heading) * fish.displayWidth * 0.22,
           });
-          addParticle(tail.x, tail.y, -Math.cos(fish.heading) * 4, -Math.sin(fish.heading) * 4 - 2, 820, 2, 0x9be4d7);
+          for (const side of [-1, 1]) {
+            addParticle(tail.x, tail.y,
+              -Math.cos(fish.heading) * speed * 0.2 + Math.sin(fish.heading) * side * 9,
+              -Math.sin(fish.heading) * speed * 0.2 - Math.cos(fish.heading) * side * 9,
+              850, 2, 0x9be4d7);
+          }
           visual.lastWake = now;
         }
       }
@@ -794,6 +819,7 @@ export async function startPondRenderer(options: StartOptions) {
         }).join(";");
         host.dataset.fishWorldPositions = frame.fish.map((fish) => `${fish.position.x.toFixed(2)},${fish.position.y.toFixed(2)}`).join(";");
         host.dataset.fishReacting = String(frame.fish.some((fish) => fish.reacting));
+        host.dataset.fishActivities = frame.fish.map((fish) => `${fish.id}:${fish.activity}`).join(";");
         host.dataset.fishWaterViolation = String(frame.fish.some((fish) => !isWaterWorld(fish.position.x, fish.position.y)));
         host.dataset.fishMaxStep = Math.max(...frame.fish.map((fish) => fish.maxStep)).toFixed(2);
         host.dataset.fishAverageSpeed = (

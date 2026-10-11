@@ -1648,7 +1648,6 @@ class PortfolioTests(BrowserTestCase):
         self.assertEqual(int(pond.get_attribute("data-food-dropped-count")), 0)
         impacts_before_food = int(pond.get_attribute("data-primary-impact-count"))
         page.touchscreen.tap(fish_x, fish_y)
-        page.wait_for_timeout(120)
         page.touchscreen.tap(fish_x, fish_y)
         try:
             page.wait_for_function(

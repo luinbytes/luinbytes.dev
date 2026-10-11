@@ -552,7 +552,7 @@ export function createPondWorld(seedValue: string | number = "6c75") {
         flyId: fly.id,
         state: brain.state,
         goal: brain.goal,
-        speedScale: brain.state === "startled" ? 1.75 : brain.state === "foraging" ? 1 : brain.state === "hovering" ? 0.42 : 0.08,
+        speedScale: brain.state === "startled" ? 2.8 : brain.state === "foraging" ? 2.1 : brain.state === "hovering" ? 0.42 : 0.08,
         reason: brain.reason,
       };
     });
@@ -762,7 +762,7 @@ export function createPondWorld(seedValue: string | number = "6c75") {
       anchorVisits.set(currentAnchor.id, 1);
       nextTargetScan = input.now + duration(240, 720);
       nextHuntAt = input.now + duration(1200, 3000);
-      nextPatrolAt = input.now + duration(15000, 30000);
+      nextPatrolAt = input.now + duration(7000, 14000);
       nextWindShift = input.now + duration(900, 2600);
       nextCurrentShift = input.now + duration(1100, 3100);
       nextAmbientRipple = input.now + duration(1400, 3600);
@@ -787,7 +787,7 @@ export function createPondWorld(seedValue: string | number = "6c75") {
         if (destinationAnchor) {
           selectedTargetId = null;
           routine = "patrolling";
-          nextPatrolAt = input.now + duration(12000, 26000);
+          nextPatrolAt = input.now + duration(8000, 16000);
           transition("approach", "pointer-requested-rock-hop", input.now, duration(180, 360), events);
         }
       } else if (candidate) {
@@ -801,7 +801,7 @@ export function createPondWorld(seedValue: string | number = "6c75") {
         if (destinationAnchor) {
           selectedTargetId = null;
           routine = "patrolling";
-          nextPatrolAt = input.now + duration(12000, 26000);
+          nextPatrolAt = input.now + duration(8000, 16000);
           transition("approach", "routine-patrol-to-fresh-vantage", input.now, duration(220, 420), events);
         } else {
           selectedTargetId = null;

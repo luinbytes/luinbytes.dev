@@ -369,6 +369,55 @@ test("nearby fish commit to fresh food promptly despite the drop disturbance", (
   assert.ok(reservedAt <= 400, `fish reserved food too slowly: ${reservedAt}ms`);
 });
 
+test("idle koi stagger swimming, gliding, darts and surface rises without food or danger", () => {
+  const simulation = createPondSimulation({
+    seed: "idle-life",
+    width: 1586,
+    height: 1024,
+    isWater: (x, y) => x > 180 && x < 850 && y > 160 && y < 700,
+    fish: Array.from({ length: 3 }, (_, index) => ({
+      ...MOTION_FISH,
+      id: `idle-${index}`,
+      position: { x: 360 + index * 120, y: 350 },
+    })),
+    flies: [],
+  });
+  const activities = Array.from({ length: 3 }, () => new Set<string>());
+  let staggered = false;
+  let glidingSpeed = Infinity;
+  let dartingSpeed = 0;
+  let surfaceDepth = 1;
+  let swimmingDepth = 0;
+  let previous = simulation.step({ now: 0, delta: 0, pointer: QUIET_POINTER, visibleAnchorIds: [] }).fish;
+  for (let index = 1; index <= 120 * 30; index += 1) {
+    const frame = simulation.step({ now: index * FRAME_MS, delta: 1 / 30, pointer: QUIET_POINTER, visibleAnchorIds: [] });
+    staggered ||= new Set(frame.fish.map((fish) => fish.activity)).size > 1;
+    frame.fish.forEach((fish, fishIndex) => {
+      assert.equal(fish.reacting, false);
+      assert.equal(fish.state, "cruising");
+      assert.equal(fish.foodId, null);
+      activities[fishIndex].add(fish.activity);
+      if (fish.activity === "gliding") glidingSpeed = Math.min(glidingSpeed, fish.speedScale);
+      if (fish.activity === "darting") dartingSpeed = Math.max(dartingSpeed, fish.speedScale);
+      if (fish.activity === "surfacing") surfaceDepth = Math.min(surfaceDepth, fish.depth);
+      if (fish.activity === "swimming") swimmingDepth = Math.max(swimmingDepth, fish.depth);
+      const before = previous[fishIndex].position;
+      assert.ok(Math.hypot(fish.position.x - before.x, fish.position.y - before.y) <= MOTION_FISH.cruise * 3.5 / 30);
+      for (let sample = 0; sample <= 8; sample += 1) {
+        const x = before.x + (fish.position.x - before.x) * sample / 8;
+        const y = before.y + (fish.position.y - before.y) * sample / 8;
+        assert.ok(x > 180 && x < 850 && y > 160 && y < 700, "idle motion crossed dry shore");
+      }
+    });
+    previous = frame.fish;
+  }
+  for (const observed of activities) assert.deepEqual([...observed].sort(), ["darting", "gliding", "surfacing", "swimming"]);
+  assert.equal(staggered, true, "idle fish switched activities together");
+  assert.ok(glidingSpeed < 0.5 && dartingSpeed > 2, "idle speed changes were too small to read");
+  assert.ok(surfaceDepth < 0.1 && swimmingDepth > 0.3, "idle fish never visibly rose and submerged");
+  simulation.destroy();
+});
+
 test("fish accelerate and turn away from danger within locomotion bounds at different frame rates", () => {
   const finishes = [];
   for (const fps of [15, 30, 60]) {
