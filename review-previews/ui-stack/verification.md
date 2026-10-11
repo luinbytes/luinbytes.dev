@@ -43,3 +43,11 @@ PASS. All 26 browser tests and lint pass after the final hero and spacing change
 ## Attention
 
 The decision trail was independently audited by gpt-6-astra. The audit found mislabeled screenshot dimensions and temporary proof pointers. Final captures now have their named dimensions, failed-run logs are retained, and manual checks are labeled parent-observed. An earlier decision row described artifacts as committed before the commit existed. A later row corrects that status. No transcript directory was supplied.
+
+## Almost transparent hero follow-up
+
+The user requested still clearer glass. The hero now has 12% to 18% tint, reduced from 60% to 68%. Blur drops from 10px to 2px. Text shadows protect readability over moving artwork. The secondary action retains a local 32% tint. Lower panel styling and all spacing rules stay the same.
+
+The parent inspected the new material in T3. The four-width layout probe and exact-size homepage screenshots were refreshed. The follow-up build briefly ran against the served output because the initial command used the repository working directory. The final browser run uses the isolated copy, and final publication copies assets before replacing HTML atomically. The server process stays running.
+
+PASS. The almost transparent hero revision passes lint, the production build, and all 26 browser tests. The final LAN readback matches the isolated export. Refreshed layout measurements pass at all four widths.

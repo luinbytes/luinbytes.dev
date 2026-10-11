@@ -10,7 +10,8 @@
       "moreToContact": 20,
       "contactToFooter": 20
     },
-    "heroBackground": "linear-gradient(135deg, rgba(8, 10, 12, 0.6), rgba(8, 10, 12, 0.68))",
+    "heroBackground": "linear-gradient(135deg, rgba(8, 10, 12, 0.12), rgba(8, 10, 12, 0.18))",
+    "heroBlur": "blur(2px) saturate(1.05)",
     "heroBottom": 620,
     "overflow": 0
   },
@@ -25,7 +26,8 @@
       "moreToContact": 20,
       "contactToFooter": 20
     },
-    "heroBackground": "linear-gradient(135deg, rgba(8, 10, 12, 0.6), rgba(8, 10, 12, 0.68))",
+    "heroBackground": "linear-gradient(135deg, rgba(8, 10, 12, 0.12), rgba(8, 10, 12, 0.18))",
+    "heroBlur": "blur(2px) saturate(1.05)",
     "heroBottom": 824,
     "overflow": 0
   },
@@ -40,7 +42,8 @@
       "moreToContact": 29.5,
       "contactToFooter": 29.5
     },
-    "heroBackground": "linear-gradient(135deg, rgba(8, 10, 12, 0.6), rgba(8, 10, 12, 0.68))",
+    "heroBackground": "linear-gradient(135deg, rgba(8, 10, 12, 0.12), rgba(8, 10, 12, 0.18))",
+    "heroBlur": "blur(2px) saturate(1.05)",
     "heroBottom": 790.5,
     "overflow": 0
   },
@@ -55,7 +58,8 @@
       "moreToContact": 32,
       "contactToFooter": 32
     },
-    "heroBackground": "linear-gradient(135deg, rgba(8, 10, 12, 0.6), rgba(8, 10, 12, 0.68))",
+    "heroBackground": "linear-gradient(135deg, rgba(8, 10, 12, 0.12), rgba(8, 10, 12, 0.18))",
+    "heroBlur": "blur(2px) saturate(1.05)",
     "heroBottom": 868,
     "overflow": 0
   }

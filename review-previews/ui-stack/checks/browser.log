@@ -6,7 +6,7 @@
 > luinbytes-site@0.1.0 prebuild
 > node scripts/generate-sitemap.js
 
-Generated sitemap with 2 URLs to /private/tmp/lu-site-final-check-20261011/public/sitemap.xml
+Generated sitemap with 2 URLs to /private/tmp/lu-clear-hero-check/public/sitemap.xml
 
 > luinbytes-site@0.1.0 build
 > tsc --noEmit && vite build && vite build --ssr app/entry-server.tsx && node scripts/prerender.mjs
@@ -25,8 +25,8 @@ out/assets/space-mono-latin-700-normal-D7A851RN.woff            12.41 kB
 out/assets/space-mono-latin-400-normal-Rg4St2Dn.woff2           16.52 kB
 out/assets/space-mono-latin-700-normal-mWgeinG7.woff2           16.72 kB
 out/assets/manrope-latin-variable-DHIcAJRg.woff2                24.83 kB
-out/assets/index-IpTcsXkz.css                                   78.15 kB │ gzip:  15.01 kB
-out/assets/index-DbIUGngv.js                                   424.96 kB │ gzip: 137.72 kB
+out/assets/index-BtWMdicA.css                                   78.24 kB │ gzip:  15.03 kB
+out/assets/index-ClVua3gh.js                                   424.96 kB │ gzip: 137.72 kB
 out/assets/pond-renderer-BTu1onqc.js                           647.47 kB │ gzip: 168.12 kB
 
 [plugin builtin:vite-reporter]
@@ -34,7 +34,7 @@ out/assets/pond-renderer-BTu1onqc.js                           647.47 kB │ gzi
 - Using dynamic import() to code-split the application
 - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
 - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
-✓ built in 1.10s
+✓ built in 897ms
 vite v8.3.3 building ssr environment for production...
 transforming...
 ✓ 32 modules transformed.
@@ -43,7 +43,7 @@ computing gzip size...
 .prerender/entry-server.js                    73.34 kB │ gzip: 17.83 kB
 .prerender/assets/pond-renderer-CZdHM-jA.js  109.93 kB │ gzip: 27.38 kB
 
-✓ built in 325ms
+✓ built in 278ms
 Prerendered 3 pages to out.
 test_sitemap_exposes_the_portfolio_and_pip (browser_test.GeneratedArtifactTests.test_sitemap_exposes_the_portfolio_and_pip) ... ok
 test_pip_page_fits_mobile_viewports_and_exposes_keyboard_skip_and_nav (browser_test.PipRouteTests.test_pip_page_fits_mobile_viewports_and_exposes_keyboard_skip_and_nav) ... ok
@@ -73,6 +73,6 @@ test_editable_source_contains_the_original_card_copy (browser_test.ShareCardStat
 test_every_scoped_route_exports_a_production_large_image_card (browser_test.ShareCardStaticExportTests.test_every_scoped_route_exports_a_production_large_image_card) ... ok
 
 ----------------------------------------------------------------------
-Ran 26 tests in 149.347s
+Ran 26 tests in 146.721s
 
 OK
