@@ -73,3 +73,11 @@ The first recording still let card-wide pointer movement update the avatar foil.
 The first recording used system light appearance. A static Swarm check confirmed that theme values had not changed between `632154cd4718a652d23cec69e88108d957854c4a` and `f7a8de6a60926244d05070abd2dae6041126fbdc`. The corrected T3 recording explicitly uses dark appearance and reads `--site-bg` as `#252031`. The 2× close-up includes a cursor highlight and stays at normal playback speed. The dark Lavender theme and its system-light variant remain in the stylesheet.
 
 PASS. The final avatar-boundary correction and immediate exit reset pass lint, production build, and all 26 browser tests. The retained profile browser log now contains this final run. The unchanged pond and Pip domain contracts passed their separate suites earlier in this follow-up. The user accepted the corrected recording before raising the separate navbar corner-shape question. That question is under read-only How investigation.
+
+## Navbar corner alignment
+
+The user approved the How recommendation. The navbar now uses a local 20px radius and 7px CSS padding. Together with its 1px border, the desktop profile card has an even measured 8px inset on its left, top, and bottom. Its existing 12px corners match the outer curve. The two-row mobile navbar uses the same radius and padding. Other pill controls, Lavender theme values, profile motion, and avatar reflection behavior are unchanged.
+
+Parent-observed T3 checks pass at 1440px, 320px, and 390px. The desktop radius and inset were read from computed styles and bounding boxes. Both narrow layouts keep all navigation links in the viewport with zero horizontal overflow. The parent inspected fresh dark-appearance screenshots at all three widths. Final production browser verification is pending.
+
+PASS. The final navbar adjustment passes lint, production build, and all 26 browser tests. [Browser results](checks/navbar-browser.log) and [computed geometry](checks/navbar-layout.json) retain the checks. Fresh production captures cover [desktop](screenshots/navbar-1440-dark.png), [320px](screenshots/navbar-320-dark.png), and [390px](screenshots/navbar-390-dark.png). The parent inspected all captures. The independent comment review found no issues in the three changed CSS declarations. All owned preview servers and tabs were stopped.

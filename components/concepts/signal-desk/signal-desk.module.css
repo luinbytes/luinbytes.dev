@@ -60,9 +60,9 @@
   gap: 18px;
   width: min(calc(100% - 32px - env(safe-area-inset-left) - env(safe-area-inset-right)), 1380px);
   min-height: 66px;
-  padding: 6px 9px;
+  padding: 7px;
   border: 1px solid var(--glass-edge);
-  border-radius: var(--site-control-radius, 999px);
+  border-radius: 20px;
   color: var(--site-text);
   background: linear-gradient(140deg, var(--glass-top), var(--glass-bottom)), var(--site-panel-bg);
   box-shadow: var(--glass-panel-shadow);
@@ -774,7 +774,7 @@
     justify-items: center;
     gap: 2px;
     min-height: 0;
-    padding: 5px 6px 6px;
+    padding: 7px;
   }
 
   .header nav {
