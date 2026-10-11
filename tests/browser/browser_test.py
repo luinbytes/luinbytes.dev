@@ -1472,12 +1472,66 @@ class PortfolioTests(BrowserTestCase):
             "text",
         )
 
+        def wait_for_tilt():
+            page.wait_for_function("""() => {
+                const surface = document.querySelector('[class*="profileLine"]');
+                const m = new DOMMatrixReadOnly(getComputedStyle(surface).transform);
+                return Math.abs(m.m13) > 0.02 && Math.abs(m.m23) > 0.01;
+            }""")
+
+        def wait_for_settle():
+            page.wait_for_function("""() => {
+                const surface = document.querySelector('[class*="profileLine"]');
+                const m = new DOMMatrixReadOnly(getComputedStyle(surface).transform);
+                return Math.abs(m.m13) < 0.001 && Math.abs(m.m23) < 0.001
+                    && Math.abs(m.m11 - 1) < 0.001;
+            }""")
+
         page.mouse.move(card_box["x"] + 12, card_box["y"] + 12)
-        page.wait_for_timeout(100)
-        self.assertNotEqual(card.evaluate("element => element.style.getPropertyValue('--profile-tilt-y')"), "0deg")
+        wait_for_tilt()
+        matrix = card_surface.evaluate("""element => {
+            const m = new DOMMatrixReadOnly(getComputedStyle(element).transform);
+            return [m.m13, m.m23];
+        }""")
+        self.assertGreater(matrix[0], 0)
+        self.assertGreater(matrix[1], 0)
+        self.assertNotEqual(card.evaluate("element => getComputedStyle(element).perspective"), "none")
         page.mouse.move(card_box["x"] + card_box["width"] + 40, card_box["y"])
-        page.wait_for_timeout(360)
-        self.assertEqual(card.evaluate("element => element.style.getPropertyValue('--profile-tilt-y')"), "0deg")
+        wait_for_settle()
+        self.assertNotIn(
+            "linear-gradient(112deg",
+            card_surface.evaluate("element => getComputedStyle(element, '::before').backgroundImage"),
+        )
+
+        portrait_box = portrait.bounding_box()
+        page.mouse.move(portrait_box["x"] + portrait_box["width"] / 2,
+                        portrait_box["y"] + portrait_box["height"] / 2)
+        page.wait_for_function("""() => {
+            const target = document.querySelector('[class*="profilePortrait"] canvas').dataset.foilTarget;
+            if (!target) return false;
+            const [x, y] = target.split(',').map(Number);
+            return Math.abs(x - 0.5) < 0.06 && Math.abs(y - 0.5) < 0.06;
+        }""")
+        page.mouse.move(card_box["x"] + card_box["width"] + 40, card_box["y"])
+        wait_for_settle()
+
+        for pointer_type in ("touch", "pen"):
+            for release in ("pointerup", "pointercancel"):
+                card.evaluate("""(element, pointerType) => {
+                    const b = element.getBoundingClientRect();
+                    element.dispatchEvent(new PointerEvent('pointerdown', {
+                        bubbles: true, pointerType, pointerId: 42, button: 0,
+                        clientX: b.left + 12, clientY: b.top + 12,
+                    }));
+                }""", pointer_type)
+                wait_for_tilt()
+                card.evaluate("""(element, args) => element.dispatchEvent(new PointerEvent(args[0], {
+                    bubbles: true, pointerType: args[1], pointerId: 42,
+                }))""", [release, pointer_type])
+                if pointer_type == "pen" and release == "pointerup":
+                    card.dispatch_event("pointerleave")
+                wait_for_settle()
+        self.assertEqual(card.evaluate("element => getComputedStyle(element).touchAction"), "auto")
 
         page.emulate_media(reduced_motion="reduce")
         page.reload(wait_until="networkidle")

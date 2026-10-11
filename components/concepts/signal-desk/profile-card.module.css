@@ -48,11 +48,7 @@
 .profileLine::before {
   z-index: 0;
   opacity: 0.64;
-  background:
-    linear-gradient(112deg, transparent 8%, rgba(203, 255, 245, 0.1) 34%, rgba(203, 255, 245, 0.04) 58%, transparent 82%),
-    repeating-linear-gradient(0deg, transparent 0 2px, rgba(220, 255, 247, 0.014) 2px 3px);
-  background-position: calc(50% + var(--profile-foil-x)) center, center;
-  background-size: 180% 100%, auto;
+  background: repeating-linear-gradient(0deg, transparent 0 2px, rgba(220, 255, 247, 0.014) 2px 3px);
   mix-blend-mode: screen;
 }
 
@@ -144,8 +140,15 @@
   border-radius: inherit;
   opacity: 1;
   background:
+    linear-gradient(112deg, transparent 8%, rgba(203, 255, 245, 0.1) 34%, rgba(203, 255, 245, 0.04) 58%, transparent 82%),
     linear-gradient(135deg, rgba(0, 10, 12, 0.22), transparent 24% 76%, rgba(0, 10, 12, 0.18)),
     linear-gradient(112deg, rgba(235, 255, 250, 0.07), transparent 27% 72%, rgba(179, 231, 224, 0.04));
+  background-position:
+    calc(50% + var(--profile-foil-x)) center,
+    center,
+    center;
+  background-size: 180% 100%, auto, auto;
+  background-repeat: no-repeat;
   box-shadow:
     inset 0 0 0 1px rgba(0, 12, 14, 0.82),
     inset 0 0 0 2px rgba(230, 255, 249, 0.2),

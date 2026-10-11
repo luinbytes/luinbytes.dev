@@ -51,3 +51,17 @@ The user requested still clearer glass. The hero now has 12% to 18% tint, reduce
 The parent inspected the new material in T3. The four-width layout probe and exact-size homepage screenshots were refreshed. The follow-up build briefly ran against the served output because the initial command used the repository working directory. The final browser run uses the isolated copy, and final publication copies assets before replacing HTML atomically. The server process stays running.
 
 PASS. The almost transparent hero revision passes lint, the production build, and all 26 browser tests. The final LAN readback matches the isolated export. Refreshed layout measurements pass at all four widths.
+
+## PR profile-card feedback
+
+The user requested axis tilt and avatar-local reflection in [PR comment 6105578449](https://github.com/luinbytes/luinbytes.dev/pull/58#issuecomment-6105578449). Two local Swarm workers own the component fix and browser checks. Their starting head is `632154cd4718a652d23cec69e88108d957854c4a`. The parent owns integration and final production verification.
+
+The user released the iPad QA server. The parent stopped its exact process and confirmed that port 3006 has no listener. Earlier statements that this server remains running describe prior checks.
+
+The confirmed input gap was that touch and pen pointer movement was ignored. Real desktop mouse input already tilted the card. The fix adds direct touch contact, pen movement, and cancellation reset while preserving the orientation fallback. Card coordinates drive tilt. Avatar coordinates drive the foil. The card-wide moving reflection now lives inside the avatar.
+
+The implementation worker checked the local Vite page with Chromium and browser-dispatched touch events. TypeScript, targeted lint, and whitespace checks passed. The comment review found no added comments or proven issues. The browser-test worker did not deliver edits within its bounded task and was interrupted. The parent took ownership of the test and added actual matrix-axis, avatar-center foil, touch, pen, release, cancellation, and reduced-motion checks. Physical iPad input remains unverified.
+
+The parent inspected production screenshots at 320px, 390px, and 1440px. T3 recorded real mouse sweeps at 2× preview zoom. A 25-second crop at normal playback speed was shared in this thread. The recording proves browser mouse behavior, not physical touch or sensor behavior.
+
+PASS. The final production export passes all 26 browser tests, including the strengthened profile-card check. Lint, build, 11 pond tests, and 3 Pip tests pass. The [browser log](checks/profile-browser.log) retains the rebuilt export and test results. [Source hashes and Swarm coverage](checks/profile-motion.json) identify the tested uncommitted inputs. All additional preview servers and the owned T3 tab were stopped.
