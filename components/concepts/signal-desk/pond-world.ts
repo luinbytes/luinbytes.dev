@@ -927,18 +927,17 @@ export function createPondWorld(seedValue: string | number = "6c75") {
       squashX = 1.04 + stateProgress * 0.04;
       squashY = 0.98 - stateProgress * 0.1;
     } else if (state === "airborne" && destinationAnchor) {
-      const hopFrames = Math.max(8, Math.round(stateDuration / 85));
-      const steppedProgress = Math.min(1, Math.round(stateProgress * hopFrames) / hopFrames);
-      const progress = smoothstep(steppedProgress);
+      const progress = stateProgress;
       contact = {
         x: lerp(takeoffAnchor.position.x, destinationAnchor.position.x, progress),
         y: lerp(takeoffAnchor.position.y, destinationAnchor.position.y, progress),
       };
       const hopDistance = distance(takeoffAnchor.position, destinationAnchor.position);
-      lift = Math.sin(steppedProgress * Math.PI) * clamp(24 + hopDistance * 0.16, 30, 72);
+      lift = 4 * progress * (1 - progress) * clamp(24 + hopDistance * 0.16, 30, 72);
       surfaceAngle = lerp(takeoffAnchor.surfaceAngle, destinationAnchor.surfaceAngle, progress);
-      squashX = 0.97;
-      squashY = 1.04;
+      const extension = Math.sin(progress * Math.PI);
+      squashX = 1 - extension * 0.04;
+      squashY = 1 + extension * 0.06;
     } else if (state === "land") {
       squashX = lerp(1.12, 1.04, stateProgress);
       squashY = lerp(0.82, 0.94, stateProgress);

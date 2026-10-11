@@ -8,10 +8,37 @@ import {
   type PondTarget,
   type PondWorldEvent,
 } from "../components/concepts/signal-desk/pond-world.ts";
-import { createPondSimulation } from "../components/concepts/signal-desk/pond-simulation.ts";
+import { createPondSimulation, type PondPointerInput } from "../components/concepts/signal-desk/pond-simulation.ts";
 
 const FRAME_MS = 1000 / 30;
 const ALL_ANCHORS = ROCK_ANCHORS.map((anchor) => anchor.id);
+const QUIET_POINTER: PondPointerInput = {
+  position: { x: -1000, y: -1000 },
+  velocity: { x: 0, y: 0 },
+  influence: 0,
+  energy: 0,
+};
+
+const MOTION_FISH = {
+  id: "motion-koi",
+  row: 0,
+  displayWidth: 54,
+  position: { x: 500, y: 500 },
+  heading: 0,
+  cruise: 13,
+  alpha: 0.8,
+  species: "koi",
+};
+
+const MOTION_FLY = {
+  id: "motion-fly",
+  position: { x: 580, y: 285 },
+  orbitX: 240,
+  orbitY: 90,
+  phase: 0.4,
+  speed: 0.021,
+  color: 0x56d7c8,
+};
 
 function nearbyTargets(now: number): PondTarget[] {
   return ROCK_ANCHORS.map((anchor, index) => ({
@@ -340,4 +367,192 @@ test("nearby fish commit to fresh food promptly despite the drop disturbance", (
 
   assert.ok(noticedAt <= 200, `fish noticed food too slowly: ${noticedAt}ms`);
   assert.ok(reservedAt <= 400, `fish reserved food too slowly: ${reservedAt}ms`);
+});
+
+test("fish accelerate and turn away from danger within locomotion bounds at different frame rates", () => {
+  const finishes = [];
+  for (const fps of [15, 30, 60]) {
+    const simulation = createPondSimulation({
+      seed: "escape-motion",
+      width: 1586,
+      height: 1024,
+      isWater: () => true,
+      fish: [MOTION_FISH],
+      flies: [],
+    });
+    let previous = { position: MOTION_FISH.position, heading: 0, speed: MOTION_FISH.cruise };
+    let fish;
+    for (let index = 1; index <= fps; index += 1) {
+      fish = simulation.step({
+        now: index * 1000 / fps,
+        delta: 1 / fps,
+        pointer: { ...QUIET_POINTER, position: { x: 500, y: 520 }, influence: 1, energy: 1 },
+        visibleAnchorIds: ["south-stone-top"],
+      }).fish[0];
+      const speed = Math.hypot(fish.velocity.x, fish.velocity.y);
+      const turn = Math.atan2(Math.sin(fish.heading - previous.heading), Math.cos(fish.heading - previous.heading));
+      assert.ok(Math.abs(turn) <= 6.7 / fps, "escape heading changed faster than its turn limit");
+      assert.ok(Math.abs(speed - previous.speed) <= MOTION_FISH.cruise * 8.1 / fps, "escape acceleration exceeded its limit");
+      assert.ok(Math.hypot(fish.position.x - previous.position.x, fish.position.y - previous.position.y) <= MOTION_FISH.cruise * 3.5 / fps);
+      assert.ok(Math.abs(fish.turnRate - turn * fps) < 1e-9);
+      assert.ok(Math.abs(fish.speedScale - speed / MOTION_FISH.cruise) < 1e-9);
+      previous = { position: fish.position, heading: fish.heading, speed };
+    }
+    assert.ok(fish);
+    assert.equal(fish.reacting, true);
+    assert.ok(fish.position.y < 475, "fish failed to flee away from the nearby pointer");
+    assert.ok(fish.speedScale > 2.5 && fish.speedScale <= 3.5);
+    assert.ok(fish.depth > 0.8 && fish.depth <= 1);
+    finishes.push(fish);
+    simulation.destroy();
+  }
+  for (const fish of finishes.slice(1)) {
+    assert.ok(Math.hypot(fish.position.x - finishes[0].position.x, fish.position.y - finishes[0].position.y) < 2);
+    assert.ok(Math.abs(fish.speedScale - finishes[0].speedScale) < 0.15);
+  }
+});
+
+test("shoreline avoidance rounds an island corner without dry crossings or recovery jumps", () => {
+  const isWater = (x: number, y: number) =>
+    x > 200 && x < 1000 && y > 200 && y < 800 && !(x > 445 && x < 525 && y > 420 && y < 580);
+  const simulation = createPondSimulation({
+    seed: "shore",
+    width: 1586,
+    height: 1024,
+    isWater,
+    fish: [{ ...MOTION_FISH, position: { x: 410, y: 500 } }],
+    flies: [],
+  });
+  let previous = { x: 410, y: 500 };
+  let crossedIsland = false;
+  for (let index = 1; index <= 60 * 30; index += 1) {
+    const fish = simulation.step({
+      now: index * FRAME_MS,
+      delta: 1 / 30,
+      pointer: { ...QUIET_POINTER, position: { x: 350, y: 500 }, influence: 1, energy: 1 },
+      visibleAnchorIds: ["south-stone-top"],
+    }).fish[0];
+    const distance = Math.hypot(fish.position.x - previous.x, fish.position.y - previous.y);
+    assert.ok(distance <= MOTION_FISH.cruise * 3.5 / 30, "shore recovery teleported the fish");
+    for (let sample = 0; sample <= 8; sample += 1) {
+      assert.equal(isWater(
+        previous.x + (fish.position.x - previous.x) * sample / 8,
+        previous.y + (fish.position.y - previous.y) * sample / 8,
+      ), true, "fish crossed a dry section between frames");
+    }
+    if (fish.position.x > 550) crossedIsland = true;
+    previous = fish.position;
+  }
+  assert.equal(crossedIsland, true, "fish became trapped against the island corner");
+  simulation.destroy();
+});
+
+test("flies damp arrival into a small hover and settle with still wings at rest", () => {
+  const simulation = createPondSimulation({
+    seed: "fly-rest",
+    width: 1586,
+    height: 1024,
+    isWater: () => true,
+    fish: [],
+    flies: [MOTION_FLY],
+  });
+  let previous = { position: MOTION_FLY.position, state: "hovering" };
+  let stationaryGoal = MOTION_FLY.position;
+  let stateFrames = 0;
+  let settledHoverFrames = 0;
+  let settledRestFrames = 0;
+  let sawFlight = false;
+  for (let index = 1; index <= 90 * 30; index += 1) {
+    const fly = simulation.step({
+      now: index * FRAME_MS,
+      delta: 1 / 30,
+      pointer: QUIET_POINTER,
+      visibleAnchorIds: ["south-stone-top"],
+    }).flies[0];
+    if (fly.state !== previous.state) {
+      stationaryGoal = previous.position;
+      stateFrames = 0;
+    }
+    stateFrames += 1;
+    const speed = Math.hypot(fly.velocity.x, fly.velocity.y);
+    if (fly.state === "foraging" && speed > 10) sawFlight = true;
+    if (fly.state === "hovering" && stateFrames > 30) {
+      assert.ok(Math.hypot(fly.position.x - stationaryGoal.x, fly.position.y - stationaryGoal.y) < 4, "hover overshot its air patch");
+      assert.ok(speed < 4, "hover kept flying at travel speed");
+      settledHoverFrames += 1;
+    }
+    if (fly.state === "resting" && stateFrames > 30) {
+      assert.ok(speed < 0.1, "resting fly kept moving");
+      assert.ok(fly.wingActivity < 0.01, "resting fly kept beating its wings");
+      assert.ok(fly.lift < 0.02, "resting fly failed to settle");
+      settledRestFrames += 1;
+    }
+    assert.equal(fly.reacting, false);
+    previous = { position: fly.position, state: fly.state };
+  }
+  assert.equal(sawFlight, true);
+  assert.ok(settledHoverFrames >= 60);
+  assert.ok(settledRestFrames >= 60);
+  simulation.destroy();
+});
+
+test("a batted fly flees the cat origin independently of an inactive pointer", () => {
+  const options = {
+    seed: "bat-0",
+    width: 1586,
+    height: 1024,
+    isWater: () => true,
+    fish: [],
+    flies: [{ ...MOTION_FLY, position: { x: 850, y: 880 } }],
+  };
+  const leftPointer = createPondSimulation(options);
+  const rightPointer = createPondSimulation(options);
+  let batOrigin;
+  let batDistance = 0;
+  let batAt = 0;
+  let escaped = false;
+  for (let index = 1; index <= 40 * 30; index += 1) {
+    const input = { now: index * FRAME_MS, delta: 1 / 30, pointer: QUIET_POINTER, visibleAnchorIds: ["south-stone-top"] };
+    const left = leftPointer.step(input);
+    const right = rightPointer.step({ ...input, pointer: { ...QUIET_POINTER, position: { x: 3000, y: 3000 } } });
+    assert.deepEqual(left.flies, right.flies, "bat escape used the inactive pointer as its origin");
+    const fly = left.flies[0];
+    if (!batOrigin && left.events.some((event) => event.type === "bat" && event.targetType === "fly")) {
+      batOrigin = left.cat.contact;
+      batDistance = Math.hypot(fly.position.x - batOrigin.x, fly.position.y - batOrigin.y);
+      batAt = index;
+      assert.equal(fly.reacting, true);
+    }
+    if (batOrigin && index === batAt + 20) {
+      assert.ok(Math.hypot(fly.position.x - batOrigin.x, fly.position.y - batOrigin.y) > batDistance + 30, "fly failed to flee the bat origin");
+      assert.ok((fly.position.x - batOrigin.x) * fly.velocity.x + (fly.position.y - batOrigin.y) * fly.velocity.y > 0);
+      escaped = true;
+      break;
+    }
+  }
+  assert.equal(escaped, true, "fixture never produced a bat followed by an escape");
+  leftPointer.destroy();
+  rightPointer.destroy();
+});
+
+test("seeded locomotion is reproducible and paused or invalid deltas cannot advance it", () => {
+  const options = { seed: "motion-repeatable", width: 1586, height: 1024, isWater: () => true, fish: [MOTION_FISH], flies: [MOTION_FLY] };
+  const first = createPondSimulation(options);
+  const second = createPondSimulation(options);
+  for (let index = 1; index <= 90; index += 1) {
+    const input = { now: index * FRAME_MS, delta: 1 / 30, pointer: QUIET_POINTER, visibleAnchorIds: ["south-stone-top"] };
+    const frame = first.step(input);
+    assert.deepEqual(frame, second.step(input));
+  }
+  const before = first.frame!;
+  for (const delta of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+    const paused = first.step({ now: 3000, delta, pointer: QUIET_POINTER, visibleAnchorIds: ["south-stone-top"] });
+    assert.deepEqual(paused.fish, before.fish);
+    assert.deepEqual(paused.flies, before.flies);
+  }
+  const resumed = first.step({ now: 3000 + FRAME_MS, delta: 100, pointer: QUIET_POINTER, visibleAnchorIds: ["south-stone-top"] });
+  assert.ok(Math.hypot(resumed.fish[0].position.x - before.fish[0].position.x, resumed.fish[0].position.y - before.fish[0].position.y) <= MOTION_FISH.cruise * 3.5 * 0.1);
+  assert.ok(Math.hypot(resumed.flies[0].position.x - before.flies[0].position.x, resumed.flies[0].position.y - before.flies[0].position.y) <= 14.3);
+  first.destroy();
+  second.destroy();
 });

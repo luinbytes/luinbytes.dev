@@ -20,6 +20,7 @@ import {
   createPondWater,
   loadPondAsset,
   PondPixels,
+  POND_RIPPLE_CAPACITY,
   setAtlasFrame,
   type PondAsset,
   type PondSprite,
@@ -377,7 +378,7 @@ export async function startPondRenderer(options: StartOptions) {
     const addRipple = (x: number, y: number, size = 132, strength = 1) => {
       const speed = 145 + strength * 45;
       ripples.push({ x, y, size, strength, speed, born: performance.now(), life: size / speed * 1000 + 180 });
-      if (ripples.length > 2) ripples.shift();
+      if (ripples.length > POND_RIPPLE_CAPACITY) ripples.shift();
       host.dataset.rippleCount = String(ripples.length);
     };
 
@@ -561,7 +562,10 @@ export async function startPondRenderer(options: StartOptions) {
       catScreen = contact;
       catContainer.position.set(Math.round(contact.x), Math.round(contact.y - lift), 0);
       catContainer.rotation.z += pondAngleDelta(catContainer.rotation.z, next.cat.surfaceAngle + aimLean) * Math.min(1, delta * 12);
-      catSprite.scale.set(catBaseScale.x * renderedFacing * next.cat.squashX, catBaseScale.y * next.cat.squashY, 1);
+      const breathing = next.cat.grounded && next.cat.routine === "resting"
+        ? Math.sin(simulationNow * 0.0018) * 0.009 * motionScale
+        : 0;
+      catSprite.scale.set(catBaseScale.x * renderedFacing * (next.cat.squashX - breathing * 0.4), catBaseScale.y * (next.cat.squashY + breathing), 1);
       catSprite.position.y = (0.5 - contactY) * catSprite.scale.y;
       catTurnSprite.scale.set(catBaseScale.x * next.cat.squashX, catBaseScale.y * next.cat.squashY, 1);
       catTurnSprite.position.y = (0.5 - CAT_TURN_CONTACT_Y) * catTurnSprite.scale.y;
@@ -700,8 +704,10 @@ export async function startPondRenderer(options: StartOptions) {
         if (!visual) continue;
         const point = worldToScreen(fly.position);
         visual.container.position.set(Math.round(point.x), Math.round(point.y), 0);
-        visual.container.rotation.z += pondAngleDelta(visual.container.rotation.z, fly.heading) * Math.min(1, delta * 5);
-        visual.wings.scale.y = 0.45 + Math.abs(Math.sin(fly.wingPhase)) * (fly.reacting ? 1.1 : 0.75);
+        visual.container.scale.setScalar(1 + fly.lift * 0.008);
+        const speed = Math.hypot(fly.velocity.x, fly.velocity.y);
+        if (speed > 2) visual.container.rotation.z += pondAngleDelta(visual.container.rotation.z, fly.heading) * (1 - Math.exp(-delta * 8));
+        visual.wings.scale.y = 0.35 + Math.abs(Math.sin(fly.wingPhase)) * fly.wingActivity * (fly.reacting ? 1.1 : 0.75);
       }
 
       for (const fish of frame.fish) {
@@ -712,17 +718,23 @@ export async function startPondRenderer(options: StartOptions) {
         const order = 2 + point.y / (1 + Math.abs(point.y)) * 0.1;
         visual.shadow.renderOrder = order;
         visual.sprite.renderOrder = order + 1e-9;
-        visual.container.rotation.z += pondAngleDelta(visual.container.rotation.z, fish.heading + Math.PI / 2) * Math.min(1, delta * (fish.reacting ? 8 : fish.goal ? 4.5 : 2.2));
-        visual.animation.speed = 0.032 + Math.min(0.026, Math.hypot(fish.velocity.x, fish.velocity.y) / 13 * 0.014);
-        const depthAlpha = fish.state === "feeding" ? 0.98 : fish.state === "circling" ? 0.93 : fish.alpha;
+        const speed = Math.hypot(fish.velocity.x, fish.velocity.y);
+        const turn = pondAngleDelta(visual.container.rotation.z, fish.heading + Math.PI / 2);
+        visual.container.rotation.z += turn * (1 - Math.exp(-delta * (fish.reacting ? 14 : 9)));
+        const effort = Math.min(2.5, fish.speedScale);
+        visual.animation.speed = (0.012 + effort * 0.025) * motionScale;
+        const depthAlpha = Math.min(0.98, fish.alpha + (0.5 - fish.depth) * 0.28);
         visual.alpha += (depthAlpha - visual.alpha) * Math.min(1, delta * 4);
         visual.sprite.material.opacity = visual.alpha;
         visual.shadow.material.opacity = visual.alpha;
         visual.sprite.material.color.setHex(fish.state === "feeding" ? 0xf4fff3 : 0xe8fff9);
         animate(visual.animation, delta);
         const peck = fish.state === "feeding" ? 1 - Math.abs(fish.feedingPulse * 2 - 1) * 0.055 : 1;
-        visual.sprite.scale.set(visual.baseScaleX * peck, visual.baseScaleY * (2 - peck), 1);
-        if (now - visual.lastWake > 230 + fish.displayWidth * 2) {
+        const flex = Math.sin(fish.swimPhase) * Math.min(0.018, effort * 0.009);
+        visual.sprite.rotation.z = Math.sin(fish.swimPhase) * 0.018 * Math.min(1, effort) + Math.max(-0.08, Math.min(0.08, fish.turnRate * 0.035));
+        visual.sprite.scale.set(visual.baseScaleX * (peck + flex), visual.baseScaleY * (2 - peck - flex * 0.5), 1);
+        visual.shadow.scale.setScalar(0.86 + fish.depth * 0.24);
+        if (!reduced && speed > 9 && now - visual.lastWake > (230 + fish.displayWidth * 2) / Math.max(0.65, effort)) {
           const tail = worldToScreen({
             x: fish.position.x - Math.cos(fish.heading) * fish.displayWidth * 0.22,
             y: fish.position.y - Math.sin(fish.heading) * fish.displayWidth * 0.22,
@@ -763,11 +775,12 @@ export async function startPondRenderer(options: StartOptions) {
         return true;
       });
       ripples = ripples.filter((ripple) => now - ripple.born < ripple.life);
-      for (let index = 0; index < 2; index += 1) {
+      for (let index = 0; index < POND_RIPPLE_CAPACITY; index += 1) {
         const ripple = ripples[index];
         if (ripple) {
           water.uniforms.rippleCenters.value[index].set(ripple.x, ripple.y, ripple.size, 1.2 + ripple.strength * 3.8);
-          water.uniforms.rippleWaves.value[index].set((now - ripple.born) / 1000, ripple.speed, 22 + ripple.size * 0.16, 1);
+          const age = (now - ripple.born) / 1000;
+          water.uniforms.rippleWaves.value[index].set(age, ripple.speed, 22 + ripple.size * 0.16, Math.exp(-age * 1.4));
         } else {
           water.uniforms.rippleWaves.value[index].w = 0;
         }
