@@ -49,6 +49,9 @@ type FishVisual = {
   baseScaleY: number;
   lastWake: number;
   surfaced: boolean;
+  status: THREE.Group;
+  bonk: PondPixels;
+  stars: PondPixels;
 };
 type FlyVisual = { container: THREE.Group; wings: PondPixels };
 type FoodVisual = { container: THREE.Group; group: THREE.Group; pellets: PondPixels[]; shadow: PondPixels };
@@ -314,9 +317,31 @@ export async function startPondRenderer(options: StartOptions) {
       const container = new THREE.Group();
       container.add(shadow, fishSprite);
       fishLayer.add(container);
+      const bonk = pixels(9, 180);
+      const glyphs = [
+        ["010", "111", "010", "101", "000"],
+        ["100", "100", "110", "101", "110"],
+        ["000", "000", "010", "101", "010"],
+        ["000", "000", "110", "101", "101"],
+        ["100", "101", "110", "101", "101"],
+        ["010", "111", "010", "101", "000"],
+      ];
+      for (const shadowPass of [true, false]) {
+        glyphs.forEach((glyph, letter) => glyph.forEach((row, y) => {
+          for (let x = 0; x < row.length; x += 1) {
+            if (row[x] === "1") bonk.rectangle((letter * 4 + x - 11.5) * 2 + (shadowPass ? 1 : 0),
+              y * 2 + (shadowPass ? 1 : 0), 2, 2, shadowPass ? 0x173d3c : 0xffefb0);
+          }
+        }));
+      }
+      const stars = pixels(9.1, 24);
+      const status = new THREE.Group();
+      status.add(bonk, stars);
+      status.visible = false;
+      stage.add(status);
       fishVisuals.set(fish.id, {
         container, sprite: fishSprite, shadow, animation, alpha: fish.alpha,
-        baseScaleX: fish.displayWidth, baseScaleY: fish.displayWidth, lastWake: 0, surfaced: false,
+        baseScaleX: fish.displayWidth, baseScaleY: fish.displayWidth, lastWake: 0, surfaced: false, status, bonk, stars,
       });
     }
 
@@ -665,7 +690,7 @@ export async function startPondRenderer(options: StartOptions) {
         const visual = foodVisuals.get(food.id) ?? createFoodVisual(food.id);
         const point = worldToScreen(food.position);
         const fall = Math.pow(1 - food.dropProgress, 2) * (reduced ? 5 : 22);
-        visual.container.position.set(Math.round(point.x), Math.round(point.y), 0);
+        visual.container.position.set(point.x, point.y, 0);
         visual.group.position.y = -fall;
         visual.group.scale.setScalar((0.76 + food.pelletSize / 13) * (food.state === "depleted" ? 0.72 : 1));
         visual.shadow.material.opacity = food.state === "dropping" ? 0.12 + food.dropProgress * 0.5 : 0.7;
@@ -715,7 +740,7 @@ export async function startPondRenderer(options: StartOptions) {
         const visual = flyVisuals.get(fly.id);
         if (!visual) continue;
         const point = worldToScreen(fly.position);
-        visual.container.position.set(Math.round(point.x), Math.round(point.y), 0);
+        visual.container.position.set(point.x, point.y, 0);
         visual.container.scale.setScalar(1 + fly.lift * 0.008);
         const speed = Math.hypot(fly.velocity.x, fly.velocity.y);
         if (speed > 2) visual.container.rotation.z += pondAngleDelta(visual.container.rotation.z, fly.heading) * (1 - Math.exp(-delta * 8));
@@ -726,28 +751,48 @@ export async function startPondRenderer(options: StartOptions) {
         const visual = fishVisuals.get(fish.id);
         if (!visual) continue;
         const point = worldToScreen(fish.position);
-        visual.container.position.set(Math.round(point.x), Math.round(point.y), 0);
+        visual.container.position.set(point.x, point.y, 0);
         const order = 2 + point.y / (1 + Math.abs(point.y)) * 0.1;
         visual.shadow.renderOrder = order;
         visual.sprite.renderOrder = order + 1e-9;
         const speed = Math.hypot(fish.velocity.x, fish.velocity.y);
-        const turn = pondAngleDelta(visual.container.rotation.z, fish.heading + Math.PI / 2);
-        visual.container.rotation.z += turn * (1 - Math.exp(-delta * (fish.reacting ? 14 : 9)));
+        visual.container.rotation.z = fish.heading + Math.PI / 2;
         const effort = Math.min(2.5, fish.speedScale);
         visual.animation.speed = (0.012 + effort * 0.025) * motionScale;
         const depthAlpha = Math.min(0.98, fish.alpha + (0.5 - fish.depth) * 0.55);
         visual.alpha += (depthAlpha - visual.alpha) * Math.min(1, delta * 4);
         visual.sprite.material.opacity = visual.alpha;
         visual.shadow.material.opacity = visual.alpha;
-        visual.sprite.material.color.setHex(fish.state === "feeding" ? 0xf4fff3 : 0xe8fff9);
+        visual.sprite.material.color.setHex(fish.stun ? 0xd4d5ef : fish.state === "feeding" ? 0xf4fff3 : 0xe8fff9);
         animate(visual.animation, delta);
         const peck = fish.state === "feeding" ? 1 - Math.abs(fish.feedingPulse * 2 - 1) * 0.055 : 1;
-        const stroke = fish.activity === "gliding" ? 0.25 : Math.min(1.6, effort);
+        const stroke = fish.stun ? 0.12 : fish.activity === "gliding" ? 0.25 : Math.min(1.6, effort);
         const flex = Math.sin(fish.swimPhase) * 0.035 * stroke;
         visual.sprite.rotation.z = Math.sin(fish.swimPhase) * 0.065 * stroke + Math.max(-0.12, Math.min(0.12, fish.turnRate * 0.055));
         const depthScale = 0.9 + (1 - fish.depth) * 0.18;
-        visual.sprite.scale.set(visual.baseScaleX * (peck + flex) * depthScale, visual.baseScaleY * (2 - peck - flex * 0.5) * depthScale, 1);
-        visual.shadow.scale.setScalar(0.86 + fish.depth * 0.24);
+        visual.sprite.scale.set(visual.baseScaleX * viewScale * (peck + flex) * depthScale, visual.baseScaleY * viewScale * (2 - peck - flex * 0.5) * depthScale, 1);
+        visual.shadow.scale.setScalar((0.86 + fish.depth * 0.24) * viewScale);
+        visual.status.visible = fish.stun !== null;
+        if (fish.stun) {
+          const headOffset = fish.displayWidth * viewScale * depthScale * 0.43;
+          visual.status.position.set(point.x + Math.cos(fish.heading) * headOffset,
+            point.y + Math.sin(fish.heading) * headOffset - 14, 0);
+          visual.bonk.position.y = -22 - Math.min(1, fish.stun.elapsed / 1.3) * (reduced ? 0 : 10);
+          visual.bonk.material.opacity = Math.max(0, 1 - fish.stun.elapsed / 1.3);
+          visual.stars.clear();
+          for (let index = 0; index < 3; index += 1) {
+            const angle = index / 3 * Math.PI * 2 + (reduced ? 0 : fish.stun.elapsed * 4);
+            const x = Math.round(Math.cos(angle) * 15);
+            const y = Math.round(Math.sin(angle) * 6);
+            visual.stars.rectangle(x - 1, y - 4, 2, 3, 0xffdb72);
+            visual.stars.rectangle(x - 5, y - 1, 10, 2, 0xffdb72);
+            visual.stars.rectangle(x - 3, y + 1, 6, 2, 0xffdb72);
+            visual.stars.rectangle(x - 4, y + 3, 2, 2, 0xffdb72);
+            visual.stars.rectangle(x + 2, y + 3, 2, 2, 0xffdb72);
+            visual.stars.rectangle(x - 1, y - 1, 2, 2, 0xfff8d3);
+          }
+          visual.stars.material.opacity = Math.min(1, fish.stun.remaining / 0.35);
+        }
         const surfaced = fish.depth < 0.18;
         if (surfaced && !visual.surfaced && !reduced) {
           addRing(point.x, point.y, fish.displayWidth * 0.34, 1100, 0xd9fff0);
@@ -820,6 +865,9 @@ export async function startPondRenderer(options: StartOptions) {
         host.dataset.fishWorldPositions = frame.fish.map((fish) => `${fish.position.x.toFixed(2)},${fish.position.y.toFixed(2)}`).join(";");
         host.dataset.fishReacting = String(frame.fish.some((fish) => fish.reacting));
         host.dataset.fishActivities = frame.fish.map((fish) => `${fish.id}:${fish.activity}`).join(";");
+        host.dataset.fishStuns = frame.fish.flatMap((fish) => fish.stun
+          ? [`${fish.id}:${fish.stun.remaining.toFixed(2)}:${fish.stun.serial}`] : []).join(";");
+        host.dataset.fishHeadings = frame.fish.map((fish) => fish.heading.toFixed(3)).join(";");
         host.dataset.fishWaterViolation = String(frame.fish.some((fish) => !isWaterWorld(fish.position.x, fish.position.y)));
         host.dataset.fishMaxStep = Math.max(...frame.fish.map((fish) => fish.maxStep)).toFixed(2);
         host.dataset.fishAverageSpeed = (

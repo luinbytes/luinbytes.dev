@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { inflateSync } from "node:zlib";
 
 import {
   createPondWorld,
@@ -8,7 +9,12 @@ import {
   type PondTarget,
   type PondWorldEvent,
 } from "../components/concepts/signal-desk/pond-world.ts";
-import { createPondSimulation, type PondPointerInput } from "../components/concepts/signal-desk/pond-simulation.ts";
+import {
+  createPondSimulation,
+  type FishDefinition,
+  type FishSimulationFrame,
+  type PondPointerInput,
+} from "../components/concepts/signal-desk/pond-simulation.ts";
 
 const FRAME_MS = 1000 / 30;
 const ALL_ANCHORS = ROCK_ANCHORS.map((anchor) => anchor.id);
@@ -39,6 +45,49 @@ const MOTION_FLY = {
   speed: 0.021,
   color: 0x56d7c8,
 };
+
+function contactSimulation(fish: readonly FishDefinition[], seed = "contact-angles") {
+  return createPondSimulation({ seed, width: 1586, height: 1024, isWater: () => true, fish, flies: [] });
+}
+
+function tickFish(simulation: ReturnType<typeof createPondSimulation>, index: number, delta = 1 / 30, pointer = QUIET_POINTER) {
+  return simulation.step({ now: index * FRAME_MS, delta, pointer, visibleAnchorIds: [] });
+}
+
+function assertFishBodiesClear(fish: readonly FishSimulationFrame[]) {
+  for (let first = 0; first < fish.length; first += 1) {
+    for (let second = first + 1; second < fish.length; second += 1) {
+      const a = fish[first];
+      const b = fish[second];
+      for (const firstOffset of [-0.2, 0, 0.2]) {
+        for (const secondOffset of [-0.2, 0, 0.2]) {
+          const distance = Math.hypot(
+            b.position.x + Math.cos(b.heading) * secondOffset * b.displayWidth - a.position.x - Math.cos(a.heading) * firstOffset * a.displayWidth,
+            b.position.y + Math.sin(b.heading) * secondOffset * b.displayWidth - a.position.y - Math.sin(a.heading) * firstOffset * a.displayWidth,
+          );
+          assert.ok(distance >= (a.displayWidth + b.displayWidth) * 0.36 - 1e-7,
+            `${a.id} passed through ${b.id} at depth ${a.depth}/${b.depth}, gap ${distance - (a.displayWidth + b.displayWidth) * 0.36}`);
+        }
+      }
+    }
+  }
+}
+
+function noseContactFish(degrees: number): FishDefinition[] {
+  const angle = degrees * Math.PI / 180;
+  return [
+    { ...MOTION_FISH, id: "a" },
+    {
+      ...MOTION_FISH,
+      id: "b",
+      heading: Math.PI + angle,
+      position: {
+        x: 500 + 10.8 * (1 + Math.cos(angle)) + Math.cos(angle / 2) * 38.891,
+        y: 500 + 10.8 * Math.sin(angle) + Math.sin(angle / 2) * 38.891,
+      },
+    },
+  ];
+}
 
 function nearbyTargets(now: number): PondTarget[] {
   return ROCK_ANCHORS.map((anchor, index) => ({
@@ -604,4 +653,279 @@ test("seeded locomotion is reproducible and paused or invalid deltas cannot adva
   assert.ok(Math.hypot(resumed.flies[0].position.x - before.flies[0].position.x, resumed.flies[0].position.y - before.flies[0].position.y) <= 14.3);
   first.destroy();
   second.destroy();
+});
+
+test("shore steering retains its turn instead of flipping at a blocked bank", () => {
+  const simulation = createPondSimulation({
+    seed: "jitter-9", width: 1586, height: 1024,
+    isWater: (x, y) => x > 200 && x < 750 && y > 200 && y < 700,
+    fish: [{ ...MOTION_FISH, id: "a", displayWidth: 82, position: { x: 720, y: 490 }, cruise: 35 }], flies: [],
+  });
+  const pointer = { ...QUIET_POINTER, position: { x: 600, y: 490 }, influence: 1, energy: 1 };
+  let previous = tickFish(simulation, 0, 0, pointer).fish[0];
+  let reversals = 0;
+  let stillFrames = 0;
+  let longestStill = 0;
+  let traveled = 0;
+  for (let index = 1; index <= 900; index += 1) {
+    const fish = tickFish(simulation, index, 1 / 30, pointer).fish[0];
+    const distance = Math.hypot(fish.position.x - previous.position.x, fish.position.y - previous.position.y);
+    if (fish.turnRate * previous.turnRate < 0 && Math.abs(fish.turnRate) > 1 && Math.abs(previous.turnRate) > 1) reversals += 1;
+    stillFrames = distance < 0.01 ? stillFrames + 1 : 0;
+    longestStill = Math.max(longestStill, stillFrames);
+    traveled += distance;
+    assert.ok(distance <= 35 * 3.5 / 30 + 1e-8, "bank recovery jumped");
+    previous = fish;
+  }
+  assert.ok(reversals <= 4, `shore steering reversed ${reversals} times`);
+  assert.ok(longestStill < 30, `fish was pinned for ${longestStill} frames`);
+  assert.ok(traveled > 600, `fish traveled only ${traveled} world units`);
+  simulation.destroy();
+});
+
+test("the authored raster bank provides an escape instead of a stationary fish", () => {
+  // Alpha > 96 from the authored water layer, cropped at 1180,400 to 160 by 160.
+  const bits = inflateSync(Buffer.from(
+    "eJzt1LuRxCAMAFAxDggpgVJcGu7kWnEp28E5dOAxh8RPAu2Nw7uZJVnvGwOSEI6xjADwiv4Vo4XYhlFsgSO6ZI6ZhTPaI0bPzMNNtjILW3r3TA/MaP6NE6R9xc/4jP88TsVeiu3l1+3d6gVZ4O5WHgH6ynDRT7q9x2geoC9YpjiATTEYzSZrG5f1lmTXYIZZKDPQaoD1g8CtfjiAmd1mW/bZzDFbDYBZqAlBj68Zi3nldsuQKd8hZLRtNNvr3L6THr+mdUqsm/XU0CA/1TIbwFdagUv4uM/BKaAt7GTzbpQqt3Sq+C5rH4oUowDemCkjnC82SdWgruDNCsXYxrg8dUpvKVqeDAbDarJgcEuqOjPXrFcBl6JTHCwAiERw+fWB4fJ+WO+dOZDxQbM42/arhWa7NNr3JW2VRn+DYrTRMdgi0qXlqWCj+ek4cm/0NFzOVBx5sYW3Szltx3u3WOAtWbvim9kiq/nWjGIw2zpbbhRpVjGjGMy2KuYVs4qZ2Up0wvxDc3/Insas2aqYVhfN4lNTap8b7YFpZznYihfCSTP5VnDDFK6hXzD9Y+grfGNvCWdr15EZRXHVoFkGp+xxyr5tIqy8yCp3RHHfmjnFwmBnfWJ21d1Gw0h/AHkU42I=",
+    "base64",
+  ));
+  const isWater = (x: number, y: number) => {
+    const localX = Math.round(x) - 1180;
+    const localY = Math.round(y) - 400;
+    const bit = localY * 160 + localX;
+    return localX >= 0 && localX < 160 && localY >= 0 && localY < 160 && (bits[bit >> 3] & 1 << (bit & 7)) !== 0;
+  };
+  const simulation = createPondSimulation({
+    seed: "stuck-repro", width: 1586, height: 992, isWater,
+    fish: [{ ...MOTION_FISH, id: "fish-15", position: { x: 1256.779, y: 470.504 }, heading: -0.9224, cruise: 27 }], flies: [],
+  });
+  let previous = tickFish(simulation, 0, 0).fish[0];
+  let still = 0;
+  let longestStill = 0;
+  let traveled = 0;
+  for (let index = 1; index <= 450; index += 1) {
+    const fish = tickFish(simulation, index).fish[0];
+    const distance = Math.hypot(fish.position.x - previous.position.x, fish.position.y - previous.position.y);
+    traveled += distance;
+    still = distance < 0.001 ? still + 1 : 0;
+    longestStill = Math.max(longestStill, still);
+    assert.equal(isWater(fish.position.x, fish.position.y), true);
+    assert.ok(distance <= 27 * 3.5 / 30 + 1e-8);
+    previous = fish;
+  }
+  assert.ok(longestStill < 60, `raster bank pinned the fish for ${longestStill} frames`);
+  assert.ok(traveled > 40, `fish swam only ${traveled} world units`);
+  simulation.destroy();
+});
+
+test("crossing, flank and overtaking fish swim around occupied bodies without bonking", () => {
+  const scenarios = [
+    [{ ...MOTION_FISH, id: "a", position: { x: 450, y: 500 }, cruise: 35 }, { ...MOTION_FISH, id: "b", position: { x: 500, y: 450 }, heading: Math.PI / 2, cruise: 35 }],
+    [{ ...MOTION_FISH, id: "a", position: { x: 420, y: 500 }, cruise: 40 }, { ...MOTION_FISH, id: "b", position: { x: 500, y: 500 }, cruise: 8 }],
+    [{ ...MOTION_FISH, id: "a", cruise: 30 }, { ...MOTION_FISH, id: "b", position: { x: 538.901, y: 500 }, heading: Math.PI / 2, cruise: 30 }],
+  ];
+  for (const definitions of scenarios) {
+    const simulation = contactSimulation(definitions, "passing");
+    let previous = tickFish(simulation, 0, 0).fish;
+    const traveled = [0, 0];
+    for (let index = 1; index <= 240; index += 1) {
+      const fish = tickFish(simulation, index).fish;
+      assertFishBodiesClear(fish);
+      fish.forEach((agent, fishIndex) => {
+        assert.equal(agent.stun, null, "ordinary passing produced a bonk");
+        traveled[fishIndex] += Math.hypot(agent.position.x - previous[fishIndex].position.x, agent.position.y - previous[fishIndex].position.y);
+      });
+      previous = fish;
+    }
+    assert.ok(traveled[0] > 100 && traveled[1] > 35, `contact froze fish, travel ${traveled}`);
+    simulation.destroy();
+  }
+});
+
+test("a distant head-on course avoids predictively before actual nose contact", () => {
+  const simulation = contactSimulation([
+    { ...MOTION_FISH, id: "a", position: { x: 400, y: 500 }, cruise: 30 },
+    { ...MOTION_FISH, id: "b", position: { x: 600, y: 500 }, heading: Math.PI, cruise: 30 },
+  ], "predictive");
+  let maximumSideStep = 0;
+  for (let index = 1; index <= 120; index += 1) {
+    const fish = tickFish(simulation, index).fish;
+    assertFishBodiesClear(fish);
+    assert.equal(fish.some((agent) => agent.stun !== null), false);
+    maximumSideStep = Math.max(maximumSideStep, ...fish.map((agent) => Math.abs(agent.position.y - 500)));
+  }
+  assert.ok(maximumSideStep > 20, "head-on course never steered aside");
+  simulation.destroy();
+});
+
+test("fish touching a flank yield space to turn and resume swimming", () => {
+  const simulation = contactSimulation([
+    { ...MOTION_FISH, id: "a" },
+    { ...MOTION_FISH, id: "b", position: { x: 549.691, y: 500 }, heading: Math.PI / 2 },
+  ], "touching");
+  const initial = tickFish(simulation, 0, 0).fish;
+  const firstContact = tickFish(simulation, 1).fish;
+  assertFishBodiesClear(firstContact);
+  assert.ok(firstContact[0].heading > 0.05, "a contact at t=0 cancelled the avoidance turn");
+  assert.ok(firstContact[1].heading < Math.PI / 2 - 0.05, "the other fish could not turn out of contact");
+  const traveled = [0, 0];
+  let previous = firstContact;
+  for (let index = 2; index <= 90; index += 1) {
+    const fish = tickFish(simulation, index).fish;
+    assertFishBodiesClear(fish);
+    fish.forEach((agent, fishIndex) => {
+      assert.equal(agent.stun, null, "a flank contact bonked");
+      const distance = Math.hypot(agent.position.x - previous[fishIndex].position.x, agent.position.y - previous[fishIndex].position.y);
+      assert.ok(distance <= 13 * 3.5 / 30 + 1e-8, "yielding teleported a fish");
+      traveled[fishIndex] += distance;
+    });
+    previous = fish;
+  }
+  assert.ok(traveled.every((distance) => distance > 30), `touching fish failed to escape, travel ${traveled}`);
+  assert.ok(Math.hypot(previous[0].position.x - previous[1].position.x, previous[0].position.y - previous[1].position.y) > 60);
+  assertFishBodiesClear(initial);
+  simulation.destroy();
+});
+
+test("only approaching nose contact within 30 degrees of opposing headings bonks", () => {
+  for (const degrees of [0, 29, 30, 31, 90]) {
+    const simulation = contactSimulation(noseContactFish(degrees));
+    const frame = tickFish(simulation, 1);
+    assertFishBodiesClear(frame.fish);
+    assert.deepEqual(frame.fish.map((fish) => fish.stun), degrees <= 30
+      ? [{ remaining: 5, elapsed: 0, serial: 1 }, { remaining: 5, elapsed: 0, serial: 1 }]
+      : [null, null]);
+    simulation.destroy();
+  }
+  const separating = contactSimulation(noseContactFish(0).map((fish) => ({ ...fish, heading: fish.heading + Math.PI })));
+  for (let index = 1; index <= 30; index += 1) {
+    const frame = tickFish(separating, index);
+    assert.equal(frame.fish.some((fish) => fish.stun !== null), false, "opposing tails or separating fish bonked");
+    assertFishBodiesClear(frame.fish);
+  }
+  separating.destroy();
+});
+
+test("bonk lasts five simulation seconds, freezes on pause, ignores food and threat, then accelerates", () => {
+  const simulation = contactSimulation(noseContactFish(0));
+  const contact = tickFish(simulation, 1);
+  assert.deepEqual(contact.fish[0].stun, { remaining: 5, elapsed: 0, serial: 1 });
+  const pausedFish = contact.fish;
+  for (const delta of [0, -1, Number.NaN, Infinity]) {
+    const paused = simulation.step({ now: 300000, delta, pointer: QUIET_POINTER, visibleAnchorIds: [] });
+    assert.deepEqual(paused.fish, pausedFish, "wall-clock pause consumed stun time or moved fish");
+  }
+  simulation.dropFood({ x: 530, y: 500 });
+  const pointer = { ...QUIET_POINTER, position: { x: 480, y: 520 }, influence: 1, energy: 1 };
+  for (let index = 1; index <= 49; index += 1) {
+    const frame = tickFish(simulation, index + 1, 0.1, pointer);
+    assertFishBodiesClear(frame.fish);
+    for (const fish of frame.fish) {
+      assert.ok(fish.stun);
+      assert.equal(fish.stun.serial, 1);
+      assert.ok(Math.abs(fish.stun.remaining - (5 - index * 0.1)) < 1e-8);
+      assert.ok(Math.abs(fish.stun.elapsed - index * 0.1) < 1e-8);
+      assert.ok(fish.speedScale > 0.1 && fish.speedScale <= 0.1800001, "food or danger bypassed slow movement");
+    }
+  }
+  assert.deepEqual(contact.fish[0].stun, { remaining: 5, elapsed: 0, serial: 1 }, "later ticks mutated an exported snapshot");
+  const recovered = tickFish(simulation, 51, 0.1, pointer);
+  assert.deepEqual(recovered.fish.map((fish) => fish.stun), [null, null]);
+  assert.ok(recovered.fish.every((fish) => fish.speedScale > 0.18 && fish.speedScale < 1.1), "recovery skipped normal acceleration");
+  let resumedSpeed = 0;
+  for (let index = 52; index <= 81; index += 1) {
+    const frame = tickFish(simulation, index, 0.1, pointer);
+    assertFishBodiesClear(frame.fish);
+    assert.equal(frame.fish.some((fish) => fish.stun !== null), false, "contact retriggered a stun loop");
+    resumedSpeed = Math.max(resumedSpeed, frame.fish[0].speedScale);
+  }
+  assert.ok(resumedSpeed > 2, "fish never resumed normal escape speed");
+  simulation.destroy();
+});
+
+test("swept contacts prevent small fast fish from tunneling between large frame steps", () => {
+  const simulation = contactSimulation([
+    { ...MOTION_FISH, id: "a", displayWidth: 12, position: { x: 420, y: 500 }, cruise: 500 },
+    { ...MOTION_FISH, id: "b", displayWidth: 12, position: { x: 500, y: 420 }, heading: Math.PI / 2, cruise: 500 },
+  ], "swept");
+  let previous = tickFish(simulation, 0, 0).fish;
+  let traveled = 0;
+  for (let index = 1; index <= 10; index += 1) {
+    const fish = tickFish(simulation, index, 0.1).fish;
+    for (let sample = 0; sample <= 20; sample += 1) {
+      assertFishBodiesClear(fish.map((agent, fishIndex) => {
+        const before = previous[fishIndex];
+        const turn = Math.atan2(Math.sin(agent.heading - before.heading), Math.cos(agent.heading - before.heading));
+        return { ...agent, position: {
+          x: before.position.x + (agent.position.x - before.position.x) * sample / 20,
+          y: before.position.y + (agent.position.y - before.position.y) * sample / 20,
+        }, heading: before.heading + turn * sample / 20 };
+      }));
+    }
+    traveled += Math.hypot(fish[0].position.x - previous[0].position.x, fish[0].position.y - previous[0].position.y);
+    previous = fish;
+  }
+  assert.ok(traveled > 200, "swept resolution froze the scene");
+  simulation.destroy();
+});
+
+test("separating disc chords still prevent contact during the interpolated turn", () => {
+  const simulation = contactSimulation([
+    { ...MOTION_FISH, id: "a", displayWidth: 82, cruise: 0.1 },
+    { ...MOTION_FISH, id: "b", displayWidth: 82, cruise: 0.1,
+      position: { x: 591.5452552932435, y: 506.4186551001654 }, heading: Math.PI },
+  ]);
+  const pointer = { ...QUIET_POINTER, position: { x: 480, y: 500 }, influence: 1, energy: 1 };
+  const before = tickFish(simulation, 0, 0, pointer).fish;
+  const after = tickFish(simulation, 1, 0.1, pointer).fish;
+  assertFishBodiesClear(before);
+  assertFishBodiesClear(after);
+  for (let sample = 1; sample < 100; sample += 1) {
+    assertFishBodiesClear(after.map((agent, fishIndex) => {
+      const start = before[fishIndex];
+      const turn = Math.atan2(Math.sin(agent.heading - start.heading), Math.cos(agent.heading - start.heading));
+      return { ...agent, position: {
+        x: start.position.x + (agent.position.x - start.position.x) * sample / 100,
+        y: start.position.y + (agent.position.y - start.position.y) * sample / 100,
+      }, heading: start.heading + turn * sample / 100 };
+    }));
+  }
+  assert.deepEqual(after.map((agent) => agent.stun), [
+    { remaining: 5, elapsed: 0, serial: 1 },
+    { remaining: 5, elapsed: 0, serial: 1 },
+  ]);
+  simulation.destroy();
+});
+
+test("overlapping shoreline spawns separate in water before the first frame without bonking", () => {
+  const isWater = (x: number, y: number) => x > 200 && x < 900 && y > 200 && y < 700;
+  const simulation = createPondSimulation({
+    seed: "spawn-overlap", width: 1586, height: 1024, isWater, flies: [],
+    fish: Array.from({ length: 4 }, (_, index) => ({ ...MOTION_FISH, id: `overlap-${index}`, position: { x: 215, y: 220 }, heading: index * Math.PI / 2 })),
+  });
+  const initial = tickFish(simulation, 0, 0).fish;
+  assertFishBodiesClear(initial);
+  assert.ok(initial.every((fish) => isWater(fish.position.x, fish.position.y) && fish.stun === null && fish.maxStep === 0));
+  for (let index = 1; index <= 90; index += 1) assertFishBodiesClear(tickFish(simulation, index).fish);
+  simulation.destroy();
+});
+
+test("crowded fish locomotion and contact serials are reproducible across seeds", () => {
+  const run = (seed: string) => {
+    const simulation = contactSimulation(Array.from({ length: 8 }, (_, index) => ({
+      ...MOTION_FISH, id: `crowd-${index}`, displayWidth: 40 + index * 3,
+      position: { x: 500 + index % 4 * 62, y: 420 + Math.floor(index / 4) * 65 }, heading: index * 0.9, cruise: 30,
+    })), seed);
+    const trace = [];
+    for (let index = 1; index <= 300; index += 1) {
+      const fish = tickFish(simulation, index).fish;
+      assertFishBodiesClear(fish);
+      if (index % 10 === 0) trace.push(fish);
+    }
+    simulation.destroy();
+    return trace;
+  };
+  const first = run("crowd-1");
+  assert.deepEqual(run("crowd-1"), first);
+  assert.notDeepEqual(run("crowd-2"), first);
 });

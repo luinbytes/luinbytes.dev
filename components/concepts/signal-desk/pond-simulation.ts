@@ -64,6 +64,7 @@ export type FishSimulationFrame = {
   feedingPulse: number;
   reacting: boolean;
   maxStep: number;
+  stun: { remaining: number; elapsed: number; serial: number } | null;
 };
 
 export type FlySimulationFrame = {
@@ -101,6 +102,7 @@ type FishMotion = {
   threat: number;
   escapeHeading: number | null;
   shoreHeading: number | null;
+  shoreRemaining: number;
 };
 
 type FishAgent = FishDefinition & {
@@ -119,7 +121,14 @@ type FishAgent = FishDefinition & {
   motion: FishMotion;
   previous: PondPoint;
   maxStep: number;
+  bodyRadius: number;
+  stun: FishSimulationFrame["stun"];
+  stunSerial: number;
+  stunHeading: number | null;
 };
+
+type FishPair = { first: FishAgent; second: FishAgent; side: 1 | -1; touching: boolean };
+type FishMove = { position: PondPoint; heading: number };
 
 type FlyAgent = FlyDefinition & {
   worldPosition: PondPoint;
@@ -172,6 +181,9 @@ const IDLE_MOTION: Record<FishActivity, { speed: number; duration: readonly [num
 };
 
 const TAU = Math.PI * 2;
+const STUN_SECONDS = 5;
+const CONTACT_GAP = 0.01;
+const OPPOSING_COSINE = Math.cos(Math.PI / 6);
 const response = (rate: number, delta: number) => 1 - Math.exp(-rate * delta);
 const startleStrength = (startle: StartleMemory | null, now: number, duration: number) =>
   startle ? pondClamp((startle.until - now) / duration, 0, 1) : 0;
@@ -180,6 +192,70 @@ function awayHeading(position: PondPoint, origin: PondPoint, fallback: number) {
   return pondDistance(position, origin) > 0.001
     ? Math.atan2(position.y - origin.y, position.x - origin.x)
     : fallback;
+}
+
+function bodyDiscs(agent: FishAgent, pose: FishMove) {
+  return [-0.2, 0, 0.2].map((offset) => ({
+    x: pose.position.x + Math.cos(pose.heading) * agent.displayWidth * offset,
+    y: pose.position.y + Math.sin(pose.heading) * agent.displayWidth * offset,
+  }));
+}
+
+function fishPose(agent: FishAgent): FishMove {
+  return { position: { x: agent.vehicle.position.x, y: agent.vehicle.position.z }, heading: agent.motion.heading };
+}
+
+function bodiesOverlap(first: FishAgent, firstPose: FishMove, second: FishAgent, secondPose: FishMove, gap = CONTACT_GAP) {
+  const radius = (first.displayWidth + second.displayWidth) * 0.36 + gap;
+  return bodyDiscs(first, firstPose).some((a) => bodyDiscs(second, secondPose).some((b) => pondDistance(a, b) < radius));
+}
+
+function sweptDiscContact(a: PondPoint, b: PondPoint, aEnd: PondPoint, bEnd: PondPoint, radius: number) {
+  const x = b.x - a.x;
+  const y = b.y - a.y;
+  const vx = (bEnd.x - b.x) - (aEnd.x - a.x);
+  const vy = (bEnd.y - b.y) - (aEnd.y - a.y);
+  const closing = x * vx + y * vy;
+  const clearance = x * x + y * y - radius * radius;
+  if (clearance <= 1e-8) return 0;
+  if (closing >= -1e-10) return null;
+  const speedSquared = vx * vx + vy * vy;
+  const discriminant = closing * closing - speedSquared * clearance;
+  if (discriminant < 0) return null;
+  const time = clearance / (-closing + Math.sqrt(discriminant));
+  return time <= 1 ? time : null;
+}
+
+function sweptBodyDiscContact(pair: FishPair, a: FishMove, b: FishMove, aEnd: FishMove, bEnd: FishMove, firstDisc: number, secondDisc: number) {
+  const discAt = (agent: FishAgent, start: FishMove, end: FishMove, disc: number, time: number) => {
+    const heading = start.heading + pondAngleDelta(start.heading, end.heading) * time;
+    const offset = agent.displayWidth * (disc - 1) * 0.2;
+    return {
+      x: start.position.x + (end.position.x - start.position.x) * time + Math.cos(heading) * offset,
+      y: start.position.y + (end.position.y - start.position.y) * time + Math.sin(heading) * offset,
+    };
+  };
+  const sweep = (from: number, to: number): number | null => {
+    const first = discAt(pair.first, a, aEnd, firstDisc, from);
+    const second = discAt(pair.second, b, bEnd, secondDisc, from);
+    const firstEnd = discAt(pair.first, a, aEnd, firstDisc, to);
+    const secondEnd = discAt(pair.second, b, bEnd, secondDisc, to);
+    const padding = pair.first.displayWidth * Math.abs(firstDisc - 1) * 0.2 *
+      (1 - Math.cos(pondAngleDelta(a.heading, aEnd.heading) * (to - from) / 2)) +
+      pair.second.displayWidth * Math.abs(secondDisc - 1) * 0.2 *
+      (1 - Math.cos(pondAngleDelta(b.heading, bEnd.heading) * (to - from) / 2));
+    const radius = (pair.first.displayWidth + pair.second.displayWidth) * 0.36 + CONTACT_GAP + padding;
+    const time = sweptDiscContact(first, second, firstEnd, secondEnd, radius);
+    if (time === null) return null;
+    const closing = (second.x - first.x) * (secondEnd.x - second.x - firstEnd.x + first.x) +
+      (second.y - first.y) * (secondEnd.y - second.y - firstEnd.y + first.y);
+    if (time > 0 || closing < -1e-10) return from + (to - from) * time;
+    // Refine separating chords inside the padded radius so a safe escape can advance.
+    if (padding <= 1e-8) return null;
+    const middle = (from + to) / 2;
+    return sweep(from, middle) ?? sweep(middle, to);
+  };
+  return sweep(0, 1);
 }
 
 class SeededWanderBehavior extends YUKA.SteeringBehavior {
@@ -212,13 +288,16 @@ function nearestWater(
   width: number,
   height: number,
   isWater: SimulationOptions["isWater"],
+  clearance = 12,
+  fallback?: PondPoint,
 ) {
   const hasClearance = (candidate: PondPoint) => {
-    if (candidate.x < 20 || candidate.x > width - 20 || candidate.y < 20 || candidate.y > height - 20) return false;
+    if (candidate.x < 20 + clearance || candidate.x > width - 20 - clearance ||
+      candidate.y < 20 + clearance || candidate.y > height - 20 - clearance) return false;
     if (!isWater(candidate.x, candidate.y)) return false;
     for (let sample = 0; sample < 8; sample += 1) {
       const angle = sample / 8 * Math.PI * 2;
-      if (!isWater(candidate.x + Math.cos(angle) * 12, candidate.y + Math.sin(angle) * 12)) return false;
+      if (!isWater(candidate.x + Math.cos(angle) * clearance, candidate.y + Math.sin(angle) * clearance)) return false;
     }
     return true;
   };
@@ -234,7 +313,21 @@ function nearestWater(
       if (hasClearance(candidate)) return candidate;
     }
   }
-  return { x: width / 2, y: height / 2 };
+  if (fallback && hasClearance(fallback)) return { ...fallback };
+  let closest: PondPoint | null = null;
+  let closestDistance = Infinity;
+  for (let x = 20 + clearance; x < width - 20 - clearance; x += 8) {
+    for (let y = 20 + clearance; y < height - 20 - clearance; y += 8) {
+      const candidate = { x, y };
+      const distance = pondDistance(position, candidate);
+      if (distance < closestDistance && hasClearance(candidate)) {
+        closest = candidate;
+        closestDistance = distance;
+      }
+    }
+  }
+  if (closest) return closest;
+  throw new Error("Pond has no water position with fish clearance");
 }
 
 export function createPondSimulation(options: SimulationOptions) {
@@ -255,7 +348,7 @@ export function createPondSimulation(options: SimulationOptions) {
       x: agent.vehicle.position.x + Math.cos(angle) * radius,
       y: agent.vehicle.position.z + Math.sin(angle) * radius,
     };
-    return nearestWater(
+    const goal = nearestWater(
       {
         x: pondClamp(candidate.x + duration(-46, 46), 60, width - 60),
         y: pondClamp(candidate.y + duration(-38, 38), 60, height - 60),
@@ -263,11 +356,28 @@ export function createPondSimulation(options: SimulationOptions) {
       width,
       height,
       isWater,
+      agent.bodyRadius,
+      { x: agent.vehicle.position.x, y: agent.vehicle.position.z },
     );
+    const from = { x: agent.vehicle.position.x, y: agent.vehicle.position.z };
+    if (waterPath(from, Math.atan2(goal.y - from.y, goal.x - from.x), pondDistance(from, goal), agent.bodyRadius)) return goal;
+    // A wet destination across an island is still an unreachable local route.
+    for (let sample = 0; sample < 24; sample += 1) {
+      const localHeading = angle + sample / 24 * TAU;
+      for (const length of [160, 90, 45]) {
+        if (waterPath(from, localHeading, length, agent.bodyRadius)) {
+          return { x: from.x + Math.cos(localHeading) * length, y: from.y + Math.sin(localHeading) * length };
+        }
+      }
+    }
+    return from;
   };
 
   const fish = options.fish.map((definition): FishAgent => {
-    const initial = nearestWater(definition.position, width, height, isWater);
+    // Three discs cover the atlas, including its 1.08 depth scale and stroke flex.
+    // Their 1.12 by 0.72 cell envelope applies equally to every swimming depth.
+    const bodyRadius = definition.displayWidth * 0.56;
+    const initial = nearestWater(definition.position, width, height, isWater, bodyRadius);
     const vehicle = new YUKA.Vehicle();
     vehicle.position.set(initial.x, 0, initial.y);
     vehicle.velocity.set(
@@ -343,14 +453,27 @@ export function createPondSimulation(options: SimulationOptions) {
         threat: 0,
         escapeHeading: null,
         shoreHeading: null,
+        shoreRemaining: 0,
       },
       previous: initial,
       maxStep: 0,
+      bodyRadius,
+      stun: null,
+      stunSerial: 0,
+      stunHeading: null,
     };
     agent.routeGoal = routePoint(agent);
     agent.goalTarget.set(agent.routeGoal.x, 0, agent.routeGoal.y);
     return agent;
   });
+
+  const pairs: FishPair[] = [];
+  const orderedFish = [...fish].sort((a, b) => a.id.localeCompare(b.id));
+  for (let first = 0; first < orderedFish.length; first += 1) {
+    for (let second = first + 1; second < orderedFish.length; second += 1) {
+      pairs.push({ first: orderedFish[first], second: orderedFish[second], side: 1, touching: false });
+    }
+  }
 
   const flies = options.flies.map((definition): FlyAgent => ({
     ...definition,
@@ -416,56 +539,284 @@ export function createPondSimulation(options: SimulationOptions) {
     return x >= 20 && x <= width - 20 && y >= 20 && y <= height - 20 && isWater(x, y);
   }
 
-  function waterPath(from: PondPoint, heading: number, length: number) {
-    const samples = Math.max(1, Math.ceil(length));
+  function waterClearance(point: PondPoint, radius = 0) {
+    if (!waterAt(point.x, point.y)) return false;
+    for (let sample = 0; radius > 0 && sample < 12; sample += 1) {
+      const angle = sample / 12 * TAU;
+      if (!waterAt(point.x + Math.cos(angle) * radius, point.y + Math.sin(angle) * radius)) return false;
+    }
+    return true;
+  }
+
+  function waterPath(from: PondPoint, heading: number, length: number, radius = 0) {
+    // Raster shore edges can reject a subpixel step even when a one-unit probe is wet.
+    for (const probe of [0.025, 0.05, 0.1, 0.25]) {
+      const distance = Math.min(length, probe);
+      if (!waterClearance({ x: from.x + Math.cos(heading) * distance, y: from.y + Math.sin(heading) * distance }, radius)) return false;
+    }
+    const samples = Math.max(1, Math.ceil(length * 4));
     for (let sample = 1; sample <= samples; sample += 1) {
       const distance = length * sample / samples;
-      if (!waterAt(from.x + Math.cos(heading) * distance, from.y + Math.sin(heading) * distance)) return false;
+      if (!waterClearance({ x: from.x + Math.cos(heading) * distance, y: from.y + Math.sin(heading) * distance }, radius)) return false;
     }
     return true;
   }
 
   function shorelineHeading(agent: FishAgent, heading: number, lookAhead: number) {
     const from = agent.previous;
-    if (waterPath(from, heading, lookAhead)) return null;
+    const retained = agent.motion.shoreHeading;
+    if (retained !== null && waterPath(from, retained, Math.min(lookAhead, Math.max(4, agent.motion.speed * 0.5)), agent.bodyRadius) &&
+      (agent.motion.shoreRemaining > 0 || !waterPath(from, heading, lookAhead, agent.bodyRadius))) return retained;
+    if (waterPath(from, heading, lookAhead, agent.bodyRadius)) return null;
+    const basis = retained ?? heading;
     for (const angle of [0.45, 0.85, 1.3, 1.85, 2.4, Math.PI]) {
       for (const side of [agent.motion.turnBias, -agent.motion.turnBias]) {
-        const candidate = heading + angle * side;
-        if (waterPath(from, candidate, lookAhead)) return candidate;
+        const candidate = basis + angle * side;
+        if (waterPath(from, candidate, lookAhead, agent.bodyRadius)) {
+          agent.motion.shoreRemaining = 1.4;
+          return candidate;
+        }
       }
     }
-    return awayHeading(from, { x: width / 2, y: height / 2 }, heading) + Math.PI;
+    let bestHeading = heading;
+    let bestLength = 0;
+    let bestTurn = Infinity;
+    for (let sample = 0; sample < 48; sample += 1) {
+      const candidate = heading + sample / 48 * TAU * agent.motion.turnBias;
+      for (const length of [24, 12, 6, 3, 1]) {
+        if (!waterPath(from, candidate, length, agent.bodyRadius)) continue;
+        const turn = Math.abs(pondAngleDelta(agent.motion.heading, candidate));
+        if (length > bestLength || length === bestLength && turn < bestTurn) {
+          bestHeading = candidate;
+          bestLength = length;
+          bestTurn = turn;
+        }
+        break;
+      }
+    }
+    agent.motion.shoreRemaining = 1.4;
+    return bestHeading;
   }
 
   function moveInWater(agent: FishAgent, delta: number) {
     const { motion, previous, vehicle } = agent;
+    let travelHeading = agent.stun ? motion.shoreHeading ?? agent.stunHeading ?? motion.heading : motion.heading;
     const distance = motion.speed * delta;
+    if (motion.shoreHeading !== null && !waterPath(previous, travelHeading, distance, agent.bodyRadius) &&
+      waterPath(previous, motion.shoreHeading, distance, agent.bodyRadius)) travelHeading = motion.shoreHeading;
     const samples = Math.max(1, Math.ceil(distance));
     let fraction = 0;
     for (let sample = 1; sample <= samples; sample += 1) {
       const nextFraction = sample / samples;
-      if (!waterAt(
-        previous.x + Math.cos(motion.heading) * distance * nextFraction,
-        previous.y + Math.sin(motion.heading) * distance * nextFraction,
-      )) break;
+      if (!waterClearance({
+        x: previous.x + Math.cos(travelHeading) * distance * nextFraction,
+        y: previous.y + Math.sin(travelHeading) * distance * nextFraction,
+      }, agent.bodyRadius)) break;
       fraction = nextFraction;
     }
     vehicle.position.set(
-      previous.x + Math.cos(motion.heading) * distance * fraction,
+      previous.x + Math.cos(travelHeading) * distance * fraction,
       0,
-      previous.y + Math.sin(motion.heading) * distance * fraction,
+      previous.y + Math.sin(travelHeading) * distance * fraction,
     );
     if (fraction < 1) motion.speed *= fraction;
-    vehicle.velocity.set(Math.cos(motion.heading) * motion.speed, 0, Math.sin(motion.heading) * motion.speed);
+    vehicle.velocity.set(Math.cos(travelHeading) * motion.speed, 0, Math.sin(travelHeading) * motion.speed);
     return fraction < 1;
+  }
+
+  function separateInitialFish() {
+    const placed: FishAgent[] = [];
+    for (const agent of orderedFish) {
+      const pose = fishPose(agent);
+      const free = (position: PondPoint, escapeLength: number) => waterClearance(position, agent.bodyRadius) &&
+        placed.every((other) => !bodiesOverlap(agent, { position, heading: pose.heading }, other, fishPose(other))) &&
+        Array.from({ length: 24 }, (_, sample) => pose.heading + sample / 24 * TAU)
+          .some((heading) => waterPath(position, heading, escapeLength, agent.bodyRadius));
+      if (!free(pose.position, 60)) {
+        let replacement: PondPoint | null = null;
+        for (const escapeLength of [60, 30, 12]) {
+          for (let radius = 4; !replacement && radius < Math.hypot(width, height); radius += 4) {
+            for (let sample = 0; sample < 48; sample += 1) {
+              const heading = pose.heading + sample / 48 * TAU;
+              const candidate = { x: pose.position.x + Math.cos(heading) * radius, y: pose.position.y + Math.sin(heading) * radius };
+              if (free(candidate, escapeLength)) {
+                replacement = candidate;
+                break;
+              }
+            }
+          }
+          if (replacement) break;
+        }
+        if (!replacement) throw new Error("Pond cannot fit non-overlapping fish in water");
+        agent.vehicle.position.set(replacement.x, 0, replacement.y);
+        agent.previous = { ...replacement };
+        agent.routeGoal = routePoint(agent);
+        agent.goalTarget.set(agent.routeGoal.x, 0, agent.routeGoal.y);
+      }
+      placed.push(agent);
+    }
+  }
+
+  function avoidanceHeadings() {
+    const offsets = new Map<FishAgent, PondPoint>();
+    const add = (agent: FishAgent, x: number, y: number) => {
+      const offset = offsets.get(agent) ?? { x: 0, y: 0 };
+      offset.x += x;
+      offset.y += y;
+      offsets.set(agent, offset);
+    };
+    for (const pair of pairs) {
+      const { first, second } = pair;
+      const a = fishPose(first).position;
+      const b = fishPose(second).position;
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const distance = Math.hypot(dx, dy);
+      const vx = second.vehicle.velocity.x - first.vehicle.velocity.x;
+      const vy = second.vehicle.velocity.z - first.vehicle.velocity.z;
+      const speedSquared = vx * vx + vy * vy;
+      const closing = dx * vx + dy * vy;
+      const time = speedSquared > 0.001 ? pondClamp(-closing / speedSquared, 0, 2.8) : 0;
+      const closest = Math.hypot(dx + vx * time, dy + vy * time);
+      const radius = first.bodyRadius + second.bodyRadius;
+      if (distance > radius + 18 && (closing >= 0 || closest > radius + 12)) continue;
+      const nx = distance > 0.001 ? dx / distance : 1;
+      const ny = distance > 0.001 ? dy / distance : 0;
+      const urgency = pondClamp((radius + 24 - closest) / 24, 0, 1) * (1 - time / 4);
+      // The same pair keeps its passing side throughout a crossing or an overtake.
+      const tx = -ny * pair.side;
+      const ty = nx * pair.side;
+      add(first, (-nx * 0.45 + tx) * urgency * 2.4, (-ny * 0.45 + ty) * urgency * 2.4);
+      add(second, (nx * 0.45 - tx) * urgency * 2.4, (ny * 0.45 - ty) * urgency * 2.4);
+    }
+    return offsets;
+  }
+
+  function resolveFishContacts(starts: Map<FishAgent, FishMove>, ends: Map<FishAgent, FishMove>, delta: number) {
+    const poses = new Map([...starts].map(([agent, pose]) => [agent, { position: { ...pose.position }, heading: pose.heading }]));
+    for (const pair of pairs) {
+      if (!bodiesOverlap(pair.first, starts.get(pair.first)!, pair.second, starts.get(pair.second)!, 4)) pair.touching = false;
+    }
+    for (let iteration = 0; iteration < fish.length * 6 + 12; iteration += 1) {
+      let contact: { pair: FishPair; time: number; firstDisc: number; secondDisc: number } | null = null;
+      for (const pair of pairs) {
+        const a = poses.get(pair.first)!;
+        const b = poses.get(pair.second)!;
+        const aEnd = ends.get(pair.first)!;
+        const bEnd = ends.get(pair.second)!;
+        // Chord sweeps include the maximum sagitta of each rotating disc center.
+        const arcPadding = pair.first.displayWidth * 0.2 * (1 - Math.cos(pondAngleDelta(a.heading, aEnd.heading) / 2)) +
+          pair.second.displayWidth * 0.2 * (1 - Math.cos(pondAngleDelta(b.heading, bEnd.heading) / 2));
+        if (pondDistance(a.position, b.position) > pair.first.bodyRadius + pair.second.bodyRadius +
+          pondDistance(a.position, aEnd.position) + pondDistance(b.position, bEnd.position) + arcPadding) continue;
+        for (let firstDisc = 0; firstDisc < 3; firstDisc += 1) {
+          for (let secondDisc = 0; secondDisc < 3; secondDisc += 1) {
+            const time = sweptBodyDiscContact(pair, a, b, aEnd, bEnd, firstDisc, secondDisc);
+            if (time !== null && (!contact || time < contact.time)) contact = { pair, time, firstDisc, secondDisc };
+          }
+        }
+      }
+      if (!contact) {
+        for (const [agent, end] of ends) poses.set(agent, end);
+        break;
+      }
+      const { pair, time, firstDisc, secondDisc } = contact;
+      const firstBefore = poses.get(pair.first)!;
+      const secondBefore = poses.get(pair.second)!;
+      const firstMove = { x: ends.get(pair.first)!.position.x - firstBefore.position.x, y: ends.get(pair.first)!.position.y - firstBefore.position.y };
+      const secondMove = { x: ends.get(pair.second)!.position.x - secondBefore.position.x, y: ends.get(pair.second)!.position.y - secondBefore.position.y };
+      for (const [agent, pose] of poses) {
+        const end = ends.get(agent)!;
+        poses.set(agent, {
+          position: { x: pose.position.x + (end.position.x - pose.position.x) * time, y: pose.position.y + (end.position.y - pose.position.y) * time },
+          heading: pose.heading + pondAngleDelta(pose.heading, end.heading) * time,
+        });
+      }
+      const a = poses.get(pair.first)!;
+      const b = poses.get(pair.second)!;
+      const aDisc = bodyDiscs(pair.first, a)[firstDisc];
+      const bDisc = bodyDiscs(pair.second, b)[secondDisc];
+      const distance = pondDistance(aDisc, bDisc);
+      const nx = (bDisc.x - aDisc.x) / Math.max(0.001, distance);
+      const ny = (bDisc.y - aDisc.y) / Math.max(0.001, distance);
+      const point = { x: aDisc.x + nx * pair.first.displayWidth * 0.36, y: aDisc.y + ny * pair.first.displayWidth * 0.36 };
+      const atNose = (agent: FishAgent, pose: FishMove) => pondDistance(point, {
+        x: pose.position.x + Math.cos(pose.heading) * agent.displayWidth * 0.47,
+        y: pose.position.y + Math.sin(pose.heading) * agent.displayWidth * 0.47,
+      }) <= agent.displayWidth * 0.14;
+      const opposing = Math.cos(a.heading - b.heading) <= -OPPOSING_COSINE + 1e-10;
+      const bothApproaching = firstMove.x * nx + firstMove.y * ny > 1e-8 && secondMove.x * nx + secondMove.y * ny < -1e-8;
+      const bonk = !pair.touching && !pair.first.stun && !pair.second.stun && firstDisc === 2 && secondDisc === 2 &&
+        opposing && bothApproaching && atNose(pair.first, a) && atNose(pair.second, b);
+      pair.touching = true;
+      for (const [agent, pose, normal, discIndex] of [[pair.first, a, -1, firstDisc], [pair.second, b, 1, secondDisc]] as const) {
+        const end = ends.get(agent)!;
+        let dx = end.position.x - pose.position.x;
+        let dy = end.position.y - pose.position.y;
+        if (bonk) {
+          agent.stun = { remaining: STUN_SECONDS, elapsed: 0, serial: ++agent.stunSerial };
+          agent.stunHeading = pose.heading + pair.side * Math.PI * 0.65;
+          agent.motion.shoreHeading = null;
+          agent.motion.speed = Math.min(agent.motion.speed, agent.cruise * 0.18);
+          dx = nx * normal * agent.motion.speed * 0.01;
+          dy = ny * normal * agent.motion.speed * 0.01;
+        } else {
+          const relativeX = firstMove.x - secondMove.x;
+          const relativeY = firstMove.y - secondMove.y;
+          const inward = Math.max(0, relativeX * nx + relativeY * ny) * (1 - time) * 0.5;
+          dx += nx * normal * inward;
+          dy += ny * normal * inward;
+          const currentDisc = bodyDiscs(agent, pose)[discIndex];
+          const endDisc = bodyDiscs(agent, end)[discIndex];
+          const rotationX = endDisc.x - currentDisc.x - (end.position.x - pose.position.x);
+          const rotationY = endDisc.y - currentDisc.y - (end.position.y - pose.position.y);
+          const rotationInward = Math.max(0, -normal * (rotationX * nx + rotationY * ny));
+          const padding = agent.displayWidth * 0.2 * (1 - Math.cos(pondAngleDelta(pose.heading, end.heading) / 2));
+          // Yield enough room for the turn instead of indefinitely cancelling it at t=0.
+          dx += nx * normal * (rotationInward + padding + CONTACT_GAP);
+          dy += ny * normal * (rotationInward + padding + CONTACT_GAP);
+        }
+        const limit = agent.stun ? agent.cruise * 0.18 * delta : agent.cruise * 3.5 * delta;
+        const length = Math.hypot(dx, dy);
+        if (length > limit) {
+          dx *= limit / length;
+          dy *= limit / length;
+        }
+        const candidate = { x: pose.position.x + dx, y: pose.position.y + dy };
+        if (waterPath(pose.position, Math.atan2(dy, dx), Math.hypot(dx, dy), agent.bodyRadius)) {
+          end.position = candidate;
+          if (bonk) end.heading = pose.heading;
+        } else {
+          end.position = { ...pose.position };
+          end.heading = pose.heading;
+        }
+      }
+    }
+    for (const agent of fish) {
+      const pose = poses.get(agent)!;
+      agent.vehicle.position.set(pose.position.x, 0, pose.position.y);
+      agent.motion.heading = Math.atan2(Math.sin(pose.heading), Math.cos(pose.heading));
+    }
   }
 
   function updateFish(input: SimulationInput, frame: PondWorldFrame) {
     const intents = new Map(frame.fish.map((intent) => [intent.fishId, intent]));
+    const starts = new Map(fish.map((agent) => [agent, fishPose(agent)]));
+    const avoidance = avoidanceHeadings();
     pointerAgent.position.set(input.pointer.position.x, 0, input.pointer.position.y);
     pointerAgent.velocity.set(input.pointer.velocity.x, 0, input.pointer.velocity.y);
 
     for (const agent of fish) {
+      agent.previous = { ...starts.get(agent)!.position };
+      agent.motion.shoreRemaining = Math.max(0, agent.motion.shoreRemaining - input.delta);
+      if (agent.stun) {
+        agent.stun.remaining = Math.max(0, agent.stun.remaining - input.delta);
+        agent.stun.elapsed = STUN_SECONDS - agent.stun.remaining;
+        if (agent.stun.remaining < 1e-9) {
+          agent.stun = null;
+          agent.stunHeading = null;
+        }
+      }
       const intent = intents.get(agent.id);
       const position = agent.vehicle.position;
       const pointerDistance = pondDistance(
@@ -507,7 +858,7 @@ export function createPondSimulation(options: SimulationOptions) {
       agent.catFlee.weight = 2.8 + catThreat * 2.8;
 
       if (intent?.goal) {
-        const goal = nearestWater(intent.goal, width, height, isWater);
+        const goal = nearestWater(intent.goal, width, height, isWater, agent.bodyRadius, agent.previous);
         agent.goalTarget.set(goal.x, 0, goal.y);
         agent.goalArrive.active = true;
         agent.goalArrive.weight = intent.state === "feeding" ? 1.25 : intent.state === "circling" ? 0.95 : 2.5;
@@ -516,7 +867,7 @@ export function createPondSimulation(options: SimulationOptions) {
         agent.wander.weight += ((intent.state === "approaching-food" ? 0.14 : 0.06) - agent.wander.weight) * Math.min(1, input.delta * 4);
       } else {
         const current = { x: position.x, y: position.z };
-        if (input.now >= agent.nextRouteAt || pondDistance(current, agent.routeGoal) < 70) {
+        if (input.now >= agent.nextRouteAt || pondDistance(current, agent.routeGoal) < 12) {
           agent.routeGoal = routePoint(agent);
           agent.nextRouteAt = input.now + duration(4200, 8500);
         }
@@ -531,7 +882,7 @@ export function createPondSimulation(options: SimulationOptions) {
 
       const foodForce = intent?.state === "approaching-food" ? 9 : 0;
       agent.vehicle.maxForce += (7 + foodForce + totalThreat * 70 - agent.vehicle.maxForce) * response(12, input.delta);
-      const speedScale = Math.max(
+      const speedScale = agent.stun ? 0.18 : Math.max(
         idle ? IDLE_MOTION[agent.motion.activity].speed * agent.motion.variation : intent?.speedScale ?? 1,
         totalThreat > 0.04 ? 1 + totalThreat * 2.35 : 0,
       );
@@ -542,22 +893,40 @@ export function createPondSimulation(options: SimulationOptions) {
       agent.homeSeek.active =
         position.x < 100 || position.x > width - 100 || position.z < 100 || position.z > height - 100;
 
-      const aheadDistance = Math.max(36, agent.displayWidth * 0.6 + agent.motion.speed * 0.9);
-      agent.motion.shoreHeading = shorelineHeading(agent, agent.motion.escapeHeading ?? agent.motion.heading, aheadDistance);
-      if (agent.motion.shoreHeading !== null) agent.motion.activity = "swimming";
     }
 
-    manager.update(input.delta);
-
+    // Yuka supplies steering only. Locomotion owns position and velocity together.
+    const steering = new Map<FishAgent, PondPoint>();
     for (const agent of fish) {
-      const position = agent.vehicle.position;
-      const velocity = agent.vehicle.velocity;
+      manager.updateNeighborhood(agent.vehicle);
+      const force = new YUKA.Vector3();
+      agent.vehicle.steering.calculate(input.delta, force);
+      steering.set(agent, {
+        x: agent.vehicle.velocity.x + force.x * input.delta,
+        y: agent.vehicle.velocity.z + force.z * input.delta,
+      });
+    }
+
+    const ends = new Map<FishAgent, FishMove>();
+    const recoveredFish = new Set<FishAgent>();
+    for (const agent of fish) {
       const intent = intents.get(agent.id);
       const motion = agent.motion;
-      const steeredSpeed = Math.hypot(velocity.x, velocity.z);
+      const suggested = steering.get(agent)!;
+      const steeredSpeed = Math.hypot(suggested.x, suggested.y);
       const cruising = intent?.state === "cruising" || intent?.state === "returning-to-cruise";
-      const targetHeading = motion.shoreHeading ?? motion.escapeHeading ?? (steeredSpeed > 0.1 ? Math.atan2(velocity.z, velocity.x) : motion.heading);
-      const maxTurnRate = (motion.shoreHeading !== null ? 3.4 : 1.15 + motion.threat * 4.8) * motion.variation;
+      let desiredHeading = motion.escapeHeading ?? (steeredSpeed > 0.1 ? Math.atan2(suggested.y, suggested.x) : motion.heading);
+      if (motion.escapeHeading === null && !agent.stun) {
+        const goalHeading = Math.atan2(agent.goalTarget.z - agent.previous.y, agent.goalTarget.x - agent.previous.x);
+        desiredHeading += pondAngleDelta(desiredHeading, goalHeading) * (intent?.goal ? 0.8 : 0.35);
+      }
+      const offset = avoidance.get(agent);
+      if (offset) desiredHeading = Math.atan2(Math.sin(desiredHeading) + offset.y, Math.cos(desiredHeading) + offset.x);
+      if (agent.stun) desiredHeading = agent.stunHeading ?? motion.heading;
+      motion.shoreHeading = shorelineHeading(agent, desiredHeading, Math.max(36, agent.bodyRadius + motion.speed * 0.9));
+      if (motion.shoreHeading !== null) motion.activity = "swimming";
+      const targetHeading = motion.shoreHeading ?? desiredHeading;
+      const maxTurnRate = (agent.stun ? 0.9 : motion.shoreHeading !== null ? 3.4 : offset ? 2.8 : 1.15 + motion.threat * 4.8) * motion.variation;
       const turn = pondClamp(pondAngleDelta(motion.heading, targetHeading), -maxTurnRate * input.delta, maxTurnRate * input.delta);
       motion.heading = Math.atan2(Math.sin(motion.heading + turn), Math.cos(motion.heading + turn));
       motion.turnRate = input.delta > 0 ? turn / input.delta : 0;
@@ -568,10 +937,28 @@ export function createPondSimulation(options: SimulationOptions) {
       if (motion.shoreHeading !== null) {
         targetSpeed = Math.min(targetSpeed, agent.cruise * (0.4 + 0.5 * Math.max(0, Math.cos(pondAngleDelta(motion.heading, targetHeading)))));
       }
+      if (agent.stun) targetSpeed = agent.cruise * 0.18;
       const acceleration = agent.cruise * (1.2 + motion.threat * 6) * motion.variation;
       motion.speed += pondClamp(targetSpeed - motion.speed, -acceleration * input.delta, acceleration * input.delta);
       motion.speed = pondClamp(motion.speed, 0, agent.cruise * 3.5);
       const recovered = moveInWater(agent, input.delta);
+      if (recovered) recoveredFish.add(agent);
+      ends.set(agent, fishPose(agent));
+      const start = starts.get(agent)!;
+      agent.vehicle.position.set(start.position.x, 0, start.position.y);
+      motion.heading = start.heading;
+    }
+
+    resolveFishContacts(starts, ends, input.delta);
+    for (const agent of fish) {
+      const { motion, vehicle } = agent;
+      const position = vehicle.position;
+      const velocity = vehicle.velocity;
+      const intent = intents.get(agent.id);
+      const idle = (intent?.state === "cruising" || intent?.state === "returning-to-cruise") && !intent?.goal && motion.threat <= 0.04;
+      velocity.set((position.x - agent.previous.x) / input.delta, 0, (position.z - agent.previous.y) / input.delta);
+      motion.speed = Math.hypot(velocity.x, velocity.z);
+      motion.turnRate = pondAngleDelta(starts.get(agent)!.heading, motion.heading) / input.delta;
       motion.swimPhase = (motion.swimPhase + input.delta * (2.4 + motion.speed / agent.cruise * 5.5) * motion.variation) % TAU;
       const targetDepth = motion.threat > 0.1 ? 0.9 : intent?.state === "feeding" ? 0.08 : intent?.goal ? 0.22
         : idle && motion.activity === "surfacing" ? 0.05 : motion.cruiseDepth;
@@ -579,7 +966,7 @@ export function createPondSimulation(options: SimulationOptions) {
       const step = pondDistance(agent.previous, { x: position.x, y: position.z });
       agent.maxStep = Math.max(agent.maxStep, step);
       agent.previous = { x: position.x, y: position.z };
-      if (recovered && !intents.get(agent.id)?.goal) {
+      if (recoveredFish.has(agent) && !intents.get(agent.id)?.goal) {
         agent.routeGoal = routePoint(agent);
         agent.goalTarget.set(agent.routeGoal.x, 0, agent.routeGoal.y);
         agent.nextRouteAt = input.now + duration(3200, 7200);
@@ -682,6 +1069,7 @@ export function createPondSimulation(options: SimulationOptions) {
           feedingPulse: intent.feedingPulse,
           reacting: agent.motion.threat > 0.04,
           maxStep: agent.maxStep,
+          stun: agent.stun ? { ...agent.stun } : null,
         };
       }),
       flies: flies.map((agent) => {
@@ -719,6 +1107,8 @@ export function createPondSimulation(options: SimulationOptions) {
     lastFrame = snapshots(frame);
     return lastFrame;
   }
+
+  separateInitialFish();
 
   return {
     dropFood: world.dropFood,
