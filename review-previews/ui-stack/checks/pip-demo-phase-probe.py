@@ -14,13 +14,12 @@ try:
     results=[]
     for phase in ("search","product","addcart","postage","review"):
         page.wait_for_function("phase => document.querySelector('[data-testid=pip-browser-demo]').dataset.phase === phase",arg=phase,timeout=25000)
-        demo.get_by_role("button",name="Pause browsing demo",exact=True).click()
         for theme in ("dark","light"):
             page.emulate_media(color_scheme=theme)
             for width in (320,390,1440):
                 page.set_viewport_size({"width":width,"height":900})
                 demo.scroll_into_view_if_needed()
-                page.wait_for_timeout(80)
+                page.wait_for_function("phase => document.querySelector('[data-testid=pip-browser-demo]').dataset.phase === phase",arg=phase,timeout=25000)
                 result=demo.evaluate("""root => {
                     const browser=root.querySelector('[data-demo-browser]').getBoundingClientRect();
                     const target=root.querySelector('[data-demo-target]').getBoundingClientRect();
@@ -36,7 +35,6 @@ try:
         page.emulate_media(color_scheme="dark")
         page.set_viewport_size({"width":1440,"height":900})
         demo.scroll_into_view_if_needed()
-        demo.get_by_role("button",name="Play browsing demo",exact=True).click()
     Path("review-previews/ui-stack/checks/pip-demo-phase-layout.json").write_text(json.dumps(results,indent=2)+"\n")
     print("PASS",len(results),"phase/layout combinations")
     browser.close()

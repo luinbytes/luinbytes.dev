@@ -20,14 +20,13 @@ try:
     page.wait_for_function("document.querySelector('[data-testid=pip-browser-demo]').dataset.renderer === 'three'")
     page.wait_for_function("document.querySelector('[data-testid=pip-browser-demo]').dataset.phase === 'postage'")
     page.wait_for_timeout(1500)
-    demo.get_by_role("button", name="Pause browsing demo", exact=True).click()
     results = []
     for theme in ("dark", "light"):
         page.emulate_media(color_scheme=theme)
         for width in (320, 390, 1440):
             page.set_viewport_size({"width": width, "height": 900})
             demo.scroll_into_view_if_needed()
-            page.wait_for_timeout(200)
+            page.wait_for_function("document.querySelector('[data-testid=pip-browser-demo]').dataset.phase === 'postage'", timeout=25000)
             demo.screenshot(path=str(shots / f"pip-demo-{width}-{theme}.png"))
             result = page.evaluate("""() => {
                 const root = document.querySelector('[data-testid=pip-browser-demo]');
@@ -44,7 +43,6 @@ try:
             assert not result["overflow"] and result["targetContained"], result
     page.set_viewport_size({"width": 1440, "height": 900})
     page.emulate_media(color_scheme="dark")
-    demo.get_by_role("button", name="Play browsing demo", exact=True).click()
     canvas = demo.locator("canvas")
     canvas.evaluate("element => element.dispatchEvent(new Event('webglcontextlost', {cancelable:true}))")
     page.wait_for_function("document.querySelector('[data-testid=pip-browser-demo]').dataset.renderer === 'fallback'")

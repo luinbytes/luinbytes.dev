@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, Pause, Play, Search } from "lucide-react";
+import { Check, Search } from "lucide-react";
 import { PipFace } from "./pip-logo";
 import type { createDemoRenderer } from "./pip-web-search-renderer";
 import styles from "./pip-web-search-demo.module.css";
@@ -106,7 +106,7 @@ function BrowserContent({ phase }: { phase: Phase }) {
           </div>
         </div>
         <div className={styles.bottom}>
-          <small>Example details</small>
+          <small>Standard delivery</small>
           <span className={styles.action} data-demo-target>
             Continue
           </span>
@@ -130,7 +130,7 @@ function BrowserContent({ phase }: { phase: Phase }) {
         </div>
         <div className={styles.bottom}>
           <small>
-            {phase === "review" ? "Demo total · £15" : "Ready when you are"}
+            {phase === "review" ? "Total · £15" : "Ready when you are"}
           </small>
           <span className={styles.action} data-demo-target>
             {phase === "review" ? "Confirm order" : "Checkout"}
@@ -174,15 +174,11 @@ function BrowserContent({ phase }: { phase: Phase }) {
 export function PipWebSearchDemo() {
   const stageRef = useRef<HTMLDivElement>(null);
   const companionRef = useRef<HTMLDivElement>(null);
-  const playingRef = useRef(true);
-  const wakeRef = useRef<() => void>(() => {});
   const [step, setStep] = useState<Step>(completedStep);
   const [rendererKind, setRendererKind] = useState<
     "pending" | "three" | "fallback"
   >("pending");
   const [playing, setPlaying] = useState(true);
-  const [requestedPlay, setRequestedPlay] = useState(true);
-  const [controlsVisible, setControlsVisible] = useState(false);
 
   useEffect(() => {
     const stageElement = stageRef.current;
@@ -215,10 +211,7 @@ export function PipWebSearchDemo() {
       renderer?.dispose();
       renderer = undefined;
       setRendererKind("fallback");
-      setControlsVisible(false);
       setStep(completedStep);
-      playingRef.current = false;
-      setRequestedPlay(false);
       setPlaying(false);
     }
 
@@ -283,8 +276,7 @@ export function PipWebSearchDemo() {
         motionChanged();
         return;
       }
-      if (!visible || document.hidden || !playingRef.current || !renderer)
-        return;
+      if (!visible || document.hidden || !renderer) return;
       const delta = previous ? Math.min(now - previous, 60) : 0;
       previous = now;
       elapsed += delta;
@@ -323,7 +315,6 @@ export function PipWebSearchDemo() {
         resize();
         if (failed) return;
         setRendererKind("three");
-        setControlsVisible(true);
         wake();
       } catch {
         if (!disposed && requestGeneration === generation) fail();
@@ -343,20 +334,14 @@ export function PipWebSearchDemo() {
 
     function wake() {
       stop();
-      setPlaying(
-        playingRef.current &&
-          visible &&
-          !document.hidden &&
-          !motion.matches &&
-          !failed,
-      );
+      setPlaying(visible && !document.hidden && !motion.matches && !failed);
       if (disposed || motion.matches || failed || !visible || document.hidden)
         return;
       if (!renderer) {
         void loadRenderer();
         return;
       }
-      if (playingRef.current) raf = requestAnimationFrame(tick);
+      raf = requestAnimationFrame(tick);
     }
 
     function motionChanged() {
@@ -369,11 +354,9 @@ export function PipWebSearchDemo() {
         elapsed = 0;
         setStep(completedStep);
         setRendererKind("fallback");
-        setControlsVisible(false);
         setPlaying(false);
         if (companionRef.current) companionRef.current.style.transform = "";
       } else {
-        setPlaying(playingRef.current);
         setRendererKind(failed ? "fallback" : "pending");
         wake();
       }
@@ -389,7 +372,6 @@ export function PipWebSearchDemo() {
     document.addEventListener("visibilitychange", wake);
     motion.addEventListener("change", motionChanged);
     theme.addEventListener("change", resize);
-    wakeRef.current = wake;
     if (motion.matches) motionChanged();
     return () => {
       disposed = true;
@@ -401,16 +383,8 @@ export function PipWebSearchDemo() {
       motion.removeEventListener("change", motionChanged);
       theme.removeEventListener("change", resize);
       renderer?.dispose();
-      wakeRef.current = () => {};
     };
   }, []);
-
-  function togglePlayback() {
-    playingRef.current = !playingRef.current;
-    setRequestedPlay(playingRef.current);
-    setPlaying(playingRef.current);
-    wakeRef.current();
-  }
 
   return (
     <div
@@ -439,7 +413,7 @@ export function PipWebSearchDemo() {
             <i />
             <i />
             <i />
-            <span>pip / browsing demo</span>
+            <span>pip / browsing</span>
             <Search />
           </div>
           <div className={styles.content}>
@@ -447,25 +421,6 @@ export function PipWebSearchDemo() {
           </div>
         </div>
         <div className={styles.status}>{step.label}</div>
-      </div>
-      <div className={styles.caption}>
-        <span>Illustrative demo</span>
-        {controlsVisible && (
-          <button
-            type="button"
-            onClick={togglePlayback}
-            aria-label={
-              requestedPlay ? "Pause browsing demo" : "Play browsing demo"
-            }
-          >
-            {requestedPlay ? (
-              <Pause aria-hidden="true" />
-            ) : (
-              <Play aria-hidden="true" />
-            )}
-            <span>{requestedPlay ? "Pause" : "Play"}</span>
-          </button>
-        )}
       </div>
     </div>
   );

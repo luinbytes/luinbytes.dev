@@ -5,7 +5,7 @@
       "overflow": false,
       "renderer": "three",
       "phase": "postage",
-      "playback": "paused",
+      "playback": "playing",
       "canvasCount": 1,
       "targetContained": true,
       "theme": "dark"
@@ -15,7 +15,7 @@
       "overflow": false,
       "renderer": "three",
       "phase": "postage",
-      "playback": "paused",
+      "playback": "playing",
       "canvasCount": 1,
       "targetContained": true,
       "theme": "dark"
@@ -25,7 +25,7 @@
       "overflow": false,
       "renderer": "three",
       "phase": "postage",
-      "playback": "paused",
+      "playback": "playing",
       "canvasCount": 1,
       "targetContained": true,
       "theme": "dark"
@@ -35,7 +35,7 @@
       "overflow": false,
       "renderer": "three",
       "phase": "postage",
-      "playback": "paused",
+      "playback": "playing",
       "canvasCount": 1,
       "targetContained": true,
       "theme": "light"
@@ -45,7 +45,7 @@
       "overflow": false,
       "renderer": "three",
       "phase": "postage",
-      "playback": "paused",
+      "playback": "playing",
       "canvasCount": 1,
       "targetContained": true,
       "theme": "light"
@@ -54,8 +54,8 @@
       "width": 1440,
       "overflow": false,
       "renderer": "three",
-      "phase": "postage",
-      "playback": "paused",
+      "phase": "review",
+      "playback": "playing",
       "canvasCount": 1,
       "targetContained": true,
       "theme": "light"
@@ -63,11 +63,11 @@
   ],
   "pageErrors": [],
   "contextLoss": "PASS",
-  "videoPath": "/tmp/lu-pip-animation-video/page@4b1fb075c490fe2131d8313f92c10294.webm",
+  "videoPath": "/tmp/lu-pip-animation-video/page@16806cb633f029b8bc314e65f2ede9f9.webm",
   "videoCrop": {
     "x": 81,
-    "y": 212.59375,
+    "y": 229.59375,
     "width": 312.234375,
-    "height": 324
+    "height": 280
   }
 }

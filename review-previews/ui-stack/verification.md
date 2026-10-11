@@ -90,3 +90,10 @@ Lu selected the "Pip beside you" draft. The Web search card now includes a large
 PASS. The final production build and all 29 browser tests pass. Lint and all 3 Pip contact contracts pass. The new checks exercise actual phase progression, manual pause through offscreen suspension, automatic resume, route remount, live reduced-motion changes, and unavailable WebGL. A separate rendered context-loss probe verifies static fallback with no page errors. All 30 action-phase, viewport, and theme combinations keep their targets inside the browser.
 
 The parent inspected both-theme captures at 320px, 390px, and 1440px. An independent source review found no remaining concrete issues after the pause-intent and narrow-form fixes. The initial failed run and resulting reduced-motion fix are retained in the [design and evidence notes](pip-animation.md). [Final browser results](checks/pip-demo-browser.log), [geometry](checks/pip-demo-phase-layout.json), and a [normal-speed clip](videos/pip-beside-you.mp4) make the result reviewable. Physical iPad Safari smoothness remains unverified. All owned loopback validation servers stop after their checks.
+
+
+## Pip controls and wording removal
+
+Lu requested removal of the pause button and demo disclaimers. The animation footer and its CSS, manual playback state, and toggle handler are deleted. The miniature browser title and shopping labels use plain wording. Offscreen suspension, reduced motion, and renderer fallback remain automatic.
+
+PASS. The final production build, lint, and all 29 browser tests pass. The updated browser check verifies no animation button or demo text, phase progression, offscreen freeze and resume, responsive action bounds, reduced motion, and static fallback. See [browser results](checks/pip-clean-browser.log). Fresh screenshots and the normal-speed clip show the cleaned-up card. Physical iPad Safari motion remains unverified.

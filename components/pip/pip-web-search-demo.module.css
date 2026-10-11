@@ -295,37 +295,6 @@
   color: var(--site-muted);
   text-align: center;
 }
-.caption {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  min-height: 34px;
-  color: var(--site-muted);
-  font-size: 10px;
-}
-.caption button {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid var(--site-border);
-  border-radius: 999px;
-  min-height: 44px;
-  min-width: 44px;
-  padding: 5px 10px;
-  color: var(--site-text);
-  background: var(--glass-fill);
-  font: inherit;
-  cursor: pointer;
-}
-.caption button svg {
-  width: 11px;
-  height: 11px;
-}
-.caption button:focus-visible {
-  outline: 2px solid var(--site-accent);
-  outline-offset: 3px;
-}
 @media (max-width: 370px) {
   .content {
     padding: 11px 9px;

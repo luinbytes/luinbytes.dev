@@ -373,7 +373,7 @@ class BrowserTestCase(unittest.TestCase):
 
 
 class PipRouteTests(BrowserTestCase):
-    def test_browsing_demo_renders_and_preserves_manual_pause(self) -> None:
+    def test_browsing_demo_renders_and_suspends_offscreen(self) -> None:
         browser = self.playwright.chromium.launch()
         context = browser.new_context(viewport={"width": 1440, "height": 900})
         page = context.new_page()
@@ -390,28 +390,21 @@ class PipRouteTests(BrowserTestCase):
             arg=first_phase,
             timeout=12000,
         )
-        demo.get_by_role("button", name="Pause browsing demo", exact=True).click()
+        self.assertEqual(demo.get_by_role("button").count(), 0)
+        self.assertNotIn("demo", demo.inner_text().lower())
+        page.locator("header").scroll_into_view_if_needed()
         expect(demo).to_have_attribute("data-playback", "paused")
         paused_phase = demo.get_attribute("data-phase")
-        page.locator("header").scroll_into_view_if_needed()
-        page.wait_for_timeout(3500)
-        demo.scroll_into_view_if_needed()
         page.wait_for_timeout(3500)
         self.assertEqual(demo.get_attribute("data-phase"), paused_phase)
-        expect(demo).to_have_attribute("data-playback", "paused")
-        demo.screenshot(path=SCREENSHOTS / "pip-browsing-demo-1440.png")
-        demo.get_by_role("button", name="Play browsing demo", exact=True).click()
+        demo.scroll_into_view_if_needed()
         expect(demo).to_have_attribute("data-playback", "playing")
-        page.wait_for_function(
-            "phase => document.querySelector('[data-testid=pip-browser-demo]').dataset.phase !== phase",
-            arg=paused_phase,
-            timeout=12000,
-        )
+        demo.screenshot(path=SCREENSHOTS / "pip-browsing-demo-1440.png")
         expect(demo).to_have_attribute("data-phase", "postage", timeout=12000)
-        demo.get_by_role("button", name="Pause browsing demo", exact=True).click()
         for width in (320, 390, 1440):
             page.set_viewport_size({"width": width, "height": 900})
             demo.scroll_into_view_if_needed()
+            expect(demo).to_have_attribute("data-phase", "postage", timeout=25000)
             bounds = demo.locator("[data-demo-browser]").bounding_box()
             target = demo.locator("[data-demo-target]").bounding_box()
             self.assertIsNotNone(bounds)
@@ -419,7 +412,6 @@ class PipRouteTests(BrowserTestCase):
             self.assertGreaterEqual(target["x"], bounds["x"])
             self.assertLessEqual(target["x"] + target["width"], bounds["x"] + bounds["width"])
             self.assertLessEqual(target["y"] + target["height"], bounds["y"] + bounds["height"])
-        demo.get_by_role("button", name="Play browsing demo", exact=True).click()
         page.locator("header").scroll_into_view_if_needed()
         expect(demo).to_have_attribute("data-playback", "paused")
         demo.scroll_into_view_if_needed()
