@@ -405,6 +405,10 @@
     border-radius: 17px;
   }
 
+  .projectNav button:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
   .projectNav strong {
     font-size: 12px;
   }
