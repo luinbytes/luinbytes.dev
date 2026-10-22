@@ -912,7 +912,7 @@ class PortfolioTests(BrowserTestCase):
                     ).is_visible()
                 )
                 expect(page.locator("#hero-title")).to_have_css("clip-path", "none")
-                for project in ("Orchid.ai", "Rakazo", "linux-sonar", "HomeBot"):
+                for project in ("Orchid.ai", "Rakazo", "linux-sonar", "HomeBot", "ConnectorMap"):
                     self.assertTrue(
                         page.get_by_role("button", name=re.compile(project, re.I)).is_visible()
                     )
@@ -1262,7 +1262,7 @@ class PortfolioTests(BrowserTestCase):
                             headingInside: heading.left >= -1 && heading.right <= width + 1 && heading.width > 120,
                             headerInside: header.left >= -1 && header.right <= width + 1,
                             pondFits: Math.abs(pond.width - width) < 1 && Math.abs(pond.height - height) < 1,
-                            projectTargets: buttons.length === 4 && buttons.every(button => button.width >= 44 && button.height >= 44),
+                            projectTargets: buttons.length === 5 && buttons.every(button => button.width >= 44 && button.height >= 44),
                             projectNamesFit: width > 430 || projectNames.every(element => {
                                 const range = document.createRange();
                                 range.selectNodeContents(element);
@@ -1416,7 +1416,7 @@ class PortfolioTests(BrowserTestCase):
             )
         )
         category_labels = page.locator("[aria-label='Featured projects'] button small")
-        self.assertEqual(category_labels.count(), 4)
+        self.assertEqual(category_labels.count(), 5)
         self.assertTrue(
             category_labels.evaluate_all(
                 "elements => elements.every(element => parseFloat(getComputedStyle(element).fontSize) >= 10)"
@@ -1434,6 +1434,7 @@ class PortfolioTests(BrowserTestCase):
             "Rakazo": "https://github.com/luinbytes/rakazo-android",
             "linux-sonar": "https://github.com/luinbytes/linux-sonar",
             "HomeBot": "https://github.com/luinbytes/HomeBot",
+            "ConnectorMap": "https://connectormap.luinbytes.dev",
         }
 
         def assert_homebot_image_fits(panel) -> None:
@@ -1480,6 +1481,26 @@ class PortfolioTests(BrowserTestCase):
             )
             if project == "HomeBot":
                 assert_homebot_image_fits(panel)
+            if project == "ConnectorMap":
+                expect(panel.get_by_text("Which AI agents can actually use which apps.", exact=True)).to_be_visible()
+                expect(panel.get_by_text(
+                    "A live directory of 60 apps across the major AI agents, with endpoints checked daily and a weekly what-changed newsletter.",
+                    exact=True,
+                )).to_be_visible()
+                for tag in ("Live directory", "Daily checks", "Newsletter"):
+                    expect(panel.locator("[class*='proofRow']").get_by_text(tag, exact=True)).to_be_visible()
+                image = panel.get_by_role("img", name="ConnectorMap matrix of AI agents and apps", exact=True)
+                expect(image).to_be_visible()
+                expect(image).to_have_attribute("src", "/images/portfolio/connectormap-card.webp")
+                page.wait_for_function(
+                    """() => {
+                        const image = document.querySelector('img[alt="ConnectorMap matrix of AI agents and apps"]');
+                        return image?.complete && image.naturalWidth > 0;
+                    }"""
+                )
+                link = panel.get_by_role("link", name="View project", exact=True)
+                expect(link).to_have_attribute("target", "_blank")
+                expect(link).to_have_attribute("rel", "noreferrer")
 
         page.set_viewport_size({"width": 390, "height": 844})
         homebot_button = page.get_by_role("button", name=re.compile("HomeBot", re.I))
