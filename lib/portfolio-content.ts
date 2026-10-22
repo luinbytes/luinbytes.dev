@@ -2,7 +2,8 @@ export type PortfolioProjectId =
   | "orchid-android"
   | "rakazo-android"
   | "linux-sonar"
-  | "homebot";
+  | "homebot"
+  | "connectormap";
 
 export type PortfolioProject = {
   id: PortfolioProjectId;
@@ -73,6 +74,19 @@ export const portfolioProjects: PortfolioProject[] = [
     image: "/images/portfolio/homebot-chat.png",
     imageAlt: "HomeBot native desktop chat interface",
     proof: ["Rust workspace", "Native desktop + Android", "Durable state + recovery"],
+  },
+  {
+    id: "connectormap",
+    name: "ConnectorMap",
+    category: "Agent directory",
+    eyebrow: "Live directory / channel 05",
+    summary: "Which AI agents can actually use which apps.",
+    detail:
+      "A live directory of 60 apps across the major AI agents, with endpoints checked daily and a weekly what-changed newsletter.",
+    href: "https://connectormap.luinbytes.dev",
+    image: "/images/portfolio/connectormap-card.webp",
+    imageAlt: "ConnectorMap matrix of AI agents and apps",
+    proof: ["Live directory", "Daily checks", "Newsletter"],
   },
 ];
 
