@@ -312,7 +312,8 @@ export async function startPondRenderer(options: StartOptions) {
         size: fishDefinitions[0].displayWidth * viewScale,
       });
     }
-    const pondSeed = new URLSearchParams(window.location.search).get("pond-seed")?.trim() || "6c75";
+    const pondSeed = new URLSearchParams(window.location.search).get("pond-seed")?.slice(0, 128).trim() || "6c75";
+    host.dataset.pondSeed = pondSeed;
     const simulation = createPondSimulation({
       seed: pondSeed,
       width: pondTexture.width,
@@ -950,7 +951,6 @@ export async function startPondRenderer(options: StartOptions) {
         host.dataset.pondCamera = `${worldCenterX().toFixed(3)},${(pondTexture.height / 2).toFixed(3)},${viewScale.toFixed(5)},${viewScale.toFixed(5)}`;
         host.dataset.touchGesture = touchGesture;
         host.dataset.frame = String(frameCount);
-        host.dataset.pondSeed = pondSeed;
         host.dataset.waterOffset = `${(window.innerWidth / 2 + current.ax).toFixed(2)},${(window.innerHeight / 2 + current.ay).toFixed(2)};${water.uniforms.currentA.value.z.toFixed(2)},${water.uniforms.currentB.value.w.toFixed(2)}`;
       }
     };

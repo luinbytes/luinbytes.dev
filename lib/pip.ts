@@ -8,16 +8,9 @@ export function getPipContact(value: string = PIP_TELEGRAM_HANDLE) {
   if (!/^[a-zA-Z][a-zA-Z0-9_]{4,31}$/.test(username)) return null;
 
   const telegramUrl = `https://t.me/${username}`;
-  const qrParams = new URLSearchParams({
-    data: telegramUrl,
-    size: "240x240",
-    qzone: "4",
-    format: "png",
-  });
-
   return {
     handle: `@${username}`,
     telegramUrl,
-    qrUrl: `https://api.qrserver.com/v1/create-qr-code/?${qrParams}`,
+    qrUrl: `/qr/${username}.svg`,
   };
 }

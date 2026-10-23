@@ -9,11 +9,10 @@ function prerenderDevelopment(): Plugin {
     name: "site-prerender-development",
     apply: "serve",
     configureServer(server) {
-      server.middlewares.use(async (request, response, next) => {
+      return () => server.middlewares.use(async (request, response, next) => {
         if (request.method !== "GET" || !request.headers.accept?.includes("text/html")) return next();
         const url = request.url ?? "/";
         const pathname = new URL(url, "http://localhost").pathname;
-        if (pathname.startsWith("/@") || (/\.[^/]+$/.test(pathname) && !/^\/(index|pip|404)\.html$/.test(pathname))) return next();
 
         try {
           const { renderPage, routeForPath } = await server.ssrLoadModule("/app/entry-server.tsx");
@@ -33,7 +32,9 @@ function prerenderDevelopment(): Plugin {
 }
 
 export default defineConfig(({ isSsrBuild }) => ({
+  appType: "mpa",
   base: "/",
+  define: { "import.meta.env.BUILD_YEAR": JSON.stringify(new Date().getFullYear()) },
   plugins: [react(), tailwindcss(), prerenderDevelopment()],
   resolve: { alias: { "@": fileURLToPath(new URL("./", import.meta.url)) } },
   build: {

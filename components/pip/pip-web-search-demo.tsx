@@ -236,10 +236,11 @@ export function PipWebSearchDemo() {
           typed.dataset.typed === "search"
             ? "a notebook for my desk"
             : "12 Example Lane";
-        typed.textContent = text.slice(
+        const nextText = text.slice(
           0,
           Math.floor(Math.min(1, frame.portion * 2.2) * text.length),
         );
+        if (typed.textContent !== nextText) typed.textContent = nextText;
       }
       const bounds = stage.getBoundingClientRect();
       const target = stage
