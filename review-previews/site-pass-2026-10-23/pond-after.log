@@ -1,0 +1,45 @@
+
+> luinbytes-site@0.1.0 test:pond
+> node --test tests/pond-world.test.mts
+
+✔ authored anchors lie inside their rock-local sitting regions (1.821065ms)
+✔ five virtual minutes without targets never produces an empty-space bat (60.235561ms)
+✔ passive patrols remember recent rocks instead of ping-ponging (45.344821ms)
+✔ the cat routes across rocks to hunt an actual fish (14.826877ms)
+✔ the cat chooses a fish beside a reachable perch instead of an open-water decoy (5.536596ms)
+✔ the integrated cat hunts moving koi from the eastern rock route (19320.876534ms)
+✔ long seeded sessions only land on anchors and only bat valid targets (850.773602ms)
+✔ the same seed is reproducible and different seeds stay varied (456.39018ms)
+✔ food drops are exact, bounded, and evict the oldest entity at capacity (10.344705ms)
+✔ fish discover, reserve, curve toward, eat, and release seeded food (3548.651358ms)
+✔ nearby fish commit to fresh food promptly despite the drop disturbance (5.189875ms)
+✔ idle koi stagger swimming, gliding, darts and surface rises without food or danger (2642.076882ms)
+✔ fish accelerate and turn away from danger within locomotion bounds at different frame rates (40.428521ms)
+✔ shoreline avoidance rounds an island corner without dry crossings or recovery jumps (304.52ms)
+✔ flies damp arrival into a small hover and settle with still wings at rest (37.29077ms)
+✔ a batted fly flees the cat origin independently of an inactive pointer (9.435509ms)
+✔ seeded locomotion is reproducible and paused or invalid deltas cannot advance it (33.366451ms)
+✔ shore steering retains its turn instead of flipping at a blocked bank (189.489161ms)
+✔ the authored raster bank provides an escape instead of a stationary fish (512.225912ms)
+✔ crossing, flank and overtaking fish swim around occupied bodies without bonking (301.57889ms)
+✔ a natural converging head-on approach reaches nose contact before bonking (36.367693ms)
+✔ opposing courses that miss the noses pass without a bonk (53.022806ms)
+✔ fish touching a flank yield space to turn and resume swimming (26.350562ms)
+✔ only approaching nose contact within 30 degrees of opposing headings bonks (35.283689ms)
+✔ bonk lasts five simulation seconds, freezes on pause, ignores food and threat, then accelerates (28.781072ms)
+✔ swept contacts prevent small fast fish from tunneling between large frame steps (32.719069ms)
+✔ a third fish cannot leave a bonk whose accepted nose paths never contact (59.130603ms)
+✔ padded disc chords cannot manufacture a bonk during a separating turn (10.7919ms)
+✔ overlapping shoreline spawns separate in water before the first frame without bonking (75.983528ms)
+✔ crowded fish locomotion and contact serials are reproducible across seeds (1617.061024ms)
+✔ a bank-pinched pair cannot withhold a distant fish's movement (86.002424ms)
+✔ all 20 authored fish swim without deadlock or heading jitter and bonk naturally (21356.308489ms)
+✔ all 14 authored fish swim without deadlock or heading jitter and bonk naturally (13222.03538ms)
+ℹ tests 33
+ℹ suites 0
+ℹ pass 33
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 65349.513239

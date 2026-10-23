@@ -3,28 +3,26 @@ import test from "node:test";
 
 import { getPipContact, PIP_TELEGRAM_HANDLE } from "../lib/pip.ts";
 
-const QR_ENDPOINT = "https://api.qrserver.com/v1/create-qr-code/";
-
 test("normalizes an optional @ prefix and returns Pip's Telegram target", () => {
   const contact = getPipContact("  PIPSOFTWARE_BOT  ");
   assert.ok(contact);
   assert.equal(contact.handle, "@PIPSOFTWARE_BOT");
   assert.equal(contact.telegramUrl, "https://t.me/PIPSOFTWARE_BOT");
-  assert.ok(contact.qrUrl.startsWith(QR_ENDPOINT));
+  assert.equal(contact.qrUrl, "/qr/PIPSOFTWARE_BOT.svg");
 
   const alreadyPrefixed = getPipContact("@PIPSOFTWARE_BOT");
   assert.deepEqual(alreadyPrefixed, contact);
 });
 
-test("encodes the exact Telegram target in the remote QR URL", () => {
-  const contact = getPipContact();
-  assert.ok(contact);
-  assert.equal(contact.handle, "@PIPSOFTWARE_BOT");
-
-  const qr = new URL(contact.qrUrl);
-  assert.equal(qr.origin, "https://api.qrserver.com");
-  assert.equal(qr.pathname, "/v1/create-qr-code/");
-  assert.equal(qr.searchParams.get("data"), contact.telegramUrl);
+test("keeps QR images on the site and keyed to the configured handle", () => {
+  for (const username of ["PIPSOFTWARE_BOT", "another_bot"]) {
+    const contact = getPipContact(username);
+    assert.ok(contact);
+    const qr = new URL(contact.qrUrl, "https://luinbytes.dev");
+    assert.equal(qr.origin, "https://luinbytes.dev");
+    assert.equal(qr.pathname, `/qr/${username}.svg`);
+    assert.equal(contact.telegramUrl, `https://t.me/${username}`);
+  }
 });
 
 test("returns null for blank and invalid Telegram handles", () => {

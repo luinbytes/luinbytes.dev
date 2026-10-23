@@ -1,0 +1,15 @@
+test_initial_page_keeps_scripts_below_300_kb_and_requests_only_local_assets (browser_test.PipRouteTests.test_initial_page_keeps_scripts_below_300_kb_and_requests_only_local_assets) ... FAIL
+
+======================================================================
+FAIL: test_initial_page_keeps_scripts_below_300_kb_and_requests_only_local_assets (browser_test.PipRouteTests.test_initial_page_keeps_scripts_below_300_kb_and_requests_only_local_assets)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/luinbytes/.t3/worktrees/luinbytes.dev/t3-c6a04f3b/tests/browser/browser_test.py", line 667, in test_initial_page_keeps_scripts_below_300_kb_and_requests_only_local_assets
+    self.assertLess(sum(scripts), 300_000)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 433530 not less than 300000
+
+----------------------------------------------------------------------
+Ran 1 test in 3.031s
+
+FAILED (failures=1)

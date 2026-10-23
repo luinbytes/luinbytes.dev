@@ -1,0 +1,49 @@
+{
+  "root": "/Users/luinbytes/.t3/worktrees/luinbytes.dev/t3-c6a04f3b/out",
+  "pages": {
+    "404.html": {
+      "initialJavaScriptBytes": 260720,
+      "stylesheetBytes": 26121,
+      "scripts": [
+        "/assets/404-BBsUnIIq.js",
+        "/assets/hydrate-page-BNxyiwGh.js",
+        "/assets/pond-environment-BqfxkPRD.js"
+      ],
+      "styles": [
+        "/assets/hydrate-page-CJ35UQPF.css",
+        "/assets/pond-environment-CdiAj1lc.css",
+        "/assets/404-C5FwtGRo.css"
+      ]
+    },
+    "index.html": {
+      "initialJavaScriptBytes": 410760,
+      "stylesheetBytes": 59135,
+      "scripts": [
+        "/assets/index-D3ox784m.js",
+        "/assets/hydrate-page-BNxyiwGh.js",
+        "/assets/pond-environment-BqfxkPRD.js",
+        "/assets/pip-logo-DJAVmYIr.js"
+      ],
+      "styles": [
+        "/assets/hydrate-page-CJ35UQPF.css",
+        "/assets/pond-environment-CdiAj1lc.css",
+        "/assets/pip-logo-DeHwXneh.css",
+        "/assets/index-Aktv9fKx.css"
+      ]
+    },
+    "pip.html": {
+      "initialJavaScriptBytes": 276864,
+      "stylesheetBytes": 40855,
+      "scripts": [
+        "/assets/pip-Dl51VyL9.js",
+        "/assets/hydrate-page-BNxyiwGh.js",
+        "/assets/pip-logo-DJAVmYIr.js"
+      ],
+      "styles": [
+        "/assets/hydrate-page-CJ35UQPF.css",
+        "/assets/pip-logo-DeHwXneh.css",
+        "/assets/pip-Dvih_xTU.css"
+      ]
+    }
+  }
+}
