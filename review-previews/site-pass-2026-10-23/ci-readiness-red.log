@@ -1,0 +1,20 @@
+test_colored_ready_log_still_checks_the_owned_server_over_http (tests.browser.browser_test.ServerStartupTests.test_colored_ready_log_still_checks_the_owned_server_over_http) ... ERROR
+test_exited_child_reports_its_owned_log_without_probing_http (tests.browser.browser_test.ServerStartupTests.test_exited_child_reports_its_owned_log_without_probing_http) ... ok
+
+======================================================================
+ERROR: test_colored_ready_log_still_checks_the_owned_server_over_http (tests.browser.browser_test.ServerStartupTests.test_colored_ready_log_still_checks_the_owned_server_over_http)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/luinbytes/.t3/worktrees/luinbytes.dev/t3-c6a04f3b/tests/browser/browser_test.py", line 180, in test_colored_ready_log_still_checks_the_owned_server_over_http
+    wait_for_owned_server(RunningServer(), server_log, "http://127.0.0.1:1")
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/luinbytes/.t3/worktrees/luinbytes.dev/t3-c6a04f3b/tests/browser/browser_test.py", line 161, in wait_for_owned_server
+    raise RuntimeError(
+        f"Test server did not become ready at {base_url}; see {server_log}"
+    )
+RuntimeError: Test server did not become ready at http://127.0.0.1:1; see /var/folders/3_/tb3fczb5283_js3lbmpdjgqh0000gn/T/tmphpnow454/dev-server.log
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.009s
+
+FAILED (errors=1)

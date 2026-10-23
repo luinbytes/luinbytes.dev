@@ -13,9 +13,9 @@ visibility, and reduced-motion behavior.
 
 | Page | Initial JS before | Initial JS after | CSS before | CSS after |
 | --- | ---: | ---: | ---: | ---: |
-| Home | 433,530 B | 410,760 B | 83,654 B | 59,135 B |
-| Pip | 433,530 B | 276,864 B | 83,654 B | 40,855 B |
-| 404 | 433,530 B | 260,720 B | 83,654 B | 26,121 B |
+| Home | 433,530 B | 410,179 B | 83,654 B | 59,208 B |
+| Pip | 433,530 B | 276,864 B | 83,654 B | 40,928 B |
+| 404 | 433,530 B | 260,139 B | 83,654 B | 26,194 B |
 
 These are deduplicated, uncompressed bytes declared by the built HTML through
 scripts, module preloads, and stylesheet links. They exclude images, fonts, and
@@ -28,8 +28,8 @@ Reproduce the report after `npm run build` with
 [after](assets-final.json), and [browser evidence](qr-decode.json).
 
 The Pip typing animation also avoids writing unchanged text before its geometry
-reads. Pond seeds are bounded to 128 characters and written to the diagnostic
-attribute once. The copyright year comes from the build so a visitor's clock
+reads. Pond seeds are bounded to 128 characters. Tests can inspect the normalized seed
+through the opt-in diagnostic attribute. The copyright year comes from the build so a visitor's clock
 cannot cause a year-related hydration mismatch.
 
 ## Security changes
@@ -63,13 +63,22 @@ the [Pages API requirement](https://docs.github.com/en/rest/pages/pages#get-a-gi
 
 ## Verification and review
 
-The [final combined browser run](browser-verified.log) passed all 38 tests in
-298.989 seconds. Other completed checks include type checking, lint, production
+The [final combined browser run](browser-verified.log) passed all 40 tests in
+343.742 seconds with CI color output enabled. Other completed checks include type checking, lint, production
 build, [33 pond tests](pond-after.log), 3 Pip contact tests, actionlint, dependency
 audit, independent QR decode, and [four security-boundary tests](security-meta-final.log).
 Chromium covers desktop, 320px and
 390px layouts, keyboard navigation, no-JavaScript content, reduced motion, WebGL
 fallbacks, route metadata, and animation interactions.
+
+The first Linux CI run failed only during development-server startup. Vite's
+ANSI-colored readiness line prevented the word-boundary regex from matching,
+although the server was reachable. The [reproduction](ci-readiness-repro.txt)
+shows HTTP 200 with the old detector returning false. The detector now strips
+ANSI color sequences. The [regression failed before](ci-readiness-red.log), then
+[passed with the real development routing test](ci-readiness-green.log) under
+`CI=true FORCE_COLOR=1` with `NO_COLOR` unset. The final combined suite also passes with those CI color settings. The next
+GitHub-hosted run remains separate verification.
 
 The baseline browser run was interrupted and is only partial evidence. An earlier
 combined run exposed CSP-incompatible test polling. Polling now uses browser
@@ -90,6 +99,11 @@ attempt at Review A failed model capacity; the retry completed. Both completed
 reviewers used GPT-6.1-Sol at different reasoning levels. Other model families
 were unavailable under the configured policy.
 
+A [focused follow-up source review](review-followup.txt) found the new canvas test could mistake the
+pond's opacity transition for animation. The test now waits for full opacity
+before comparing frames. Its [targeted rerun](diagnostics-settled.log) and the final combined suite passed. The reviewer found no further renderer or
+security issues. Comment review found no new comments or suppressions to remove.
+
 The [design judgment](design-review.txt) selected native page entries over custom
 manifest traversal. The [decision trail](decisions.tsv) records choices, failed
 checks, corrections, and evidence. No active transcript artifact was exposed for
@@ -107,10 +121,26 @@ Physical iPad Safari, Firefox, screen readers, and live bot replies were not
 tested. Development without JavaScript retains the pre-existing unstyled SSR
 behavior; use the production preview for no-JavaScript visual verification.
 
-The seven pond source assets still total about 5.7 MB. Re-encoding the authored
-textures, removing the 404 pond, changing reduced-motion animation, and gating
-all diagnostic writes were deferred. Those changes need separate visual or
-profiling evidence. This pass makes no FPS or device-performance claim.
+The follow-up removed recurring pond diagnostic serialization and DOM writes
+from ordinary visits. Browser tests enable `window.__POND_TEST_DIAGNOSTICS__`
+before navigation. Lifecycle, motion preference, and fallback status remain
+available. The [new regression](diagnostics-green.log) observes zero host attribute
+writes over three seconds while the rendered canvas changes on home and 404.
+It [failed on the previous artifact](diagnostics-red.log). These are behavior
+checks, not a frame-rate or CPU benchmark.
+
+Six pond textures use lossless re-encoding with identical decoded RGBA pixels,
+including transparent pixels, dimensions, and ICC/EXIF/XMP metadata. The accepted
+files save 73,700 bytes. The seven source assets total 5,658,779 bytes after the
+change. JPEG-to-WebP conversion increased the displacement texture by 454,151
+bytes and was rejected. See the [per-file results](pond-assets.json). Reproduce
+with `python3 review-previews/site-pass-2026-10-23/verify-pond-assets.py`, with
+`dwebp` on PATH and the recorded base commit available. The candidates were made
+with `cwebp -lossless -m 6 -q 100 -exact -metadata all`.
+
+The 404 pond and reduced-motion ecosystem remain. Removing those features or
+resizing authored textures would change existing behavior or pixels. This pass
+makes no FPS, load-time, or physical-device performance claim.
 
 Boundary Discipline put checks at URL and filesystem inputs. Laziness Protocol
 favored Vite's native page entries. Prove It Works required browser enforcement,

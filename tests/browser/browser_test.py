@@ -15,6 +15,7 @@ import urllib.request
 import xml.etree.ElementTree as ET
 from html.parser import HTMLParser
 from pathlib import Path
+from unittest.mock import patch
 from urllib.parse import urlparse
 
 from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError, expect, sync_playwright
@@ -23,6 +24,7 @@ from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError, ex
 SCREENSHOTS = Path("test-results")
 SERVER_LOG = SCREENSHOTS / "dev-server.log"
 READY_PATTERN = re.compile(r"\bReady in\b", re.IGNORECASE)
+ANSI_COLOR_PATTERN = re.compile(r"\x1b\[[0-9;]*m")
 LEGACY_ROUTES = (
     "/concepts/signal-desk",
     "/concepts/signal-field",
@@ -140,7 +142,7 @@ def wait_for_owned_server(server, server_log: Path, base_url: str) -> None:
 
         if not saw_ready:
             saw_ready = READY_PATTERN.search(
-                server_log.read_text(errors="replace")
+                ANSI_COLOR_PATTERN.sub("", server_log.read_text(errors="replace"))
             ) is not None
 
         if saw_ready:
@@ -163,6 +165,22 @@ def wait_for_owned_server(server, server_log: Path, base_url: str) -> None:
 
 
 class ServerStartupTests(unittest.TestCase):
+    def test_colored_ready_log_still_checks_the_owned_server_over_http(self) -> None:
+        class RunningServer:
+            def poll(self):
+                return None
+
+        with tempfile.TemporaryDirectory() as directory:
+            server_log = Path(directory) / "dev-server.log"
+            server_log.write_text("\x1b[32mVITE v8.3.3\x1b[39m  \x1b[2mready in \x1b[1m104\x1b[22m ms\x1b[22m\n")
+            with (
+                patch("time.monotonic", side_effect=[0, 1, 91]),
+                patch("time.sleep"),
+                patch("urllib.request.urlopen") as request,
+            ):
+                wait_for_owned_server(RunningServer(), server_log, "http://127.0.0.1:1")
+            request.assert_called_once_with("http://127.0.0.1:1", timeout=5)
+
     def test_exited_child_reports_its_owned_log_without_probing_http(self) -> None:
         class ExitedServer:
             def poll(self):
@@ -387,6 +405,11 @@ class BrowserTestCase(unittest.TestCase):
                 cls.server.wait(timeout=10)
         cls.server_log.close()
 
+    def pond_page(self, owner, **options) -> Page:
+        page = owner.new_page(**options)
+        page.add_init_script("window.__POND_TEST_DIAGNOSTICS__ = true")
+        return page
+
     @classmethod
     def tearDownClass(cls) -> None:
         if cls.playwright is not None:
@@ -422,7 +445,7 @@ class SecurityBoundaryTests(BrowserTestCase):
     def test_pond_seed_is_bounded_at_the_url_boundary(self) -> None:
         browser = self.playwright.chromium.launch()
         self.addCleanup(browser.close)
-        page = browser.new_page(viewport={"width": 390, "height": 844}, reduced_motion="reduce")
+        page = self.pond_page(browser, viewport={"width": 390, "height": 844}, reduced_motion="reduce")
         page.goto(f"{self.base_url}/?pond-seed={'a' * 1024}", wait_until="networkidle")
         pond = page.locator("[data-pond-seed]")
         expect(pond).to_have_attribute("data-pond-seed", "a" * 128)
@@ -521,7 +544,7 @@ class KoiAtlasBrowserTests(BrowserTestCase):
                 }
             })()"""
         )
-        return context.new_page()
+        return self.pond_page(context)
 
     def capture_koi(self, page, name):
         pond = page.locator("[data-pond-state]")
@@ -1029,11 +1052,45 @@ class PipRouteTests(BrowserTestCase):
         browser.close()
 
 
+class PondProductionTests(BrowserTestCase):
+    def test_pond_animates_without_test_diagnostics(self) -> None:
+        browser = self.playwright.chromium.launch()
+        self.addCleanup(browser.close)
+        for path, motion in (("/", "no-preference"), ("/missing/nested/page", "reduce")):
+            with self.subTest(path=path, motion=motion):
+                page = browser.new_page(viewport={"width": 390, "height": 844}, reduced_motion=motion)
+                try:
+                    errors = []
+                    page.on("pageerror", lambda error: errors.append(str(error)))
+                    page.goto(f"{self.base_url}{path}", wait_until="networkidle")
+                    pond = page.locator("[data-pond-state]")
+                    expect(pond).to_have_attribute("data-pond-state", "running")
+                    expect(page.locator('[data-renderer]')).to_have_attribute("data-renderer", "three")
+                    canvas = pond.locator("canvas")
+                    expect(canvas).to_be_visible()
+                    wait_for_condition(page, "getComputedStyle(document.querySelector('[data-pond-state]')).opacity === '1'")
+                    first_frame = canvas.screenshot()
+                    mutations = pond.evaluate("""element => new Promise(resolve => {
+                        const attributes = [];
+                        const observer = new MutationObserver(records => {
+                            attributes.push(...records.map(record => record.attributeName));
+                        });
+                        observer.observe(element, { attributes: true });
+                        setTimeout(() => { observer.disconnect(); resolve(attributes); }, 3000);
+                    })""")
+                    self.assertEqual(mutations, [])
+                    self.assertEqual(pond.evaluate("element => Object.keys(element.dataset).sort()"), ["motion", "pondState"])
+                    self.assertNotEqual(first_frame, canvas.screenshot())
+                    self.assertEqual(errors, [])
+                finally:
+                    page.close()
+
+
 class PortfolioTests(BrowserTestCase):
     def test_copyright_year_hydrates_when_the_visitors_clock_differs(self) -> None:
         browser = self.playwright.chromium.launch()
         self.addCleanup(browser.close)
-        page = browser.new_page(reduced_motion="reduce")
+        page = self.pond_page(browser, reduced_motion="reduce")
         issues = []
         page.on("pageerror", lambda error: issues.append(str(error)))
         page.on("console", lambda message: record_console_issue(issues, message))
@@ -1052,7 +1109,7 @@ class PortfolioTests(BrowserTestCase):
             with self.subTest(viewport=viewport_name):
                 browser = self.playwright.chromium.launch()
                 self.addCleanup(browser.close)
-                page = browser.new_page(viewport=viewport)
+                page = self.pond_page(browser, viewport=viewport)
                 page.goto(self.base_url, wait_until="networkidle")
 
                 self.assertTrue(
@@ -1105,7 +1162,7 @@ class PortfolioTests(BrowserTestCase):
     def test_mobile_navigation_hero_viewport_and_system_color_modes(self) -> None:
         browser = self.playwright.chromium.launch()
         self.addCleanup(browser.close)
-        page = browser.new_page(viewport={"width": 320, "height": 640})
+        page = self.pond_page(browser, viewport={"width": 320, "height": 640})
         page.goto(f"{self.base_url}/?pond-seed=e2e-mobile-first-view", wait_until="networkidle")
 
         light_signature = None
@@ -1197,7 +1254,7 @@ class PortfolioTests(BrowserTestCase):
             ):
                 with self.subTest(viewport=viewport_name):
                     context = browser.new_context(viewport=viewport)
-                    page = context.new_page()
+                    page = self.pond_page(context)
                     console_issues = []
                     page.on(
                         "console",
@@ -1289,7 +1346,7 @@ class PortfolioTests(BrowserTestCase):
             java_script_enabled=False,
             viewport={"width": 390, "height": 844},
         )
-        page = context.new_page()
+        page = self.pond_page(context)
         page.goto(f"{self.base_url}/", wait_until="domcontentloaded")
 
         navigation = page.get_by_role("navigation", name="Portfolio navigation")
@@ -1327,7 +1384,7 @@ class PortfolioTests(BrowserTestCase):
             reduced_motion="reduce",
             viewport={"width": 320, "height": 568},
         )
-        page = context.new_page()
+        page = self.pond_page(context)
         page.goto(
             f"{self.base_url}/?pond-seed=e2e-homepage-pip-reduced",
             wait_until="networkidle",
@@ -1373,7 +1430,7 @@ class PortfolioTests(BrowserTestCase):
             ("desktop-1920", {"width": 1920, "height": 1080}),
         )
         browser = self.playwright.chromium.launch()
-        page = browser.new_page(viewport={"width": 1440, "height": 900})
+        page = self.pond_page(browser, viewport={"width": 1440, "height": 900})
         page_errors = []
         page.on("pageerror", lambda error: page_errors.append(str(error)))
         page.goto(f"{self.base_url}/?pond-seed=e2e-viewport-matrix", wait_until="networkidle")
@@ -1455,7 +1512,7 @@ class PortfolioTests(BrowserTestCase):
 
     def test_loading_shows_only_the_pond_then_fades_in_the_live_ecosystem(self) -> None:
         browser = self.playwright.chromium.launch()
-        page = browser.new_page(viewport={"width": 1280, "height": 800})
+        page = self.pond_page(browser, viewport={"width": 1280, "height": 800})
 
         def delay_koi_atlas(route) -> None:
             time.sleep(0.7)
@@ -1493,7 +1550,7 @@ class PortfolioTests(BrowserTestCase):
 
     def test_hero_copy_does_not_block_pointer_water_reaction(self) -> None:
         browser = self.playwright.chromium.launch()
-        page = browser.new_page(viewport={"width": 1280, "height": 800})
+        page = self.pond_page(browser, viewport={"width": 1280, "height": 800})
         page.goto(f"{self.base_url}/?pond-seed=e2e-hero-pointer", wait_until="networkidle")
         pond = page.locator("[data-pond-state]")
         wait_for_condition(
@@ -1524,7 +1581,7 @@ class PortfolioTests(BrowserTestCase):
 
     def test_navigation_and_bordered_controls_keep_their_visual_hierarchy(self) -> None:
         browser = self.playwright.chromium.launch()
-        page = browser.new_page(viewport={"width": 1280, "height": 800})
+        page = self.pond_page(browser, viewport={"width": 1280, "height": 800})
         page.goto(f"{self.base_url}/?pond-seed=e2e-control-polish", wait_until="networkidle")
         page.wait_for_timeout(1_200)
 
@@ -1672,7 +1729,7 @@ class PortfolioTests(BrowserTestCase):
 
     def test_pointer_stirs_the_pond(self) -> None:
         browser = self.playwright.chromium.launch()
-        page = browser.new_page(viewport={"width": 1440, "height": 900})
+        page = self.pond_page(browser, viewport={"width": 1440, "height": 900})
         page_errors = []
         console_issues = []
         page.on("pageerror", lambda error: page_errors.append(str(error)))
@@ -1836,7 +1893,7 @@ class PortfolioTests(BrowserTestCase):
 
     def test_food_drop_reservation_and_feeding(self) -> None:
         browser = self.playwright.chromium.launch()
-        page = browser.new_page(viewport={"width": 1440, "height": 900})
+        page = self.pond_page(browser, viewport={"width": 1440, "height": 900})
         page_errors = []
         page.on("pageerror", lambda error: page_errors.append(str(error)))
         page.goto(f"{self.base_url}/?pond-seed=e2e-food", wait_until="networkidle")
@@ -1917,7 +1974,7 @@ class PortfolioTests(BrowserTestCase):
 
     def test_profile_card_foil_is_square_pointer_driven_and_motion_safe(self) -> None:
         browser = self.playwright.chromium.launch()
-        page = browser.new_page(viewport={"width": 1280, "height": 800})
+        page = self.pond_page(browser, viewport={"width": 1280, "height": 800})
         page_errors = []
         page.on("pageerror", lambda error: page_errors.append(str(error)))
         page.goto(self.base_url, wait_until="networkidle")
@@ -2056,7 +2113,7 @@ class PortfolioTests(BrowserTestCase):
 
     def test_reduced_motion_preserves_the_ecosystem_at_low_speed(self) -> None:
         browser = self.playwright.chromium.launch()
-        page = browser.new_page(viewport={"width": 1440, "height": 900})
+        page = self.pond_page(browser, viewport={"width": 1440, "height": 900})
         console_issues = []
         page_errors = []
         page.on("pageerror", lambda error: page_errors.append(str(error)))
@@ -2108,7 +2165,7 @@ class PortfolioTests(BrowserTestCase):
         context = browser.new_context(
             viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True
         )
-        page = context.new_page()
+        page = self.pond_page(context)
         page.goto(f"{self.base_url}/?pond-seed=e2e-touch", wait_until="networkidle")
         pond = page.locator("[data-pond-state]")
         wait_for_condition(
@@ -2251,7 +2308,7 @@ class PortfolioTests(BrowserTestCase):
         context.add_init_script(
             "HTMLCanvasElement.prototype.getContext = function () { return null; }"
         )
-        page = context.new_page()
+        page = self.pond_page(context)
         page.goto(self.base_url, wait_until="networkidle")
         wait_for_condition(
             page,
@@ -2272,7 +2329,7 @@ class PortfolioTests(BrowserTestCase):
 
     def test_pause_resize_and_remount_keep_world_state_bounded(self) -> None:
         browser = self.playwright.chromium.launch()
-        page = browser.new_page(viewport={"width": 1280, "height": 800})
+        page = self.pond_page(browser, viewport={"width": 1280, "height": 800})
         page.goto(f"{self.base_url}/?pond-seed=e2e-lifecycle", wait_until="networkidle")
         pond = page.locator("[data-pond-state]")
         wait_for_condition(
@@ -2333,7 +2390,7 @@ class PortfolioTests(BrowserTestCase):
 
     def test_removed_routes_use_the_pond_not_found_page(self) -> None:
         browser = self.playwright.chromium.launch()
-        page = browser.new_page(viewport={"width": 1280, "height": 800})
+        page = self.pond_page(browser, viewport={"width": 1280, "height": 800})
         for path in LEGACY_ROUTES:
             with self.subTest(path=path):
                 response = page.request.get(f"{self.base_url}{path}")

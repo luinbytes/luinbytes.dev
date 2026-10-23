@@ -2,30 +2,30 @@
   "root": "/Users/luinbytes/.t3/worktrees/luinbytes.dev/t3-c6a04f3b/out",
   "pages": {
     "404.html": {
-      "initialJavaScriptBytes": 260720,
-      "stylesheetBytes": 26121,
+      "initialJavaScriptBytes": 260139,
+      "stylesheetBytes": 26194,
       "scripts": [
-        "/assets/404-BBsUnIIq.js",
-        "/assets/hydrate-page-BNxyiwGh.js",
-        "/assets/pond-environment-BqfxkPRD.js"
+        "/assets/404-ekA-uUef.js",
+        "/assets/hydrate-page-DB7Smeue.js",
+        "/assets/pond-environment-0Y8H6bnd.js"
       ],
       "styles": [
-        "/assets/hydrate-page-CJ35UQPF.css",
+        "/assets/hydrate-page-D0SEc89c.css",
         "/assets/pond-environment-CdiAj1lc.css",
         "/assets/404-C5FwtGRo.css"
       ]
     },
     "index.html": {
-      "initialJavaScriptBytes": 410760,
-      "stylesheetBytes": 59135,
+      "initialJavaScriptBytes": 410179,
+      "stylesheetBytes": 59208,
       "scripts": [
-        "/assets/index-D3ox784m.js",
-        "/assets/hydrate-page-BNxyiwGh.js",
-        "/assets/pond-environment-BqfxkPRD.js",
-        "/assets/pip-logo-DJAVmYIr.js"
+        "/assets/index-DafYc6RH.js",
+        "/assets/hydrate-page-DB7Smeue.js",
+        "/assets/pond-environment-0Y8H6bnd.js",
+        "/assets/pip-logo-ESPjufs0.js"
       ],
       "styles": [
-        "/assets/hydrate-page-CJ35UQPF.css",
+        "/assets/hydrate-page-D0SEc89c.css",
         "/assets/pond-environment-CdiAj1lc.css",
         "/assets/pip-logo-DeHwXneh.css",
         "/assets/index-Aktv9fKx.css"
@@ -33,14 +33,14 @@
     },
     "pip.html": {
       "initialJavaScriptBytes": 276864,
-      "stylesheetBytes": 40855,
+      "stylesheetBytes": 40928,
       "scripts": [
-        "/assets/pip-Dl51VyL9.js",
-        "/assets/hydrate-page-BNxyiwGh.js",
-        "/assets/pip-logo-DJAVmYIr.js"
+        "/assets/pip-DA5CCFy7.js",
+        "/assets/hydrate-page-DB7Smeue.js",
+        "/assets/pip-logo-ESPjufs0.js"
       ],
       "styles": [
-        "/assets/hydrate-page-CJ35UQPF.css",
+        "/assets/hydrate-page-D0SEc89c.css",
         "/assets/pip-logo-DeHwXneh.css",
         "/assets/pip-Dvih_xTU.css"
       ]

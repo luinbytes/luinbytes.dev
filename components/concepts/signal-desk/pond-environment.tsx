@@ -2,31 +2,6 @@ import { useEffect, useRef } from "react";
 
 import styles from "./pond-environment.module.css";
 
-const POND_ATTRIBUTES = {
-  "data-pond-state": "idle",
-  "data-ripple-count": "0",
-  "data-ring-count": "0",
-  "data-wake-count": "0",
-  "data-fish-count": "0",
-  "data-food-count": "0",
-  "data-food-dropped-count": "0",
-  "data-food-expired-count": "0",
-  "data-fish-fed-count": "0",
-  "data-primary-impact-count": "0",
-  "data-food-affordance": "false",
-  "data-pond-element-count": "0",
-  "data-insect-count": "0",
-  "data-cat-count": "0",
-  "data-cat-state": "idle",
-  "data-cat-pounce-count": "0",
-  "data-cat-bap-count": "0",
-  "data-cat-empty-bap-count": "0",
-  "data-cat-water-violation": "false",
-  "data-cat-rotation": "0.000",
-  "data-fish-reacting": "false",
-  "data-fish-water-violation": "false",
-} as const;
-
 export function PondEnvironment({ reduced }: { reduced: boolean }) {
   const pondRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
@@ -74,7 +49,7 @@ export function PondEnvironment({ reduced }: { reduced: boolean }) {
     <>
       <div ref={pondRef} className={styles.pond} data-renderer="fallback" aria-hidden="true">
         <div className={styles.pondImage} />
-        <div ref={hostRef} className={styles.pondHost} {...POND_ATTRIBUTES} />
+        <div ref={hostRef} className={styles.pondHost} data-pond-state="idle" />
         <div className={styles.pondGrade} />
         <div className={styles.surfaceLight} />
       </div>

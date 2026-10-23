@@ -1,0 +1,7 @@
+test_pond_animates_without_test_diagnostics (tests.browser.browser_test.PondProductionTests.test_pond_animates_without_test_diagnostics) ... ok
+test_pond_seed_is_bounded_at_the_url_boundary (tests.browser.browser_test.SecurityBoundaryTests.test_pond_seed_is_bounded_at_the_url_boundary) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 15.912s
+
+OK

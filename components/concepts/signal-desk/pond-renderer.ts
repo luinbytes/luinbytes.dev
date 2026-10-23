@@ -75,11 +75,41 @@ const KOI_FRAME_BOUNDS_PX: readonly (readonly AtlasFrameBounds[])[] = [
 
 export async function startPondRenderer(options: StartOptions) {
   const { pond, host, interaction, reduced } = options;
-  const testPose = (window as Window & { __POND_TEST_KOI__?: KoiTestPose }).__POND_TEST_KOI__;
+  const testWindow = window as Window & {
+    __POND_TEST_KOI__?: KoiTestPose;
+    __POND_TEST_DIAGNOSTICS__?: boolean;
+  };
+  const testPose = testWindow.__POND_TEST_KOI__;
+  const diagnostics = testWindow.__POND_TEST_DIAGNOSTICS__ === true;
   if (options.signal.aborted) return () => {};
   host.dataset.pondState = "loading";
   host.dataset.motion = reduced ? "reduced" : "full";
   delete host.dataset.fallbackReason;
+  if (diagnostics) {
+    Object.assign(host.dataset, {
+      rippleCount: "0",
+      ringCount: "0",
+      wakeCount: "0",
+      fishCount: "0",
+      foodCount: "0",
+      foodDroppedCount: "0",
+      foodExpiredCount: "0",
+      fishFedCount: "0",
+      primaryImpactCount: "0",
+      foodAffordance: "false",
+      pondElementCount: "0",
+      insectCount: "0",
+      catCount: "0",
+      catState: "idle",
+      catPounceCount: "0",
+      catBapCount: "0",
+      catEmptyBapCount: "0",
+      catWaterViolation: "false",
+      catRotation: "0.000",
+      fishReacting: "false",
+      fishWaterViolation: "false",
+    });
+  }
 
   const resources = new Set<{ dispose: () => void }>();
   const loads = new AbortController();
@@ -304,7 +334,7 @@ export async function startPondRenderer(options: StartOptions) {
       }));
     if (testPose) {
       const point = worldToScreen(fishDefinitions[0].position);
-      host.dataset.koiTest = JSON.stringify({
+      if (diagnostics) host.dataset.koiTest = JSON.stringify({
         row: testPose.row,
         column: testPose.column,
         x: point.x,
@@ -313,7 +343,7 @@ export async function startPondRenderer(options: StartOptions) {
       });
     }
     const pondSeed = new URLSearchParams(window.location.search).get("pond-seed")?.slice(0, 128).trim() || "6c75";
-    host.dataset.pondSeed = pondSeed;
+    if (diagnostics) host.dataset.pondSeed = pondSeed;
     const simulation = createPondSimulation({
       seed: pondSeed,
       width: pondTexture.width,
@@ -431,18 +461,18 @@ export async function startPondRenderer(options: StartOptions) {
     const addParticle = (x: number, y: number, vx: number, vy: number, life = 760, size = 2, color = 0xc8fff0) => {
       particles.push({ x, y, vx, vy, born: performance.now(), life, size, color });
       if (particles.length > (reduced ? 32 : 120)) particles = particles.slice(reduced ? -32 : -120);
-      host.dataset.wakeCount = String(particles.length);
+      if (diagnostics) host.dataset.wakeCount = String(particles.length);
     };
     const addRing = (x: number, y: number, radius = 34, life = 620, color = 0xb9f5e7) => {
       rings.push({ x, y, born: performance.now(), life, radius, color });
       if (rings.length > (reduced ? 4 : 10)) rings = rings.slice(reduced ? -4 : -10);
-      host.dataset.ringCount = String(rings.length);
+      if (diagnostics) host.dataset.ringCount = String(rings.length);
     };
     const addRipple = (x: number, y: number, size = 132, strength = 1) => {
       const speed = 145 + strength * 45;
       ripples.push({ x, y, size, strength, speed, born: performance.now(), life: size / speed * 1000 + 180 });
       if (ripples.length > POND_RIPPLE_CAPACITY) ripples.shift();
-      host.dataset.rippleCount = String(ripples.length);
+      if (diagnostics) host.dataset.rippleCount = String(ripples.length);
     };
 
     const foodLayer = layer();
@@ -562,13 +592,13 @@ export async function startPondRenderer(options: StartOptions) {
         if (Math.hypot(screen.x - catScreen.x, screen.y - catScreen.y) < 280) simulation.requestHop();
       },
       onFoodDrop: (_screen, world) => {
-        lastFoodRequested = { ...world };
+        if (diagnostics) lastFoodRequested = { ...world };
         simulation.dropFood(world);
       },
       onAffordance: (screen, visible) => {
         feedAffordance.position.set(screen.x, screen.y, 0);
         affordanceTarget = visible ? 0.34 : 0;
-        host.dataset.foodAffordance = String(visible);
+        if (diagnostics) host.dataset.foodAffordance = String(visible);
       },
       onGesture: (gesture) => { touchGesture = gesture; },
     });
@@ -688,7 +718,7 @@ export async function startPondRenderer(options: StartOptions) {
           }
         } else if (event.type === "food-dropped") {
           foodDroppedCount += 1;
-          lastFoodDropped = { ...event.position };
+          if (diagnostics) lastFoodDropped = { ...event.position };
           const point = worldToScreen(event.position);
           addRipple(point.x, point.y, reduced ? 42 : 72, event.rippleStrength * (reduced ? 0.32 : 1));
           addRing(point.x, point.y, reduced ? 18 : 30, reduced ? 460 : 720, 0xf2d58a);
@@ -891,7 +921,7 @@ export async function startPondRenderer(options: StartOptions) {
       }
 
       frameCount += 1;
-      if (frameCount % 12 === 0) {
+      if (diagnostics && frameCount % 12 === 0) {
         host.dataset.fishPositions = frame.fish.map((fish) => {
           const point = worldToScreen(fish.position);
           return `${point.x.toFixed(1)},${point.y.toFixed(1)}`;
@@ -999,12 +1029,14 @@ export async function startPondRenderer(options: StartOptions) {
       window.removeEventListener("resize", layout);
       document.removeEventListener("visibilitychange", visibility);
     };
-    host.dataset.fishCount = String(fishDefinitions.length);
-    host.dataset.pondElementCount = String(pondElements.length);
-    host.dataset.insectCount = String(midges.length + flyVisuals.size);
-    host.dataset.catCount = "1";
-    host.dataset.fishLogic = "authoritative-seeded-world-steering";
-    host.dataset.worldModel = "seeded-routine-rock-target-food-environment";
+    if (diagnostics) {
+      host.dataset.fishCount = String(fishDefinitions.length);
+      host.dataset.pondElementCount = String(pondElements.length);
+      host.dataset.insectCount = String(midges.length + flyVisuals.size);
+      host.dataset.catCount = "1";
+      host.dataset.fishLogic = "authoritative-seeded-world-steering";
+      host.dataset.worldModel = "seeded-routine-rock-target-food-environment";
+    }
     visibility();
     return dispose;
   } catch (error) {
