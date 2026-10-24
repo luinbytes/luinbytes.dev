@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import http.client
 import json
 import math
 import os
@@ -14,14 +15,16 @@ import urllib.request
 import xml.etree.ElementTree as ET
 from html.parser import HTMLParser
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
+from unittest.mock import patch
+from urllib.parse import urlparse
 
 from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError, expect, sync_playwright
 
 
 SCREENSHOTS = Path("test-results")
 SERVER_LOG = SCREENSHOTS / "dev-server.log"
-READY_PATTERN = re.compile(r"\bReady in\b")
+READY_PATTERN = re.compile(r"\bReady in\b", re.IGNORECASE)
+ANSI_COLOR_PATTERN = re.compile(r"\x1b\[[0-9;]*m")
 LEGACY_ROUTES = (
     "/concepts/signal-desk",
     "/concepts/signal-field",
@@ -42,6 +45,16 @@ PORTFOLIO_NAV_LINKS = (
     ("About", "#about"),
     ("Contact", "#contact"),
 )
+
+
+def wait_for_condition(page: Page, expression: str, *, arg=None, timeout=30_000):
+    deadline = time.monotonic() + timeout / 1000
+    while time.monotonic() < deadline:
+        result = page.evaluate(expression, arg)
+        if result:
+            return result
+        time.sleep(0.05)
+    raise PlaywrightTimeoutError(f"Condition did not become true: {expression}")
 
 
 def control_contrast(locator):
@@ -129,7 +142,7 @@ def wait_for_owned_server(server, server_log: Path, base_url: str) -> None:
 
         if not saw_ready:
             saw_ready = READY_PATTERN.search(
-                server_log.read_text(errors="replace")
+                ANSI_COLOR_PATTERN.sub("", server_log.read_text(errors="replace"))
             ) is not None
 
         if saw_ready:
@@ -152,6 +165,22 @@ def wait_for_owned_server(server, server_log: Path, base_url: str) -> None:
 
 
 class ServerStartupTests(unittest.TestCase):
+    def test_colored_ready_log_still_checks_the_owned_server_over_http(self) -> None:
+        class RunningServer:
+            def poll(self):
+                return None
+
+        with tempfile.TemporaryDirectory() as directory:
+            server_log = Path(directory) / "dev-server.log"
+            server_log.write_text("\x1b[32mVITE v8.3.3\x1b[39m  \x1b[2mready in \x1b[1m104\x1b[22m ms\x1b[22m\n")
+            with (
+                patch("time.monotonic", side_effect=[0, 1, 91]),
+                patch("time.sleep"),
+                patch("urllib.request.urlopen") as request,
+            ):
+                wait_for_owned_server(RunningServer(), server_log, "http://127.0.0.1:1")
+            request.assert_called_once_with("http://127.0.0.1:1", timeout=5)
+
     def test_exited_child_reports_its_owned_log_without_probing_http(self) -> None:
         class ExitedServer:
             def poll(self):
@@ -333,6 +362,8 @@ class ShareCardStaticExportTests(unittest.TestCase):
 
 
 class BrowserTestCase(unittest.TestCase):
+    server_command = ("npm", "run", "preview", "--")
+
     @classmethod
     def setUpClass(cls) -> None:
         SCREENSHOTS.mkdir(exist_ok=True)
@@ -341,10 +372,7 @@ class BrowserTestCase(unittest.TestCase):
         try:
             cls.server = subprocess.Popen(
                 [
-                    "npm",
-                    "run",
-                    "preview",
-                    "--",
+                    *cls.server_command,
                     "--host",
                     "127.0.0.1",
                     "--port",
@@ -377,11 +405,126 @@ class BrowserTestCase(unittest.TestCase):
                 cls.server.wait(timeout=10)
         cls.server_log.close()
 
+    def pond_page(self, owner, **options) -> Page:
+        page = owner.new_page(**options)
+        page.add_init_script("window.__POND_TEST_DIAGNOSTICS__ = true")
+        return page
+
     @classmethod
     def tearDownClass(cls) -> None:
         if cls.playwright is not None:
             cls.playwright.stop()
         cls.stop_server()
+
+
+class DevelopmentRoutingTests(BrowserTestCase):
+    server_command = ("npm", "run", "dev", "--")
+
+    def test_html_navigations_keep_their_page_and_status(self) -> None:
+        browser = self.playwright.chromium.launch()
+        self.addCleanup(browser.close)
+        page = browser.new_page(reduced_motion="reduce")
+        for path, status, entry in (
+            ("/", 200, "entry-client.tsx"),
+            ("/pip", 200, "entry-pip.tsx"),
+            ("/pip.html", 200, "entry-pip.tsx"),
+            ("/missing.html", 404, "entry-not-found.tsx"),
+            ("/nested/missing.file", 404, "entry-not-found.tsx"),
+        ):
+            with self.subTest(path=path):
+                response = page.goto(f"{self.base_url}{path}", wait_until="networkidle")
+                self.assertEqual(response.status, status)
+                self.assertIn(f'/app/{entry}', response.text())
+                expect(page.locator("h1")).to_be_visible()
+        response = page.request.get(f"{self.base_url}/qr/PIPSOFTWARE_BOT.svg", headers={"Accept": "text/html"})
+        self.assertEqual(response.status, 200)
+        self.assertIn("image/svg+xml", response.headers["content-type"])
+
+
+class SecurityBoundaryTests(BrowserTestCase):
+    def test_pond_seed_is_bounded_at_the_url_boundary(self) -> None:
+        browser = self.playwright.chromium.launch()
+        self.addCleanup(browser.close)
+        page = self.pond_page(browser, viewport={"width": 390, "height": 844}, reduced_motion="reduce")
+        page.goto(f"{self.base_url}/?pond-seed={'a' * 1024}", wait_until="networkidle")
+        pond = page.locator("[data-pond-seed]")
+        expect(pond).to_have_attribute("data-pond-seed", "a" * 128)
+        expect(pond).to_have_attribute("data-pond-state", "running")
+
+    def test_export_blocks_inline_scripts_and_external_connections(self) -> None:
+        def serve_without_policy_header(route):
+            response = route.fetch()
+            headers = dict(response.headers)
+            headers.pop("content-security-policy", None)
+            route.fulfill(response=response, headers=headers)
+
+        browser = self.playwright.chromium.launch()
+        self.addCleanup(browser.close)
+        for path in ("/", "/pip", "/missing/nested/page"):
+            with self.subTest(path=path):
+                context = browser.new_context(reduced_motion="reduce")
+                try:
+                    page = context.new_page()
+                    page.route(f"{self.base_url}{path}", serve_without_policy_header)
+                    page.goto(f"{self.base_url}{path}", wait_until="networkidle")
+                    self.assertEqual(page.locator('meta[name="referrer"]').get_attribute("content"), "no-referrer")
+                    result = page.evaluate("""async () => {
+                        const violations = [];
+                        const onViolation = event => violations.push(event.effectiveDirective);
+                        document.addEventListener('securitypolicyviolation', onViolation);
+                        const script = document.createElement('script');
+                        script.textContent = 'window.inlineScriptRan = true';
+                        document.body.append(script);
+                        let connectionBlocked = false;
+                        try { await fetch('https://blocked.invalid/probe'); }
+                        catch { connectionBlocked = true; }
+                        await new Promise(resolve => setTimeout(resolve, 50));
+                        document.removeEventListener('securitypolicyviolation', onViolation);
+                        script.remove();
+                        return {ran: window.inlineScriptRan === true, connectionBlocked, violations};
+                    }""")
+                    self.assertFalse(result["ran"])
+                    self.assertTrue(result["connectionBlocked"])
+                    self.assertIn("script-src-elem", result["violations"])
+                    self.assertIn("connect-src", result["violations"])
+                finally:
+                    context.close()
+
+    def request(self, path, method="GET"):
+        parsed = urlparse(self.base_url)
+        connection = http.client.HTTPConnection(parsed.hostname, parsed.port, timeout=10)
+        try:
+            connection.request(method, path)
+            response = connection.getresponse()
+            return response.status, dict(response.getheaders()), response.read()
+        finally:
+            connection.close()
+
+    def test_preview_rejects_escape_paths_and_unsupported_methods(self) -> None:
+        for path in ("/%", "/%00", "/%5cprivate", "/%2e%2e%2fpackage.json"):
+            with self.subTest(path=path):
+                status, headers, _ = self.request(path)
+                self.assertEqual(status, 400)
+                self.assertEqual(headers.get("X-Content-Type-Options"), "nosniff")
+        self.assertEqual(self.request("/", "POST")[0], 405)
+        status, headers, body = self.request("/pip", "HEAD")
+        self.assertEqual(status, 200)
+        self.assertEqual(body, b"")
+        self.assertGreater(int(headers["Content-Length"]), 0)
+        for path in ("/404", "/404.html", "/missing/nested/page"):
+            self.assertEqual(self.request(path)[0], 404)
+        self.assertEqual(self.request("/pip///")[0], 200)
+
+    def test_preview_does_not_follow_symlinks_outside_the_export(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            secret = Path(directory) / "outside.txt"
+            secret.write_text("outside-export-sentinel")
+            with tempfile.TemporaryDirectory(dir="out", prefix="boundary-") as exported:
+                link = Path(exported) / "escape.txt"
+                link.symlink_to(secret)
+                status, _, body = self.request("/" + str(link.relative_to(Path("out").resolve())))
+                self.assertEqual(status, 403)
+                self.assertNotIn(b"outside-export-sentinel", body)
 
 
 class KoiAtlasBrowserTests(BrowserTestCase):
@@ -401,13 +544,13 @@ class KoiAtlasBrowserTests(BrowserTestCase):
                 }
             })()"""
         )
-        return context.new_page()
+        return self.pond_page(context)
 
     def capture_koi(self, page, name):
         pond = page.locator("[data-pond-state]")
         expect(pond).to_have_attribute("data-pond-state", "running", timeout=15000)
-        page.wait_for_function("document.querySelector('[data-pond-state]')?.dataset.koiTest")
-        page.wait_for_function("Number(document.querySelector('[data-pond-state]').dataset.frame) >= 3")
+        wait_for_condition(page, "document.querySelector('[data-pond-state]')?.dataset.koiTest")
+        wait_for_condition(page, "Number(document.querySelector('[data-pond-state]').dataset.frame) >= 3")
         page.screenshot(path=SCREENSHOTS / f"{name}.png")
         canvas_image = pond.locator("canvas").evaluate("canvas => canvas.toDataURL('image/png')")
         (SCREENSHOTS / f"{name}-candidate.png").write_bytes(base64.b64decode(canvas_image.partition(",")[2]))
@@ -580,6 +723,24 @@ class KoiAtlasBrowserTests(BrowserTestCase):
 
 
 class PipRouteTests(BrowserTestCase):
+    def test_initial_page_keeps_scripts_below_300_kb_and_requests_only_local_assets(self) -> None:
+        browser = self.playwright.chromium.launch()
+        self.addCleanup(browser.close)
+        context = browser.new_context(viewport={"width": 390, "height": 844}, reduced_motion="reduce")
+        requests = []
+        page = context.new_page()
+        page.on("request", lambda request: requests.append(request.url))
+        page.goto(f"{self.base_url}/pip", wait_until="networkidle")
+        scripts = page.evaluate("""() => performance.getEntriesByType('resource')
+            .filter(entry => new URL(entry.name).pathname.endsWith('.js'))
+            .map(entry => entry.decodedBodySize)""")
+        self.assertGreater(len(scripts), 0)
+        self.assertTrue(all(size > 0 for size in scripts))
+        self.assertLess(sum(scripts), 300_000)
+        self.assertTrue(all(urlparse(url).netloc == urlparse(self.base_url).netloc for url in requests))
+        self.assertFalse(any("/qr/" in url for url in requests))
+        context.close()
+
     def test_browsing_demo_renders_and_suspends_offscreen(self) -> None:
         browser = self.playwright.chromium.launch()
         context = browser.new_context(viewport={"width": 1440, "height": 900})
@@ -592,7 +753,8 @@ class PipRouteTests(BrowserTestCase):
         self.assertEqual(demo.locator("canvas").count(), 1)
         expect(demo.locator("canvas")).to_be_visible()
         first_phase = demo.get_attribute("data-phase")
-        page.wait_for_function(
+        wait_for_condition(
+            page,
             "phase => document.querySelector('[data-testid=pip-browser-demo]').dataset.phase !== phase",
             arg=first_phase,
             timeout=12000,
@@ -769,24 +931,14 @@ class PipRouteTests(BrowserTestCase):
         failure_context.close()
         browser.close()
 
-    def test_telegram_qr_uses_the_same_target_and_reports_remote_failure(self) -> None:
+    def test_telegram_qr_loads_locally_on_demand_and_reports_failure(self) -> None:
         browser = self.playwright.chromium.launch()
-        transparent_png = base64.b64decode(
-            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
-        )
-        qr_data = []
+        requests = []
         fulfilled_context = browser.new_context(viewport={"width": 390, "height": 844})
         fulfilled_page = fulfilled_context.new_page()
-
-        def fulfill_qr(route) -> None:
-            qr_data.append(
-                parse_qs(urlparse(route.request.url).query).get("data", [None])[0]
-            )
-            route.fulfill(status=200, content_type="image/png", body=transparent_png)
-
-        fulfilled_page.route("https://api.qrserver.com/**", fulfill_qr)
+        fulfilled_page.on("request", lambda request: requests.append(request.url))
         fulfilled_page.goto(f"{self.base_url}/pip", wait_until="networkidle")
-        self.assertEqual(qr_data, [])
+        self.assertFalse(any("/qr/" in url for url in requests))
         contact = fulfilled_page.locator("#text-pip")
         qr_button = contact.get_by_role("button", name="Show QR code", exact=True)
         qr_button.click()
@@ -797,12 +949,18 @@ class PipRouteTests(BrowserTestCase):
             "true",
         )
         self.assertTrue(image.is_visible())
-        self.assertEqual(qr_data, ["https://t.me/PIPSOFTWARE_BOT"])
+        expect(image).to_have_attribute("src", "/qr/PIPSOFTWARE_BOT.svg")
+        wait_for_condition(
+            fulfilled_page,
+            "() => document.querySelector('#pip-qr img')?.naturalWidth === 240"
+        )
+        self.assertIn(f"{self.base_url}/qr/PIPSOFTWARE_BOT.svg", requests)
+        self.assertTrue(all(urlparse(url).netloc == urlparse(self.base_url).netloc for url in requests))
         fulfilled_context.close()
 
         aborted_context = browser.new_context(viewport={"width": 390, "height": 844})
         aborted_page = aborted_context.new_page()
-        aborted_page.route("https://api.qrserver.com/**", lambda route: route.abort())
+        aborted_page.route("**/qr/*.svg", lambda route: route.abort())
         aborted_page.goto(f"{self.base_url}/pip", wait_until="networkidle")
         aborted_page.locator("#text-pip").get_by_role(
             "button", name="Show QR code", exact=True
@@ -894,7 +1052,55 @@ class PipRouteTests(BrowserTestCase):
         browser.close()
 
 
+class PondProductionTests(BrowserTestCase):
+    def test_pond_animates_without_test_diagnostics(self) -> None:
+        browser = self.playwright.chromium.launch()
+        self.addCleanup(browser.close)
+        for path, motion in (("/", "no-preference"), ("/missing/nested/page", "reduce")):
+            with self.subTest(path=path, motion=motion):
+                page = browser.new_page(viewport={"width": 390, "height": 844}, reduced_motion=motion)
+                try:
+                    errors = []
+                    page.on("pageerror", lambda error: errors.append(str(error)))
+                    page.goto(f"{self.base_url}{path}", wait_until="networkidle")
+                    pond = page.locator("[data-pond-state]")
+                    expect(pond).to_have_attribute("data-pond-state", "running")
+                    expect(page.locator('[data-renderer]')).to_have_attribute("data-renderer", "three")
+                    canvas = pond.locator("canvas")
+                    expect(canvas).to_be_visible()
+                    wait_for_condition(page, "getComputedStyle(document.querySelector('[data-pond-state]')).opacity === '1'")
+                    first_frame = canvas.screenshot()
+                    mutations = pond.evaluate("""element => new Promise(resolve => {
+                        const attributes = [];
+                        const observer = new MutationObserver(records => {
+                            attributes.push(...records.map(record => record.attributeName));
+                        });
+                        observer.observe(element, { attributes: true });
+                        setTimeout(() => { observer.disconnect(); resolve(attributes); }, 3000);
+                    })""")
+                    self.assertEqual(mutations, [])
+                    self.assertEqual(pond.evaluate("element => Object.keys(element.dataset).sort()"), ["motion", "pondState"])
+                    self.assertNotEqual(first_frame, canvas.screenshot())
+                    self.assertEqual(errors, [])
+                finally:
+                    page.close()
+
+
 class PortfolioTests(BrowserTestCase):
+    def test_copyright_year_hydrates_when_the_visitors_clock_differs(self) -> None:
+        browser = self.playwright.chromium.launch()
+        self.addCleanup(browser.close)
+        page = self.pond_page(browser, reduced_motion="reduce")
+        issues = []
+        page.on("pageerror", lambda error: issues.append(str(error)))
+        page.on("console", lambda message: record_console_issue(issues, message))
+        page.add_init_script("Date.prototype.getFullYear = () => 2040")
+        page.goto(self.base_url, wait_until="networkidle")
+        rendered = re.sub(r"<[^>]+>", "", Path("out/index.html").read_text())
+        expected = re.search(r"© (\d{4}) Lu / 6C75", rendered).group(0)
+        expect(page.locator("footer")).to_contain_text(expected)
+        self.assertEqual(issues, [])
+
     def test_homepage_is_responsive_and_routes_featured_work(self) -> None:
         for viewport_name, viewport in (
             ("desktop", {"width": 1440, "height": 900}),
@@ -903,7 +1109,7 @@ class PortfolioTests(BrowserTestCase):
             with self.subTest(viewport=viewport_name):
                 browser = self.playwright.chromium.launch()
                 self.addCleanup(browser.close)
-                page = browser.new_page(viewport=viewport)
+                page = self.pond_page(browser, viewport=viewport)
                 page.goto(self.base_url, wait_until="networkidle")
 
                 self.assertTrue(
@@ -917,7 +1123,8 @@ class PortfolioTests(BrowserTestCase):
                         page.get_by_role("button", name=re.compile(project, re.I)).is_visible()
                     )
 
-                page.wait_for_function(
+                wait_for_condition(
+                    page,
                     "document.querySelector('[data-pond-state]')?.dataset.pondState === 'running'"
                 )
                 impact_count = page.locator("[data-pond-state]").get_attribute(
@@ -955,7 +1162,7 @@ class PortfolioTests(BrowserTestCase):
     def test_mobile_navigation_hero_viewport_and_system_color_modes(self) -> None:
         browser = self.playwright.chromium.launch()
         self.addCleanup(browser.close)
-        page = browser.new_page(viewport={"width": 320, "height": 640})
+        page = self.pond_page(browser, viewport={"width": 320, "height": 640})
         page.goto(f"{self.base_url}/?pond-seed=e2e-mobile-first-view", wait_until="networkidle")
 
         light_signature = None
@@ -1047,7 +1254,7 @@ class PortfolioTests(BrowserTestCase):
             ):
                 with self.subTest(viewport=viewport_name):
                     context = browser.new_context(viewport=viewport)
-                    page = context.new_page()
+                    page = self.pond_page(context)
                     console_issues = []
                     page.on(
                         "console",
@@ -1139,7 +1346,7 @@ class PortfolioTests(BrowserTestCase):
             java_script_enabled=False,
             viewport={"width": 390, "height": 844},
         )
-        page = context.new_page()
+        page = self.pond_page(context)
         page.goto(f"{self.base_url}/", wait_until="domcontentloaded")
 
         navigation = page.get_by_role("navigation", name="Portfolio navigation")
@@ -1177,7 +1384,7 @@ class PortfolioTests(BrowserTestCase):
             reduced_motion="reduce",
             viewport={"width": 320, "height": 568},
         )
-        page = context.new_page()
+        page = self.pond_page(context)
         page.goto(
             f"{self.base_url}/?pond-seed=e2e-homepage-pip-reduced",
             wait_until="networkidle",
@@ -1223,12 +1430,13 @@ class PortfolioTests(BrowserTestCase):
             ("desktop-1920", {"width": 1920, "height": 1080}),
         )
         browser = self.playwright.chromium.launch()
-        page = browser.new_page(viewport={"width": 1440, "height": 900})
+        page = self.pond_page(browser, viewport={"width": 1440, "height": 900})
         page_errors = []
         page.on("pageerror", lambda error: page_errors.append(str(error)))
         page.goto(f"{self.base_url}/?pond-seed=e2e-viewport-matrix", wait_until="networkidle")
         pond = page.locator("[data-pond-state]")
-        page.wait_for_function(
+        wait_for_condition(
+            page,
             "document.querySelector('[data-pond-state]')?.dataset.fishWorldPositions"
         )
 
@@ -1240,7 +1448,8 @@ class PortfolioTests(BrowserTestCase):
                     for point in pond.get_attribute("data-fish-world-positions").split(";")
                 ]
                 page.set_viewport_size(viewport)
-                page.wait_for_function(
+                wait_for_condition(
+                    page,
                     "frame => document.querySelector('[data-pond-state]')?.dataset.frame !== frame",
                     arg=previous_frame,
                 )
@@ -1303,7 +1512,7 @@ class PortfolioTests(BrowserTestCase):
 
     def test_loading_shows_only_the_pond_then_fades_in_the_live_ecosystem(self) -> None:
         browser = self.playwright.chromium.launch()
-        page = browser.new_page(viewport={"width": 1280, "height": 800})
+        page = self.pond_page(browser, viewport={"width": 1280, "height": 800})
 
         def delay_koi_atlas(route) -> None:
             time.sleep(0.7)
@@ -1327,10 +1536,12 @@ class PortfolioTests(BrowserTestCase):
             )
         )
         self.assertEqual(host.evaluate("element => getComputedStyle(element).opacity"), "0")
-        page.wait_for_function(
+        wait_for_condition(
+            page,
             "document.querySelector('[data-renderer]')?.dataset.renderer === 'three'"
         )
-        page.wait_for_function(
+        wait_for_condition(
+            page,
             "getComputedStyle(document.querySelector('[data-pond-state]')).opacity === '1'",
             timeout=3_000,
         )
@@ -1339,10 +1550,11 @@ class PortfolioTests(BrowserTestCase):
 
     def test_hero_copy_does_not_block_pointer_water_reaction(self) -> None:
         browser = self.playwright.chromium.launch()
-        page = browser.new_page(viewport={"width": 1280, "height": 800})
+        page = self.pond_page(browser, viewport={"width": 1280, "height": 800})
         page.goto(f"{self.base_url}/?pond-seed=e2e-hero-pointer", wait_until="networkidle")
         pond = page.locator("[data-pond-state]")
-        page.wait_for_function(
+        wait_for_condition(
+            page,
             "document.querySelector('[data-pond-state]')?.dataset.pondState === 'running'"
         )
 
@@ -1369,7 +1581,7 @@ class PortfolioTests(BrowserTestCase):
 
     def test_navigation_and_bordered_controls_keep_their_visual_hierarchy(self) -> None:
         browser = self.playwright.chromium.launch()
-        page = browser.new_page(viewport={"width": 1280, "height": 800})
+        page = self.pond_page(browser, viewport={"width": 1280, "height": 800})
         page.goto(f"{self.base_url}/?pond-seed=e2e-control-polish", wait_until="networkidle")
         page.wait_for_timeout(1_200)
 
@@ -1441,7 +1653,8 @@ class PortfolioTests(BrowserTestCase):
             image = panel.get_by_role(
                 "img", name="HomeBot native desktop chat interface", exact=True
             )
-            page.wait_for_function(
+            wait_for_condition(
+                page,
                 """alt => {
                     const image = [...document.images].find(candidate => candidate.alt === alt);
                     return image?.complete && image.naturalWidth > 0;
@@ -1492,7 +1705,8 @@ class PortfolioTests(BrowserTestCase):
                 image = panel.get_by_role("img", name="ConnectorMap matrix of AI agents and apps", exact=True)
                 expect(image).to_be_visible()
                 expect(image).to_have_attribute("src", "/images/portfolio/connectormap-card.webp")
-                page.wait_for_function(
+                wait_for_condition(
+                    page,
                     """() => {
                         const image = document.querySelector('img[alt="ConnectorMap matrix of AI agents and apps"]');
                         return image?.complete && image.naturalWidth > 0;
@@ -1515,7 +1729,7 @@ class PortfolioTests(BrowserTestCase):
 
     def test_pointer_stirs_the_pond(self) -> None:
         browser = self.playwright.chromium.launch()
-        page = browser.new_page(viewport={"width": 1440, "height": 900})
+        page = self.pond_page(browser, viewport={"width": 1440, "height": 900})
         page_errors = []
         console_issues = []
         page.on("pageerror", lambda error: page_errors.append(str(error)))
@@ -1532,7 +1746,8 @@ class PortfolioTests(BrowserTestCase):
         self.assertEqual(page.get_by_text("Touch the water", exact=True).count(), 0)
 
         pond = page.locator("[data-pond-state]")
-        page.wait_for_function(
+        wait_for_condition(
+            page,
             """() => {
                 const pond = document.querySelector('[data-pond-state]');
                 return pond?.dataset.pondState === 'running' && pond.dataset.fishPositions;
@@ -1556,7 +1771,8 @@ class PortfolioTests(BrowserTestCase):
             pond.get_attribute("data-world-model"),
             "seeded-routine-rock-target-food-environment",
         )
-        page.wait_for_function(
+        wait_for_condition(
+            page,
             """initial => {
                 const pond = document.querySelector('[data-pond-state]');
                 return pond?.dataset.waterOffset !== initial;
@@ -1596,7 +1812,8 @@ class PortfolioTests(BrowserTestCase):
             page.mouse.click(impact_x, impact_y)
 
         disturb_water_near_cat(cat_x, cat_y)
-        page.wait_for_function(
+        wait_for_condition(
+            page,
             """initial => {
                 const pond = document.querySelector('[data-pond-state]');
                 return Number(pond?.dataset.catPounceCount) > initial;
@@ -1604,12 +1821,14 @@ class PortfolioTests(BrowserTestCase):
             arg=first_pounce_count,
         )
         self.assertNotEqual(pond.get_attribute("data-cat-state"), "idle")
-        page.wait_for_function(
+        wait_for_condition(
+            page,
             "initial => document.querySelector('[data-pond-state]')?.dataset.catPosition !== initial",
             arg=first_cat_position,
         )
         self.assertNotEqual(pond.get_attribute("data-cat-position"), first_cat_position)
-        page.wait_for_function(
+        wait_for_condition(
+            page,
             """() => {
                 const pond = document.querySelector('[data-pond-state]');
                 return pond?.dataset.catGrounded === 'true' && ['idle', 'observe'].includes(pond.dataset.catState);
@@ -1639,7 +1858,8 @@ class PortfolioTests(BrowserTestCase):
         pointer_x, pointer_y = fish_x, fish_y
         page.mouse.move(fish_x - 220, fish_y - 60)
         page.mouse.move(pointer_x, pointer_y, steps=2)
-        page.wait_for_function(
+        wait_for_condition(
+            page,
             "document.querySelector('[data-pond-state]')?.dataset.fishReacting === 'true'"
         )
         self.assertEqual(pond.get_attribute("data-fish-reacting"), "true")
@@ -1656,7 +1876,8 @@ class PortfolioTests(BrowserTestCase):
         page.mouse.move(impact_x - 120, impact_y - 40)
         page.mouse.move(impact_x, impact_y, steps=6)
         page.mouse.click(impact_x, impact_y)
-        page.wait_for_function(
+        wait_for_condition(
+            page,
             "Number(document.querySelector('[data-pond-state]')?.dataset.rippleCount) > 0",
             timeout=2_000,
         )
@@ -1672,12 +1893,13 @@ class PortfolioTests(BrowserTestCase):
 
     def test_food_drop_reservation_and_feeding(self) -> None:
         browser = self.playwright.chromium.launch()
-        page = browser.new_page(viewport={"width": 1440, "height": 900})
+        page = self.pond_page(browser, viewport={"width": 1440, "height": 900})
         page_errors = []
         page.on("pageerror", lambda error: page_errors.append(str(error)))
         page.goto(f"{self.base_url}/?pond-seed=e2e-food", wait_until="networkidle")
         pond = page.locator("[data-pond-state]")
-        page.wait_for_function(
+        wait_for_condition(
+            page,
             "document.querySelector('[data-pond-state]')?.dataset.fishPositions"
         )
         food_before = int(pond.get_attribute("data-food-dropped-count"))
@@ -1706,7 +1928,8 @@ class PortfolioTests(BrowserTestCase):
             }, { once: true })"""
         )
         page.mouse.click(fish_x, fish_y, button="right")
-        page.wait_for_function(
+        wait_for_condition(
+            page,
             "initial => Number(document.querySelector('[data-pond-state]')?.dataset.foodDroppedCount) > initial",
             arg=food_before,
         )
@@ -1726,12 +1949,14 @@ class PortfolioTests(BrowserTestCase):
         self.assertEqual((dropped_x, dropped_y), (requested_x, requested_y))
         self.assertAlmostEqual(dropped_x, camera_x + (fish_x - 720) / scale_x, delta=1.2)
         self.assertAlmostEqual(dropped_y, camera_y + (fish_y - 450) / scale_y, delta=1.2)
-        page.wait_for_function(
+        wait_for_condition(
+            page,
             "document.querySelector('[data-pond-state]')?.dataset.foodReservations",
             timeout=20_000,
         )
         try:
-            page.wait_for_function(
+            wait_for_condition(
+                page,
                 "Number(document.querySelector('[data-pond-state]')?.dataset.fishFedCount) > 0",
                 timeout=30_000,
             )
@@ -1749,7 +1974,7 @@ class PortfolioTests(BrowserTestCase):
 
     def test_profile_card_foil_is_square_pointer_driven_and_motion_safe(self) -> None:
         browser = self.playwright.chromium.launch()
-        page = browser.new_page(viewport={"width": 1280, "height": 800})
+        page = self.pond_page(browser, viewport={"width": 1280, "height": 800})
         page_errors = []
         page.on("pageerror", lambda error: page_errors.append(str(error)))
         page.goto(self.base_url, wait_until="networkidle")
@@ -1758,7 +1983,8 @@ class PortfolioTests(BrowserTestCase):
         card_surface = card.locator('[class*="profileLine"]')
         portrait = page.locator('[class*="profilePortrait"]')
         card.scroll_into_view_if_needed()
-        page.wait_for_function(
+        wait_for_condition(
+            page,
             "document.querySelector('[class*=profilePortrait]')?.dataset.foilRenderer"
         )
         page.wait_for_timeout(700)
@@ -1796,14 +2022,14 @@ class PortfolioTests(BrowserTestCase):
         )
 
         def wait_for_tilt():
-            page.wait_for_function("""() => {
+            wait_for_condition(page, """() => {
                 const surface = document.querySelector('[class*="profileLine"]');
                 const m = new DOMMatrixReadOnly(getComputedStyle(surface).transform);
                 return Math.abs(m.m13) > 0.02 && Math.abs(m.m23) > 0.01;
             }""")
 
         def wait_for_settle():
-            page.wait_for_function("""() => {
+            wait_for_condition(page, """() => {
                 const surface = document.querySelector('[class*="profileLine"]');
                 const m = new DOMMatrixReadOnly(getComputedStyle(surface).transform);
                 return Math.abs(m.m13) < 0.001 && Math.abs(m.m23) < 0.001
@@ -1829,19 +2055,19 @@ class PortfolioTests(BrowserTestCase):
         portrait_box = portrait.bounding_box()
         page.mouse.move(portrait_box["x"] + portrait_box["width"] / 2,
                         portrait_box["y"] + portrait_box["height"] / 2)
-        page.wait_for_function("""() => {
+        wait_for_condition(page, """() => {
             const target = document.querySelector('[class*="profilePortrait"] canvas').dataset.foilTarget;
             if (!target) return false;
             const [x, y] = target.split(',').map(Number);
             return Math.abs(x - 0.5) < 0.06 && Math.abs(y - 0.5) < 0.06;
         }""")
         card.dispatch_event("pointerleave")
-        page.wait_for_function("""() => document.querySelector('[class*="profilePortrait"] canvas')
+        wait_for_condition(page, """() => document.querySelector('[class*="profilePortrait"] canvas')
             .dataset.foilView === '0.380,0.560'""")
         wait_for_settle()
         page.mouse.move(card_box["x"] + card_box["width"] - 12, card_box["y"] + 12)
         wait_for_tilt()
-        page.wait_for_function("""() => {
+        wait_for_condition(page, """() => {
             const canvas = document.querySelector('[class*="profilePortrait"] canvas');
             return canvas.dataset.foilTarget === '0.380,0.560'
                 && canvas.dataset.foilView === '0.380,0.560';
@@ -1887,7 +2113,7 @@ class PortfolioTests(BrowserTestCase):
 
     def test_reduced_motion_preserves_the_ecosystem_at_low_speed(self) -> None:
         browser = self.playwright.chromium.launch()
-        page = browser.new_page(viewport={"width": 1440, "height": 900})
+        page = self.pond_page(browser, viewport={"width": 1440, "height": 900})
         console_issues = []
         page_errors = []
         page.on("pageerror", lambda error: page_errors.append(str(error)))
@@ -1899,7 +2125,8 @@ class PortfolioTests(BrowserTestCase):
         page.goto(f"{self.base_url}/?pond-seed=e2e-reduced", wait_until="networkidle")
 
         pond = page.locator("[data-pond-state]")
-        page.wait_for_function(
+        wait_for_condition(
+            page,
             """() => {
                 const pond = document.querySelector('[data-pond-state]');
                 return pond?.dataset.pondState === 'running' && pond.dataset.fishPositions;
@@ -1910,7 +2137,8 @@ class PortfolioTests(BrowserTestCase):
         self.assertEqual(pond.get_attribute("data-motion"), "reduced")
         self.assertEqual(page.locator("[data-renderer]").get_attribute("data-renderer"), "three")
         self.assertEqual(pond.locator("canvas").count(), 1)
-        page.wait_for_function(
+        wait_for_condition(
+            page,
             "initial => document.querySelector('[data-pond-state]')?.dataset.fishPositions !== initial",
             arg=first_positions,
             timeout=5_000,
@@ -1923,7 +2151,8 @@ class PortfolioTests(BrowserTestCase):
         ]
         fish_x, fish_y = find_open_water(page, pond, fish_points)
         page.mouse.click(fish_x, fish_y, button="right")
-        page.wait_for_function(
+        wait_for_condition(
+            page,
             "Number(document.querySelector('[data-pond-state]')?.dataset.foodDroppedCount) > 0"
         )
         self.assertGreater(int(pond.get_attribute("data-food-count")), 0)
@@ -1936,10 +2165,11 @@ class PortfolioTests(BrowserTestCase):
         context = browser.new_context(
             viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True
         )
-        page = context.new_page()
+        page = self.pond_page(context)
         page.goto(f"{self.base_url}/?pond-seed=e2e-touch", wait_until="networkidle")
         pond = page.locator("[data-pond-state]")
-        page.wait_for_function(
+        wait_for_condition(
+            page,
             "document.querySelector('[data-pond-state]')?.dataset.pondState === 'running' && document.querySelector('[data-pond-state]')?.dataset.fishPositions"
         )
         fish_points = [
@@ -1960,7 +2190,8 @@ class PortfolioTests(BrowserTestCase):
         }""")
         impacts_before = int(pond.get_attribute("data-primary-impact-count"))
         page.touchscreen.tap(fish_x, fish_y)
-        page.wait_for_function(
+        wait_for_condition(
+            page,
             "document.querySelector('[data-pond-state]')?.dataset.touchGesture === 'single-tap-impact'"
         )
         self.assertEqual(
@@ -1970,11 +2201,18 @@ class PortfolioTests(BrowserTestCase):
         self.assertGreater(int(pond.get_attribute("data-ring-count")), 0)
         self.assertEqual(int(pond.get_attribute("data-food-dropped-count")), 0)
         impacts_before_food = int(pond.get_attribute("data-primary-impact-count"))
-        page.touchscreen.tap(fish_x, fish_y)
-        page.wait_for_timeout(100)
-        page.touchscreen.tap(fish_x, fish_y)
+        touch_session = context.new_cdp_session(page)
+
+        def double_tap(x, y):
+            touch_session.send("Input.synthesizeTapGesture", {
+                "x": x, "y": y, "duration": 100,
+                "tapCount": 2, "gestureSourceType": "touch",
+            })
+
+        double_tap(fish_x, fish_y)
         try:
-            page.wait_for_function(
+            wait_for_condition(
+                page,
                 "Number(document.querySelector('[data-pond-state]')?.dataset.foodDroppedCount) > 0"
             )
         except PlaywrightTimeoutError:
@@ -2006,9 +2244,7 @@ class PortfolioTests(BrowserTestCase):
         project_button = page.get_by_role("button", name=re.compile("Orchid.ai", re.I))
         project_button.scroll_into_view_if_needed()
         box = project_button.bounding_box()
-        page.touchscreen.tap(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
-        page.wait_for_timeout(100)
-        page.touchscreen.tap(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+        double_tap(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
         page.wait_for_timeout(500)
         self.assertEqual(int(pond.get_attribute("data-food-dropped-count")), dropped_count)
 
@@ -2072,9 +2308,10 @@ class PortfolioTests(BrowserTestCase):
         context.add_init_script(
             "HTMLCanvasElement.prototype.getContext = function () { return null; }"
         )
-        page = context.new_page()
+        page = self.pond_page(context)
         page.goto(self.base_url, wait_until="networkidle")
-        page.wait_for_function(
+        wait_for_condition(
+            page,
             "document.querySelector('[data-pond-state]')?.dataset.pondState === 'fallback'"
         )
         self.assertEqual(
@@ -2092,10 +2329,11 @@ class PortfolioTests(BrowserTestCase):
 
     def test_pause_resize_and_remount_keep_world_state_bounded(self) -> None:
         browser = self.playwright.chromium.launch()
-        page = browser.new_page(viewport={"width": 1280, "height": 800})
+        page = self.pond_page(browser, viewport={"width": 1280, "height": 800})
         page.goto(f"{self.base_url}/?pond-seed=e2e-lifecycle", wait_until="networkidle")
         pond = page.locator("[data-pond-state]")
-        page.wait_for_function(
+        wait_for_condition(
+            page,
             "document.querySelector('[data-pond-state]')?.dataset.fishWorldPositions"
         )
         first = [
@@ -2130,7 +2368,8 @@ class PortfolioTests(BrowserTestCase):
                 document.dispatchEvent(new Event('visibilitychange'));
             }"""
         )
-        page.wait_for_function(
+        wait_for_condition(
+            page,
             "initial => document.querySelector('[data-pond-state]')?.dataset.frame !== initial",
             arg=paused_frame,
         )
@@ -2142,7 +2381,8 @@ class PortfolioTests(BrowserTestCase):
             page.get_by_role("heading", name="Nothing surfaced here.").is_visible()
         )
         page.go_back(wait_until="networkidle")
-        page.wait_for_function(
+        wait_for_condition(
+            page,
             "document.querySelector('[data-pond-state]')?.dataset.pondState === 'running'"
         )
         self.assertEqual(page.locator("[data-pond-state] canvas").count(), 1)
@@ -2150,7 +2390,7 @@ class PortfolioTests(BrowserTestCase):
 
     def test_removed_routes_use_the_pond_not_found_page(self) -> None:
         browser = self.playwright.chromium.launch()
-        page = browser.new_page(viewport={"width": 1280, "height": 800})
+        page = self.pond_page(browser, viewport={"width": 1280, "height": 800})
         for path in LEGACY_ROUTES:
             with self.subTest(path=path):
                 response = page.request.get(f"{self.base_url}{path}")

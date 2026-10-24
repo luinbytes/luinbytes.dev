@@ -9,17 +9,17 @@ function prerenderDevelopment(): Plugin {
     name: "site-prerender-development",
     apply: "serve",
     configureServer(server) {
-      server.middlewares.use(async (request, response, next) => {
+      return () => server.middlewares.use(async (request, response, next) => {
         if (request.method !== "GET" || !request.headers.accept?.includes("text/html")) return next();
         const url = request.url ?? "/";
         const pathname = new URL(url, "http://localhost").pathname;
-        if (pathname.startsWith("/@") || (/\.[^/]+$/.test(pathname) && !/^\/(index|pip|404)\.html$/.test(pathname))) return next();
 
         try {
-          const template = await readFile(fileURLToPath(new URL("./index.html", import.meta.url)), "utf8");
           const { renderPage, routeForPath } = await server.ssrLoadModule("/app/entry-server.tsx");
+          const route = routeForPath(pathname);
+          const template = await readFile(fileURLToPath(new URL(route.output, import.meta.url)), "utf8");
           const html = await server.transformIndexHtml(url, renderPage(template, pathname));
-          response.statusCode = routeForPath(pathname).path === "/404" ? 404 : 200;
+          response.statusCode = route.path === "/404" ? 404 : 200;
           response.setHeader("Content-Type", "text/html; charset=utf-8");
           response.end(html);
         } catch (error) {
@@ -32,12 +32,17 @@ function prerenderDevelopment(): Plugin {
 }
 
 export default defineConfig(({ isSsrBuild }) => ({
+  appType: "mpa",
+  base: "/",
+  define: { "import.meta.env.BUILD_YEAR": JSON.stringify(new Date().getFullYear()) },
   plugins: [react(), tailwindcss(), prerenderDevelopment()],
   resolve: { alias: { "@": fileURLToPath(new URL("./", import.meta.url)) } },
   build: {
     outDir: isSsrBuild ? ".prerender" : "out",
     emptyOutDir: true,
     copyPublicDir: !isSsrBuild,
-    ...(isSsrBuild ? { rolldownOptions: { output: { entryFileNames: "entry-server.js" } } } : {}),
+    rolldownOptions: isSsrBuild
+      ? { output: { entryFileNames: "entry-server.js" } }
+      : { input: ["index.html", "pip.html", "404.html"] },
   },
 }));

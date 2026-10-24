@@ -1,0 +1,35 @@
+{
+  "root": "/tmp/luinbytes-security-optimization/before",
+  "pages": {
+    "404.html": {
+      "initialJavaScriptBytes": 433530,
+      "stylesheetBytes": 83654,
+      "scripts": [
+        "/assets/index-Cnudbxck.js"
+      ],
+      "styles": [
+        "/assets/index-6jsudVxL.css"
+      ]
+    },
+    "index.html": {
+      "initialJavaScriptBytes": 433530,
+      "stylesheetBytes": 83654,
+      "scripts": [
+        "/assets/index-Cnudbxck.js"
+      ],
+      "styles": [
+        "/assets/index-6jsudVxL.css"
+      ]
+    },
+    "pip.html": {
+      "initialJavaScriptBytes": 433530,
+      "stylesheetBytes": 83654,
+      "scripts": [
+        "/assets/index-Cnudbxck.js"
+      ],
+      "styles": [
+        "/assets/index-6jsudVxL.css"
+      ]
+    }
+  }
+}

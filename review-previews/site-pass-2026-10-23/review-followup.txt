@@ -1,0 +1,16 @@
+Focused source review by GPT-6.1-Sol at xhigh covered the follow-up diff
+against 4fb3aa223cd7e91defde84d505ecb5814d62cf39.
+
+Finding: the new canvas screenshot comparison could mistake the 760 ms host
+opacity transition for animation if rendering stopped after the first frame.
+
+Accepted fix: wait for computed host opacity to equal 1 before the first
+capture. The targeted rerun and the final 40-test combined suite passed.
+See diagnostics-settled.log and browser-verified.log.
+
+No additional correctness or security findings in diagnostic gating, attribute
+consumers, lifecycle handling, or the asset verifier. The reviewer did not run
+builds, tests, or image decoding. Runtime evidence is parent-owned.
+
+Separate comment review reported zero comment or suppression findings and zero
+deletions. No source edits were delegated in this follow-up.

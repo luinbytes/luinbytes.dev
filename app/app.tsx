@@ -1,7 +1,6 @@
+import type { ComponentType } from "react";
 import RootLayout from "./layout";
-import type { SiteRoute } from "./routes";
 
-export function App({ route }: { route: SiteRoute }) {
-  const Page = route.Component;
+export function App({ Page }: { Page: ComponentType }) {
   return <RootLayout><Page /></RootLayout>;
 }

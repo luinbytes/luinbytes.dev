@@ -1,0 +1,13 @@
+Task: site-pass-final-review-b-01
+Model: gpt-6.1-sol
+Status: completed
+
+1. **[warning / P2] Unknown dotted routes render the homepage during development.**
+   **Location:** [app/entry-client.tsx:4](/Users/luinbytes/.t3/worktrees/luinbytes.dev/t3-c6a04f3b/app/entry-client.tsx:4), interacting with [vite.config.ts:16](/Users/luinbytes/.t3/worktrees/luinbytes.dev/t3-c6a04f3b/vite.config.ts:16).
+   **Trigger:** Navigate to `/missing.html` under `npm run dev`.
+   **Evidence:** The prerender middleware skips unknown dotted paths. Vite retains its default `appType: "spa"` and rewrites the missing HTML request to `/index.html`. The new client entry unconditionally hydrates `Home`; previously it selected `NotFound` through `routeForPath(window.location.pathname)`. Production preview serves the authored 404 for this URL, so development now displays a different page. This follows the installed Vite middleware source; no server was started.
+   **Suggestion:** Route unmatched HTML navigations through the 404 template and entry after allowing actual asset requests through.
+
+Audit spot-checks found the referenced artifacts present. The baseline budget log records **433530 bytes**, and the baseline browser log supports the explicitly partial status. The design row’s build log supports the baseline build but does not itself substantiate the independent judge’s verdict.
+
+Source-only review. No edits, builds, tests, servers, or delegation performed.

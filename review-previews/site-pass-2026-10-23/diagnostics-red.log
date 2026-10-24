@@ -1,0 +1,38 @@
+test_pond_animates_without_test_diagnostics (tests.browser.browser_test.PondProductionTests.test_pond_animates_without_test_diagnostics) ...
+  test_pond_animates_without_test_diagnostics (tests.browser.browser_test.PondProductionTests.test_pond_animates_without_test_diagnostics) (path='/', motion='no-preference') ... FAIL
+  test_pond_animates_without_test_diagnostics (tests.browser.browser_test.PondProductionTests.test_pond_animates_without_test_diagnostics) (path='/missing/nested/page', motion='reduce') ... FAIL
+
+======================================================================
+FAIL: test_pond_animates_without_test_diagnostics (tests.browser.browser_test.PondProductionTests.test_pond_animates_without_test_diagnostics) (path='/', motion='no-preference')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/luinbytes/.t3/worktrees/luinbytes.dev/t3-c6a04f3b/tests/browser/browser_test.py", line 1062, in test_pond_animates_without_test_diagnostics
+    self.assertEqual(mutations, [])
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+AssertionError: Lists differ: ['data-wake-count', 'data-wake-count', 'da[12033 chars]unt'] != []
+
+First list contains 563 additional elements.
+First extra element 0:
+'data-wake-count'
+
+Diff is 13774 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_pond_animates_without_test_diagnostics (tests.browser.browser_test.PondProductionTests.test_pond_animates_without_test_diagnostics) (path='/missing/nested/page', motion='reduce')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/luinbytes/.t3/worktrees/luinbytes.dev/t3-c6a04f3b/tests/browser/browser_test.py", line 1062, in test_pond_animates_without_test_diagnostics
+    self.assertEqual(mutations, [])
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+AssertionError: Lists differ: ['data-fish-positions', 'data-fish-world-p[8017 chars]set'] != []
+
+First list contains 360 additional elements.
+First extra element 0:
+'data-fish-positions'
+
+Diff is 9149 characters long. Set self.maxDiff to None to see it.
+
+----------------------------------------------------------------------
+Ran 1 test in 12.274s
+
+FAILED (failures=2)

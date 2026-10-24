@@ -1,0 +1,9 @@
+test_export_blocks_inline_scripts_and_external_connections (browser_test.SecurityBoundaryTests.test_export_blocks_inline_scripts_and_external_connections) ... ok
+test_pond_seed_is_bounded_at_the_url_boundary (browser_test.SecurityBoundaryTests.test_pond_seed_is_bounded_at_the_url_boundary) ... ok
+test_preview_does_not_follow_symlinks_outside_the_export (browser_test.SecurityBoundaryTests.test_preview_does_not_follow_symlinks_outside_the_export) ... ok
+test_preview_rejects_escape_paths_and_unsupported_methods (browser_test.SecurityBoundaryTests.test_preview_rejects_escape_paths_and_unsupported_methods) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 9.163s
+
+OK

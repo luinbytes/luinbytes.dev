@@ -1,0 +1,25 @@
+Task: site-pass-design-judge-01
+Model: gpt-6.1-sol
+Status: completed
+
+**Choose three explicit client entries and HTML templates for this three-page site.** They give Vite ownership of production CSS links and avoid custom manifest traversal. Keep the existing route registry for server rendering, metadata, aliases, and output filenames.
+
+Source review confirms the static page imports in [routes.tsx](/Users/luinbytes/.t3/worktrees/luinbytes.dev/t3-c6a04f3b/app/routes.tsx:3) and the single-template export in [prerender.mjs](/Users/luinbytes/.t3/worktrees/luinbytes.dev/t3-c6a04f3b/scripts/prerender.mjs:5).
+
+1. **Styled HTML and hydration.** Both designs can work. Explicit entries let Vite attach styles from each entry’s static imports to its HTML. Each entry hydrates its known page through the same `App` and `RootLayout` used by SSR. Candidate2 must await the selected loader before both `renderToString` and `hydrateRoot`. Using `React.lazy` with the current synchronous rendering approach introduces fallback and hydration hazards.
+
+2. **Route isolation and nested 404s.** Give home, Pip, and 404 separate entries. Keep runtime imports of the server route registry out of their client dependency graphs. Shared components and global styles remain shared. Unknown nested paths receive `404.html`, whose entry always hydrates `NotFound`. Use root-relative asset URLs. Candidate2 achieves comparable isolation only if its manifest traversal follows the selected page’s `imports`, collects CSS, and excludes `dynamicImports`. Missing manifest entries should fail the build.
+
+3. **Maintainable diff.** Explicit entries add two small templates and entry files. They avoid async rendering changes, glob lookup validation, manifest-key coupling, and custom preload ordering. This is the Laziness Protocol choice. For three fixed routes, a few repeated template lines carry less maintenance risk than another asset-linking system.
+
+4. **Lazy animation.** Preserve the existing dynamic imports in [PondEnvironment](/Users/luinbytes/.t3/worktrees/luinbytes.dev/t3-c6a04f3b/components/concepts/signal-desk/pond-environment.tsx:45) and [PipWebSearchDemo](/Users/luinbytes/.t3/worktrees/luinbytes.dev/t3-c6a04f3b/components/pip/pip-web-search-demo.tsx:292). Keep their fallback markup, cleanup, visibility, and reduced-motion behavior. Neither architecture should preload renderer chunks or Three.js through generated links.
+
+5. **Development parity.** The [dev middleware](/Users/luinbytes/.t3/worktrees/luinbytes.dev/t3-c6a04f3b/vite.config.ts:18) must select the matching template before calling `transformIndexHtml`. Both alternatives need deliberate CSS handling for styled development HTML without JavaScript. Client-side CSS imports alone are insufficient. Emit direct stylesheet links for global/font styles and the selected page’s transitive CSS modules, with matching SSR class names. Preserve clean URLs, `.html` aliases, and 404 status handling.
+
+The compact architecture is three page-specific entries calling one shared `hydratePage(Page)` helper. Server rendering retains the existing route resolver and synchronous render function. Prerendering reads each route’s own Vite-built HTML before inserting metadata and content. No client router is needed.
+
+**Use the proposed build-time QR design.** Keep `qrcode` as a devDependency. The generator should call `getPipContact()`, encode its exact `telegramUrl`, and write the SVG beneath `public` using its validated `qrUrl`. Run it in `predev` and `prebuild`. Preserve the conditional image mount, dimensions, and failure message. Do not preload the SVG. This removes the QR provider request while preserving “Show QR” behavior. The parent’s concurrent implementation now follows this shape.
+
+For CSP integration, place the meta policy before resource links and allow same-origin fonts if the default policy denies them.
+
+This is source-only judgment at the supplied HEAD. I made no edits, delegated no work, and ran no builds or tests. The parent’s next step is to implement the three-entry split.

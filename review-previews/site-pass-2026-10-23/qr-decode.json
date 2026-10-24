@@ -1,0 +1,20 @@
+{
+  "decoded": "https://t.me/PIPSOFTWARE_BOT",
+  "allRequestsSameOrigin": true,
+  "qrRequestedOnDemand": true,
+  "initialScripts": [
+    {
+      "url": "http://127.0.0.1:3017/assets/pip-Dl51VyL9.js",
+      "bytes": 19866
+    },
+    {
+      "url": "http://127.0.0.1:3017/assets/hydrate-page-BNxyiwGh.js",
+      "bytes": 256238
+    },
+    {
+      "url": "http://127.0.0.1:3017/assets/pip-logo-DJAVmYIr.js",
+      "bytes": 760
+    }
+  ],
+  "initialJavaScriptBytes": 276864
+}

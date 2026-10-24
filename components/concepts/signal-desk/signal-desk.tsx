@@ -57,7 +57,7 @@ function SiteFooter({ reduced, entrance, ready }: { reduced: boolean; entrance: 
       viewport={{ once: true, amount: 0.7 }}
       transition={{ duration: motionValue(reduced, 0.42), ease: EASE_OUT }}
     >
-      <span>© {new Date().getFullYear()} Lu / 6C75</span>
+      <span>© {import.meta.env.BUILD_YEAR} Lu / 6C75</span>
       <div>
         <a href={portfolioIdentity.github} target="_blank" rel="noreferrer">GitHub</a>
         <a href={portfolioIdentity.x} target="_blank" rel="noreferrer">@x6c75</a>

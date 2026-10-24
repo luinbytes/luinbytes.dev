@@ -8,5 +8,5 @@ export function renderPage(template: string, pathname: string): string {
   const route = routeForPath(pathname);
   return template
     .replace("<!--app-head-->", renderToStaticMarkup(<RouteHead route={route} />))
-    .replace("<!--app-html-->", renderToString(<App route={route} />));
+    .replace("<!--app-html-->", renderToString(<App Page={route.Component} />));
 }

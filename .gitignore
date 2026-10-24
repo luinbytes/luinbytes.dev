@@ -21,6 +21,7 @@ __pycache__/
 .venv/
 
 /out/
+/public/qr/
 /.prerender/
 /.next*/
 

@@ -62,7 +62,8 @@ available as static, readable HTML. Its Telegram target is defined in
 `PIP_TELEGRAM_HANDLE` in `lib/pip.ts`; rebuild after changing it so the
 configured Telegram handle and contact controls are rendered into the exported
 page. Message Pip and copy-handle fallback are available directly, while the
-remote QR image is requested from `api.qrserver.com` only after Show QR. The
+QR image is generated locally during development setup and production builds.
+It is requested from this site only after Show QR, without a third-party image service. The
 page's canonical URL is
 `https://luinbytes.dev/pip`, and it uses a Pip-specific share card so embeds keep
 the product page's identity.
@@ -102,3 +103,24 @@ image service or runtime route: Vite copies the checked-in PNGs into the static 
 
 - Built by Lu
 - Powered by caffeine and spite
+
+## Security and page loading
+
+Home, Pip, and the 404 page have separate HTML and client entries. Vite generates
+their stylesheet and preload links. Run `node scripts/measure-page-assets.mjs`
+after a build to inspect each page's initial uncompressed JavaScript and CSS.
+
+Each production page receives a Content Security Policy that allows scripts and
+connections from this site. Inline JavaScript, embedded frames, plugins, and form
+submissions are blocked. Inline styles remain allowed for React and animation
+styles. Blob images remain allowed for local pond textures.
+
+The preview server also sends `X-Content-Type-Options`, `X-Frame-Options`, and
+`Referrer-Policy`. These server headers apply to local previews. GitHub Pages and
+Cloudflare control the public response headers. In particular, public frame
+embedding restrictions require a response header at the hosting layer; an HTML
+meta policy cannot enforce `frame-ancestors`.
+
+Pull requests run dependency auditing, lint, unit tests, and the production browser
+suite. Deployment actions use pinned commits, and only the deployment job receives
+Pages write and identity-token permissions.

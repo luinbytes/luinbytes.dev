@@ -1,0 +1,66 @@
+{
+  "base": "4fb3aa223cd7e91defde84d505ecb5814d62cf39",
+  "savedBytes": 73700,
+  "assets": [
+    {
+      "asset": "pixel-pond-world.webp",
+      "beforeBytes": 1482782,
+      "afterBytes": 1449726,
+      "width": 1586,
+      "height": 992,
+      "rgbaSha256": "d4f2480a3ce9ac76f63cf337e60d4b01a3b07d77dc301147fc2f8128b62f883c",
+      "exactRgba": true,
+      "metadataUnchanged": true
+    },
+    {
+      "asset": "pixel-koi-atlas.webp",
+      "beforeBytes": 1068362,
+      "afterBytes": 1063708,
+      "width": 1256,
+      "height": 1256,
+      "rgbaSha256": "8a64daa48e2f5c4a1a6f5d7172a324d33abcb46c45c700dc7c44e572e104d9f4",
+      "exactRgba": true,
+      "metadataUnchanged": true
+    },
+    {
+      "asset": "pixel-pond-foreground.webp",
+      "beforeBytes": 1646424,
+      "afterBytes": 1613324,
+      "width": 1586,
+      "height": 992,
+      "rgbaSha256": "6ff78e981c552d8b64b92dc53cd4f0248d9caeb252699fc303569c7168ddbeab",
+      "exactRgba": true,
+      "metadataUnchanged": true
+    },
+    {
+      "asset": "pixel-pond-water-layer.webp",
+      "beforeBytes": 1039850,
+      "afterBytes": 1039792,
+      "width": 1586,
+      "height": 992,
+      "rgbaSha256": "5762ec72e27c5854ebcf354cf542d0a0dac2cf21e36020008c609152c9515a20",
+      "exactRgba": true,
+      "metadataUnchanged": true
+    },
+    {
+      "asset": "pixel-tabby-atlas.webp",
+      "beforeBytes": 135412,
+      "afterBytes": 134300,
+      "width": 1280,
+      "height": 1280,
+      "rgbaSha256": "deebb752c7c3f66f2463b0f5869be597e7ae6168af69728e255a7c8287aebb53",
+      "exactRgba": true,
+      "metadataUnchanged": true
+    },
+    {
+      "asset": "pixel-tabby-turn-atlas.webp",
+      "beforeBytes": 110836,
+      "afterBytes": 109116,
+      "width": 1600,
+      "height": 320,
+      "rgbaSha256": "ea0fce008a91e0fa441d4690d0bd1a88200405d7fd03c030622ba610012d4db8",
+      "exactRgba": true,
+      "metadataUnchanged": true
+    }
+  ]
+}

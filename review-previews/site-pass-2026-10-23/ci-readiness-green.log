@@ -1,0 +1,8 @@
+test_colored_ready_log_still_checks_the_owned_server_over_http (tests.browser.browser_test.ServerStartupTests.test_colored_ready_log_still_checks_the_owned_server_over_http) ... [32mok[0m
+test_exited_child_reports_its_owned_log_without_probing_http (tests.browser.browser_test.ServerStartupTests.test_exited_child_reports_its_owned_log_without_probing_http) ... [32mok[0m
+test_html_navigations_keep_their_page_and_status (tests.browser.browser_test.DevelopmentRoutingTests.test_html_navigations_keep_their_page_and_status) ... [32mok[0m
+
+----------------------------------------------------------------------
+Ran 3 tests in 13.282s
+
+[32mOK[0m

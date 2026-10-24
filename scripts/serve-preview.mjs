@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
-import { readFile, stat } from "node:fs/promises";
+import { readFile, realpath, stat } from "node:fs/promises";
 import { extname, resolve, sep } from "node:path";
+import { contentSecurityPolicy } from "./security-policy.mjs";
 
 const args = process.argv.slice(2);
 const argument = (name, fallback) => {
@@ -24,9 +25,14 @@ const contentTypes = {
   ".webp": "image/webp",
   ".ico": "image/x-icon",
   ".woff2": "font/woff2",
+  ".woff": "font/woff",
 };
 
 const server = createServer(async (request, response) => {
+  response.setHeader("X-Content-Type-Options", "nosniff");
+  response.setHeader("Referrer-Policy", "no-referrer");
+  response.setHeader("X-Frame-Options", "DENY");
+  response.setHeader("Content-Security-Policy", `${contentSecurityPolicy}; frame-ancestors 'none'`);
   if (request.method !== "GET" && request.method !== "HEAD") {
     response.writeHead(405, { Allow: "GET, HEAD" }).end();
     return;
@@ -38,13 +44,13 @@ const server = createServer(async (request, response) => {
     response.writeHead(400).end();
     return;
   }
-  const route = pathname.replace(/\/$/, "") || "/";
-  let file = resolve(root, `.${route === "/" ? "/index.html" : route === "/pip" ? "/pip.html" : pathname}`);
+  const route = pathname.replace(/\/+$/, "") || "/";
+  let file = resolve(root, `.${route === "/" ? "/index.html" : route === "/pip" ? "/pip.html" : route === "/404" ? "/404.html" : route}`);
   if (!file.startsWith(`${root}${sep}`) || pathname.includes("\0") || pathname.includes("\\")) {
     response.writeHead(400).end();
     return;
   }
-  let status = 200;
+  let status = route === "/404" || route === "/404.html" ? 404 : 200;
   try {
     if (!(await stat(file)).isFile()) throw new Error("not-file");
   } catch {
@@ -52,7 +58,12 @@ const server = createServer(async (request, response) => {
     status = 404;
   }
   try {
-    const body = await readFile(file);
+    const [canonicalRoot, canonicalFile] = await Promise.all([realpath(root), realpath(file)]);
+    if (!canonicalFile.startsWith(`${canonicalRoot}${sep}`)) {
+      response.writeHead(403).end();
+      return;
+    }
+    const body = await readFile(canonicalFile);
     response.writeHead(status, {
       "Content-Type": contentTypes[extname(file)] ?? "application/octet-stream",
       "Content-Length": body.length,
