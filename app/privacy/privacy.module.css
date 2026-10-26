@@ -45,7 +45,7 @@
   font-size: 14px;
 }
 
-.page p,
+.page > .shell > p:not(.nav),
 .page section p {
   margin: 0;
   color: var(--site-muted);
