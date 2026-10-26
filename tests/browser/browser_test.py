@@ -197,7 +197,7 @@ class ServerStartupTests(unittest.TestCase):
 
 
 class GeneratedArtifactTests(unittest.TestCase):
-    def test_sitemap_exposes_the_portfolio_and_pip(self) -> None:
+    def test_sitemap_exposes_the_portfolio_pip_and_privacy(self) -> None:
         root = ET.parse("public/sitemap.xml").getroot()
         locations = [
             location.text
@@ -207,7 +207,25 @@ class GeneratedArtifactTests(unittest.TestCase):
             )
         ]
 
-        self.assertEqual(locations, ["https://luinbytes.dev", "https://luinbytes.dev/pip"])
+        self.assertEqual(
+            locations,
+            [
+                "https://luinbytes.dev",
+                "https://luinbytes.dev/pip",
+                "https://luinbytes.dev/privacy",
+            ],
+        )
+
+    def test_privacy_export_serves_the_policy_page(self) -> None:
+        html = Path("out/privacy.html").read_text()
+        self.assertIn("<title>Privacy Policy | Lu</title>", html)
+        self.assertIn('content="noindex"', html)
+        self.assertIn("https://luinbytes.dev/privacy", html)
+        self.assertIn("Privacy Policy", html)
+        self.assertIn("Lumi Health", html)
+        self.assertIn("0x6c75@gmail.com", html)
+        self.assertIn("26 Oct 2026", html)
+        self.assertNotIn("Nothing surfaced here.", html)
 
 
 class MetadataParser(HTMLParser):
@@ -428,6 +446,8 @@ class DevelopmentRoutingTests(BrowserTestCase):
             ("/", 200, "entry-client.tsx"),
             ("/pip", 200, "entry-pip.tsx"),
             ("/pip.html", 200, "entry-pip.tsx"),
+            ("/privacy", 200, "entry-privacy.tsx"),
+            ("/privacy.html", 200, "entry-privacy.tsx"),
             ("/missing.html", 404, "entry-not-found.tsx"),
             ("/nested/missing.file", 404, "entry-not-found.tsx"),
         ):
@@ -511,9 +531,15 @@ class SecurityBoundaryTests(BrowserTestCase):
         self.assertEqual(status, 200)
         self.assertEqual(body, b"")
         self.assertGreater(int(headers["Content-Length"]), 0)
+        privacy_status, _, privacy_body = self.request("/privacy")
+        self.assertEqual(privacy_status, 200)
+        self.assertIn(b"Privacy Policy", privacy_body)
+        self.assertIn(b"0x6c75@gmail.com", privacy_body)
+        self.assertIn(b"Lumi Health", privacy_body)
         for path in ("/404", "/404.html", "/missing/nested/page"):
             self.assertEqual(self.request(path)[0], 404)
         self.assertEqual(self.request("/pip///")[0], 200)
+        self.assertEqual(self.request("/privacy///")[0], 200)
 
     def test_preview_does_not_follow_symlinks_outside_the_export(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

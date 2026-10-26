@@ -2,6 +2,7 @@ import type { ComponentType } from "react";
 import siteConfig from "@/site.config.json";
 import Home from "./page";
 import PipPage from "./pip/page";
+import PrivacyPage from "./privacy/page";
 import NotFound from "./not-found";
 
 type RouteMetadata = {
@@ -16,8 +17,8 @@ type RouteMetadata = {
 };
 
 export type SiteRoute = {
-  path: "/" | "/pip" | "/404";
-  output: "index.html" | "pip.html" | "404.html";
+  path: "/" | "/pip" | "/privacy" | "/404";
+  output: "index.html" | "pip.html" | "privacy.html" | "404.html";
   Component: ComponentType;
   metadata: RouteMetadata;
 };
@@ -55,6 +56,21 @@ export const siteRoutes: readonly SiteRoute[] = [
       canonical: `${siteConfig.siteUrl}/pip`,
       image: `${siteConfig.siteUrl}/share-cards/luinbytes-dev-pip.png`,
       imageAlt: "Pip - Your Telegram mate",
+    },
+  },
+  {
+    path: "/privacy",
+    output: "privacy.html",
+    Component: PrivacyPage,
+    metadata: {
+      title: "Privacy Policy | Lu",
+      socialTitle: "Privacy Policy",
+      description: "Privacy policy for Lu's personal software on luinbytes.dev.",
+      socialDescription: "Privacy policy for Lu's personal software on luinbytes.dev.",
+      canonical: `${siteConfig.siteUrl}/privacy`,
+      image: `${siteConfig.siteUrl}/share-cards/luinbytes-dev-pond.png`,
+      imageAlt: "Lu | Software Engineer",
+      noindex: true,
     },
   },
   notFoundRoute,

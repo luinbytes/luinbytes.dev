@@ -1,0 +1,80 @@
+.page {
+  min-height: 100svh;
+  min-height: 100dvh;
+  color: var(--site-text);
+  background: var(--site-bg);
+  font-family: var(--font-body, sans-serif);
+}
+
+.shell {
+  width: min(100%, 40rem);
+  margin-inline: auto;
+  padding: max(28px, env(safe-area-inset-top)) clamp(16px, 4vw, 28px) max(48px, env(safe-area-inset-bottom));
+}
+
+.nav {
+  margin: 0 0 36px;
+}
+
+.nav a {
+  color: var(--site-muted);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.nav a:hover {
+  color: var(--site-text);
+}
+
+.header {
+  margin-bottom: 28px;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: clamp(2rem, 6vw, 2.75rem);
+  font-weight: 650;
+  letter-spacing: -0.05em;
+  line-height: 1.1;
+}
+
+.updated {
+  margin: 12px 0 0;
+  color: var(--site-muted);
+  font-size: 14px;
+}
+
+.page > .shell > p:not(.nav),
+.page section p {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.page > .shell > p:not(.nav) {
+  margin-bottom: 28px;
+}
+
+.page section + section {
+  margin-top: 24px;
+}
+
+.page h2 {
+  margin: 0 0 8px;
+  color: var(--site-text);
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.page section a {
+  color: var(--site-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.page section a:hover {
+  color: var(--site-text);
+}
