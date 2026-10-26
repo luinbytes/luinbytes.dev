@@ -45,7 +45,8 @@ const server = createServer(async (request, response) => {
     return;
   }
   const route = pathname.replace(/\/+$/, "") || "/";
-  let file = resolve(root, `.${route === "/" ? "/index.html" : route === "/pip" ? "/pip.html" : route === "/404" ? "/404.html" : route}`);
+  const mapped = route === "/" ? "/index.html" : extname(route) ? route : `${route}.html`;
+  let file = resolve(root, `.${mapped}`);
   if (!file.startsWith(`${root}${sep}`) || pathname.includes("\0") || pathname.includes("\\")) {
     response.writeHead(400).end();
     return;

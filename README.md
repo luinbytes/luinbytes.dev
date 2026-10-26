@@ -4,7 +4,7 @@ Lu's interactive personal portfolio, built around the living pixel pond version 
 
 The homepage focuses on Lu's current work at [Orchid.ai](https://orchid.ai), selected public projects, and an interactive procedural pond rather than a catalogue of product pages.
 
-The site has two public routes: `/`, the interactive portfolio, and `/pip`, a static product page for Pip, Lu's warm, easygoing Telegram agent. The Pip page is a deliberate standalone exception to the portfolio's homepage-first structure. Retired concept and product URLs resolve to the pond-themed 404 instead of preserving stale copies of older portfolios.
+The site has three public routes: `/`, the interactive portfolio; `/pip`, a static product page for Pip, Lu's warm, easygoing Telegram agent; and `/privacy`, a short personal-use privacy policy. The Pip page is a deliberate standalone exception to the portfolio's homepage-first structure. Retired concept and product URLs resolve to the pond-themed 404 instead of preserving stale copies of older portfolios.
 
 The portfolio features [HomeBot](https://github.com/luinbytes/HomeBot), [rakazo-android](https://github.com/luinbytes/rakazo-android), [Linux Sonar](https://github.com/luinbytes/linux-sonar), [bongocat](https://github.com/luinbytes/bongocat), and [cursor-barrier](https://github.com/luinbytes/cursor-barrier).
 

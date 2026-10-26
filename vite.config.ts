@@ -43,6 +43,6 @@ export default defineConfig(({ isSsrBuild }) => ({
     copyPublicDir: !isSsrBuild,
     rolldownOptions: isSsrBuild
       ? { output: { entryFileNames: "entry-server.js" } }
-      : { input: ["index.html", "pip.html", "404.html"] },
+      : { input: ["index.html", "pip.html", "privacy.html", "404.html"] },
   },
 }));

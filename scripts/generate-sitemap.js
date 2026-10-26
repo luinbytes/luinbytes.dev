@@ -9,7 +9,7 @@ const projectRoot = fileURLToPath(new URL('..', import.meta.url));
 const { siteUrl } = JSON.parse(fs.readFileSync(path.join(projectRoot, 'site.config.json'), 'utf8'));
 const outputPath = path.join(projectRoot, 'public/sitemap.xml');
 
-const staticPages = ['', '/pip'];
+const staticPages = ['', '/pip', '/privacy'];
 
 function generateSitemap() {
   const lastModified = execFileSync('git', ['log', '-1', '--format=%cs'], {
