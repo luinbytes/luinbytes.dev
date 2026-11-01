@@ -2694,28 +2694,44 @@ document.addEventListener("readystatechange", armBoneWatch);
             route.continue_()
 
         page.route("**/*", hold_chunk)
-        second_label = page.evaluate(
+        final = page.evaluate(
             """() => new Promise((resolve) => {
               const button = document.querySelector("#text-pip button[aria-controls='pip-qr']");
+              const panel = document.getElementById("pip-qr");
+              let hid = false;
+              let secondWasShow = false;
+              const finish = () => resolve({
+                expanded: button.getAttribute("aria-expanded"),
+                hidden: panel.hidden,
+                secondWasShow,
+              });
+              const observer = new MutationObserver(() => {
+                if (hid || button.getAttribute("aria-expanded") !== "true") return;
+                hid = true;
+                observer.disconnect();
+                button.click();
+                window.setTimeout(finish, 250);
+              });
+              observer.observe(button, { attributes: true, attributeFilter: ["aria-expanded"] });
               button.click();
               window.setTimeout(() => {
+                secondWasShow = (button.textContent || "").includes("Show QR code");
+                if (!secondWasShow) {
+                  observer.disconnect();
+                  finish();
+                  return;
+                }
                 button.click();
-                resolve(button.textContent);
               }, 130);
+              window.setTimeout(() => {
+                if (hid) return;
+                observer.disconnect();
+                finish();
+              }, 1000);
             })"""
         )
-        self.assertIn("Show QR code", second_label)
-        page.wait_for_function(
-            """() => {
-              const button = document.querySelector("#text-pip button[aria-controls='pip-qr']");
-              const panel = document.getElementById("pip-qr");
-              return button && button.getAttribute("aria-expanded") === "true" && panel && !panel.hidden;
-            }""",
-            timeout=500,
-        )
-        page.locator("#text-pip").get_by_role("button", name="Hide QR code", exact=True).click()
-        page.wait_for_timeout(250)
-        self.assertEqual(page.locator("#text-pip button[aria-controls='pip-qr']").get_attribute("aria-expanded"), "false")
-        self.assertTrue(page.locator("#pip-qr").is_hidden())
+        self.assertTrue(final["secondWasShow"])
+        self.assertEqual(final["expanded"], "false")
+        self.assertTrue(final["hidden"])
         self.assertGreaterEqual(len(held_chunks), 1)
         browser.close()

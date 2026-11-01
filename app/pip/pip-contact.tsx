@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowUpRight, Check, Copy, Send, QrCode } from "lucide-react";
 import type { getPipContact } from "@/lib/pip";
 import { Button } from "@/components/ui/button";
@@ -6,12 +6,13 @@ import { loadSkulletOverlay, SKELETON_HOLD_MS, SkulletImage } from "@/components
 import styles from "./pip.module.css";
 
 function loadQrOverlay() {
-  return Promise.race([
-    loadSkulletOverlay(),
-    new Promise<boolean>((resolve) => {
-      window.setTimeout(() => resolve(false), SKELETON_HOLD_MS);
-    }),
-  ]);
+  let timer = 0;
+  const timeout = new Promise<boolean>((resolve) => {
+    timer = window.setTimeout(() => resolve(false), SKELETON_HOLD_MS);
+  });
+  return Promise.race([loadSkulletOverlay(), timeout]).finally(() => {
+    window.clearTimeout(timer);
+  });
 }
 
 export function PipContact({ contact }: { contact: ReturnType<typeof getPipContact> }) {
@@ -20,6 +21,9 @@ export function PipContact({ contact }: { contact: ReturnType<typeof getPipConta
   const [qrImmediate, setQrImmediate] = useState(false);
   const [qrFailed, setQrFailed] = useState(false);
   const qrOpenRequest = useRef(0);
+  useEffect(() => () => {
+    qrOpenRequest.current++;
+  }, []);
 
   async function copyHandle() {
     if (!contact) return;
