@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ArrowUpRight, Check, Copy, Send, QrCode } from "lucide-react";
 import type { getPipContact } from "@/lib/pip";
 import { Button } from "@/components/ui/button";
+import { SkulletImage } from "@/components/ui/skullet-image";
 import styles from "./pip.module.css";
 
 export function PipContact({ contact }: { contact: ReturnType<typeof getPipContact> }) {
@@ -73,11 +74,13 @@ export function PipContact({ contact }: { contact: ReturnType<typeof getPipConta
                 <p role="status">QR code couldn’t load. Use Message Pip or copy the handle instead.</p>
               ) : (
                 <>
-                  <img
+                  <SkulletImage
+                    label="Loading QR code"
                     src={contact.qrUrl}
                     alt="Scan to message Pip on Telegram"
                     width={240}
                     height={240}
+                    radius="12px"
                     referrerPolicy="no-referrer"
                     onError={() => setQrFailed(true)}
                   />

@@ -13,6 +13,7 @@ import { ProfileCard } from "./profile-card";
 import { PipFace } from "@/components/pip/pip-logo";
 import { PipFeature } from "@/components/pip/pip-feature";
 import { Button } from "@/components/ui/button";
+import { SkulletImage } from "@/components/ui/skullet-image";
 import projectStyles from "./project-explorer.module.css";
 import styles from "./signal-desk.module.css";
 
@@ -80,7 +81,9 @@ function ProjectArtwork({ project }: { project: PortfolioProject }) {
 
   return (
     <div className={`${projectStyles.projectMedia} ${projectStyles[`media${project.id.replaceAll("-", "")}`]}`}>
-      <img
+      <SkulletImage
+        frame
+        label={`Loading ${project.name} artwork`}
         src={project.image}
         alt={project.imageAlt ?? `${project.name} project artwork`}
         style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}

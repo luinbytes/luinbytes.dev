@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 
+import { SkulletImage } from "@/components/ui/skullet-image";
 import styles from "./profile-card.module.css";
 
 export function ProfileCard({ reducedMotion, compact = false }: { reducedMotion: boolean; compact?: boolean }) {
@@ -442,7 +443,16 @@ export function ProfileCard({ reducedMotion, compact = false }: { reducedMotion:
     <div ref={cardRef} className={`${styles.profileTilt} ${compact ? styles.compact : ""}`}>
       <div className={styles.profileLine}>
         <span className={styles.profilePortrait}>
-          <img src="/images/portfolio/lu-avatar.jpg" alt="Lu's illustrated avatar wearing a pink cap" width={72} height={72} loading="eager" fetchPriority="high" />
+          <SkulletImage
+            frame
+            label="Loading portrait"
+            src="/images/portfolio/lu-avatar.jpg"
+            alt="Lu's illustrated avatar wearing a pink cap"
+            width={72}
+            height={72}
+            loading="eager"
+            fetchPriority="high"
+          />
           <canvas ref={foilCanvasRef} className={styles.profileFoilCanvas} width={72} height={72} aria-hidden="true" />
         </span>
         <span className={styles.profileDetails}>

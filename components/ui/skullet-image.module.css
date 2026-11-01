@@ -1,0 +1,57 @@
+:global(img[data-skullet-media]) {
+  transition: opacity 180ms ease;
+}
+
+:global(img[data-pending-media]) {
+  opacity: 0;
+}
+
+.frame[skullet-reveal],
+.overlay[skullet-reveal] {
+  position: absolute;
+  z-index: 3;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.frame[skullet-reveal] {
+  inset: 0;
+}
+
+.overlay[skullet-reveal] {
+  inset: 0;
+}
+
+.frame[skullet-reveal] > [skullet-pane],
+.frame[skullet-reveal] [skullet-loading],
+.frame[skullet-reveal] [skullet-ghost],
+.overlay[skullet-reveal] > [skullet-pane],
+.overlay[skullet-reveal] [skullet-loading],
+.overlay[skullet-reveal] [skullet-ghost] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.block {
+  position: absolute;
+  inset: 0;
+  display: block;
+  border-radius: inherit;
+}
+
+.slot {
+  position: relative;
+  display: block;
+  width: min(100%, 240px);
+  justify-self: center;
+}
+
+.slot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+}

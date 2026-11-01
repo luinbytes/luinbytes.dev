@@ -55,6 +55,11 @@
   --layer-content: 1;
   --layer-navigation: 30;
   --layer-skip-link: 40;
+  --skullet-base: color-mix(in srgb, var(--site-text) 18%, transparent);
+  --skullet-highlight: color-mix(in srgb, var(--site-accent) 48%, white);
+  --skullet-radius: 12px;
+  --skullet-animation: shimmer;
+  --skullet-speed: slow;
 }
 
 @media (prefers-color-scheme: light) {
@@ -107,6 +112,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .skip-link:focus { transform: none; }
 
 @media (prefers-reduced-motion: reduce) {
+  :root { --skullet-animation: none; }
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
