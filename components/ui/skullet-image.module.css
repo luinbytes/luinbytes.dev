@@ -9,7 +9,7 @@
 .frame[skullet-reveal],
 .overlay[skullet-reveal] {
   position: absolute;
-  z-index: 3;
+  z-index: 4;
   inset: 0;
   overflow: hidden;
   pointer-events: none;
@@ -33,44 +33,11 @@
   height: 100%;
 }
 
-.frame[skullet-reveal] [skullet-layer],
-.overlay[skullet-reveal] [skullet-layer] {
-  visibility: hidden !important;
-}
-
-.frame[skullet-reveal] [skullet-loading] .block,
-.overlay[skullet-reveal] [skullet-loading] .block {
-  visibility: visible !important;
-}
-
-.frame[skullet-reveal] [skullet-loading] .block::before,
-.overlay[skullet-reveal] [skullet-loading] .block::before {
-  content: none !important;
-}
-
 .block {
   position: absolute;
   inset: 0;
   display: block;
-  overflow: hidden;
   border-radius: inherit;
-  background-color: var(--skullet-base);
-}
-
-.block::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 15%;
-  background: linear-gradient(90deg, transparent, var(--skullet-highlight), transparent);
-  animation: skullet-band 1.6s linear infinite;
-}
-
-@keyframes skullet-band {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(766.67%); }
 }
 
 .slot {
@@ -91,8 +58,7 @@
 @media (prefers-reduced-motion: reduce) {
   :global(img[data-skullet-media]),
   .frame[skullet-reveal],
-  .overlay[skullet-reveal],
-  .block::after {
+  .overlay[skullet-reveal] {
     transition: none !important;
     animation: none !important;
   }

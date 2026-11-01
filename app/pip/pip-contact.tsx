@@ -2,12 +2,13 @@ import { useState } from "react";
 import { ArrowUpRight, Check, Copy, Send, QrCode } from "lucide-react";
 import type { getPipContact } from "@/lib/pip";
 import { Button } from "@/components/ui/button";
-import { SkulletImage } from "@/components/ui/skullet-image";
+import { loadSkulletOverlay, SkulletImage } from "@/components/ui/skullet-image";
 import styles from "./pip.module.css";
 
 export function PipContact({ contact }: { contact: ReturnType<typeof getPipContact> }) {
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
   const [showQr, setShowQr] = useState(false);
+  const [qrImmediate, setQrImmediate] = useState(false);
   const [qrFailed, setQrFailed] = useState(false);
 
   async function copyHandle() {
@@ -58,7 +59,16 @@ export function PipContact({ contact }: { contact: ReturnType<typeof getPipConta
             disabled={!contact}
             aria-expanded={showQr}
             aria-controls="pip-qr"
-            onClick={() => setShowQr(!showQr)}
+            onClick={() => {
+              if (showQr) {
+                setShowQr(false);
+                return;
+              }
+              void loadSkulletOverlay().then((ready) => {
+                setQrImmediate(ready);
+                setShowQr(true);
+              });
+            }}
           >
             <QrCode aria-hidden="true" /> {showQr ? "Hide QR code" : "Show QR code"}
           </Button>
@@ -75,6 +85,7 @@ export function PipContact({ contact }: { contact: ReturnType<typeof getPipConta
               ) : (
                 <>
                   <SkulletImage
+                    immediate={qrImmediate}
                     label="Loading QR code"
                     src={contact.qrUrl}
                     alt="Scan to message Pip on Telegram"

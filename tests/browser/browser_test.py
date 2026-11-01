@@ -2445,6 +2445,24 @@ class PortfolioTests(BrowserTestCase):
 
 class SkulletImageTests(BrowserTestCase):
     HERO_ALT = "Pixel art of an open notebook, a cup of tea, oranges, and a leafy plant on a desk beside a lake view."
+    SKULLET_WATCH = """
+window.__skulletShown = false;
+const markSkullet = () => {
+  if (document.querySelector("[skullet-loading]")) window.__skulletShown = true;
+};
+const armSkulletWatch = () => {
+  if (window.__skulletArmed || !document.documentElement) return;
+  window.__skulletArmed = true;
+  new MutationObserver(markSkullet).observe(document.documentElement, {
+    attributes: true,
+    childList: true,
+    subtree: true,
+  });
+  markSkullet();
+};
+armSkulletWatch();
+document.addEventListener("readystatechange", armSkulletWatch);
+"""
 
     def hold_matching(self, page, token):
         held = []
@@ -2465,12 +2483,14 @@ class SkulletImageTests(BrowserTestCase):
     def test_delayed_image_shows_a_skeleton_then_clears_it(self) -> None:
         browser = self.playwright.chromium.launch()
         page = browser.new_page(viewport={"width": 1440, "height": 900})
+        page.add_init_script(self.SKULLET_WATCH)
         license_text = page.request.get(f"{self.base_url}/third-party-licenses.txt").text()
         self.assertIn("Copyright (c) 2025 Lochie Axon", license_text)
         self.assertIn("Permission is hereby granted, free of charge", license_text)
         held = self.hold_matching(page, "pip-everyday.webp")
         page.goto(f"{self.base_url}/pip", wait_until="domcontentloaded")
         page.wait_for_selector("[skullet-loading]")
+        self.assertIs(page.evaluate("window.__skulletShown"), True)
         image = page.get_by_alt_text(self.HERO_ALT)
         self.assertEqual(image.get_attribute("aria-hidden"), "true")
         self.assertIn("Loading illustration", page.locator("[skullet-status]").inner_text())
@@ -2499,24 +2519,32 @@ class SkulletImageTests(BrowserTestCase):
     def test_complete_image_never_shows_a_skeleton(self) -> None:
         browser = self.playwright.chromium.launch()
         page = browser.new_page(viewport={"width": 1440, "height": 900})
-        page.add_init_script(
-            """() => {
-              window.__skulletShown = false;
-              const mark = () => {
-                if (document.querySelector("[skullet-loading]")) window.__skulletShown = true;
-              };
-              new MutationObserver(mark).observe(document.documentElement, {
-                subtree: true,
-                childList: true,
-                attributes: true,
-              });
-            }"""
+        page.add_init_script(self.SKULLET_WATCH)
+        held_scripts = []
+
+        def hold_scripts(route):
+            if route.request.resource_type == "script":
+                held_scripts.append(route)
+                return
+            route.continue_()
+
+        page.route("**/*", hold_scripts)
+        page.goto(f"{self.base_url}/pip", wait_until="commit")
+        page.wait_for_function(
+            """(alt) => {
+              const image = document.querySelector(`img[alt="${alt}"]`);
+              return !!image && image.complete && image.naturalWidth > 0;
+            }""",
+            arg=self.HERO_ALT,
         )
-        page.goto(f"{self.base_url}/pip", wait_until="networkidle")
+        for route in held_scripts:
+            route.continue_()
+        page.wait_for_load_state("networkidle")
+        page.wait_for_timeout(250)
         image = page.get_by_alt_text(self.HERO_ALT)
         self.assertGreater(image.evaluate("node => node.naturalWidth"), 0)
         self.assertIsNone(image.get_attribute("aria-hidden"))
-        self.assertFalse(page.evaluate("window.__skulletShown"))
+        self.assertIs(page.evaluate("window.__skulletShown"), False)
         self.assertEqual(page.locator("[skullet-loading]").count(), 0)
         browser.close()
 
@@ -2526,10 +2554,12 @@ class SkulletImageTests(BrowserTestCase):
         page_errors = []
         page.on("pageerror", lambda error: page_errors.append(str(error)))
         held = []
+        aborted_chunks = []
 
         def handler(route):
             url = route.request.url
             if "skullet-overlay" in url and url.endswith(".js"):
+                aborted_chunks.append(url)
                 route.abort()
                 return
             if "pip-everyday.webp" in url:
@@ -2540,6 +2570,7 @@ class SkulletImageTests(BrowserTestCase):
         page.route("**/*", handler)
         page.goto(f"{self.base_url}/pip", wait_until="domcontentloaded")
         page.wait_for_timeout(500)
+        self.assertGreaterEqual(len(aborted_chunks), 1)
         self.assertTrue(page.get_by_role("heading", name="A little help.").is_visible())
         self.release(held)
         image = page.get_by_alt_text(self.HERO_ALT)
@@ -2547,4 +2578,48 @@ class SkulletImageTests(BrowserTestCase):
         self.assertGreater(image.evaluate("node => node.naturalWidth"), 0)
         self.assertIsNone(image.get_attribute("aria-hidden"))
         self.assertEqual(page_errors, [])
+        browser.close()
+
+    def test_qr_bone_is_visible_on_the_first_paint(self) -> None:
+        browser = self.playwright.chromium.launch()
+        page = browser.new_page(viewport={"width": 390, "height": 844})
+        held = self.hold_matching(page, "/qr/")
+        page.goto(f"{self.base_url}/pip", wait_until="networkidle")
+        page.evaluate(
+            """() => {
+              window.__qrFirst = null;
+              const root = document.getElementById("pip-qr");
+              const sample = () => {
+                if (!root || root.hidden || window.__qrFirst) return;
+                const layer = root.querySelector("[skullet-layer]");
+                const bar = layer && layer.shadowRoot ? layer.shadowRoot.querySelector("[skullet-rect]") : null;
+                const box = bar ? bar.getBoundingClientRect() : null;
+                const image = root.querySelector("img");
+                window.__qrFirst = {
+                  bone: !!(box && box.width > 8 && box.height > 8),
+                  width: box ? box.width : 0,
+                  height: box ? box.height : 0,
+                  opacity: image ? getComputedStyle(image).opacity : null,
+                  background: image ? getComputedStyle(image).backgroundColor : null,
+                };
+              };
+              new MutationObserver(() => {
+                if (root && !root.hidden) requestAnimationFrame(sample);
+              }).observe(root, { attributes: true, childList: true, subtree: true });
+            }"""
+        )
+        page.locator("#text-pip").get_by_role("button", name="Show QR code", exact=True).click()
+        page.wait_for_function("() => window.__qrFirst && window.__qrFirst.bone")
+        first = page.evaluate("window.__qrFirst")
+        self.assertTrue(first["bone"])
+        self.assertEqual(first["opacity"], "0")
+        self.assertIn("0, 0, 0, 0", first["background"])
+        self.assertAlmostEqual(first["width"], first["height"], delta=1)
+        self.release(held)
+        page.wait_for_function(
+            """() => {
+              const image = document.querySelector("#pip-qr img");
+              return image && image.complete && image.naturalWidth > 0 && image.getAttribute("aria-hidden") === null;
+            }"""
+        )
         browser.close()

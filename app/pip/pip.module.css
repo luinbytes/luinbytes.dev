@@ -585,6 +585,11 @@
   background: white;
 }
 
+.qrPanel img[data-pending-media] {
+  background: transparent;
+  border-color: transparent;
+}
+
 .qrPanel p {
   margin: 0;
   color: var(--site-muted);

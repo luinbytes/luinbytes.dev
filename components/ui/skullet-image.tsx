@@ -1,4 +1,4 @@
-import { Component, lazy, Suspense, useCallback, useEffect, useRef, useState, type ComponentProps, type ReactNode, type SyntheticEvent } from "react";
+import { Component, lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState, type ComponentProps, type ReactNode, type SyntheticEvent } from "react";
 import { flushSync } from "react-dom";
 
 import styles from "./skullet-image.module.css";
@@ -6,12 +6,33 @@ import styles from "./skullet-image.module.css";
 const SKELETON_HOLD_MS = 150;
 const REVEAL_MS = 200;
 
+type OverlayComponent = typeof import("./skullet-overlay").default;
+
+let readyOverlay: OverlayComponent | null = null;
+
+function rememberOverlay(component: OverlayComponent) {
+  readyOverlay = component;
+  return component;
+}
+
+export function loadSkulletOverlay() {
+  if (readyOverlay) return Promise.resolve(true);
+  return import("./skullet-overlay")
+    .then((mod) => {
+      rememberOverlay(mod.default);
+      return true;
+    })
+    .catch(() => false);
+}
+
 // Loaded only after an image is still incomplete. A static import pulls Skullet
 // into Pip's initial script. A failed chunk drops the skeleton and leaves the image.
 const SkulletOverlay = lazy(() =>
-  import("./skullet-overlay").catch(() => ({
-    default: (() => null) as unknown as typeof import("./skullet-overlay").default,
-  })),
+  import("./skullet-overlay")
+    .then((mod) => ({ default: rememberOverlay(mod.default) }))
+    .catch(() => ({
+      default: (() => null) as unknown as OverlayComponent,
+    })),
 );
 
 type SkulletImageProps = ComponentProps<"img"> & {
@@ -19,6 +40,7 @@ type SkulletImageProps = ComponentProps<"img"> & {
   frame?: boolean;
   radius?: string;
   inset?: string;
+  immediate?: boolean;
 };
 
 type Phase = "pending" | "skeleton" | "reveal" | "ready";
@@ -48,6 +70,7 @@ export function SkulletImage({
   frame = false,
   radius,
   inset,
+  immediate = false,
   onLoad,
   onError,
   alt,
@@ -55,22 +78,29 @@ export function SkulletImage({
 }: SkulletImageProps) {
   const imgRef = useRef<HTMLImageElement>(null);
   const timerRef = useRef<number | null>(null);
-  const [phase, setPhase] = useState<Phase>("pending");
+  const [phase, setPhase] = useState<Phase>(immediate ? "skeleton" : "pending");
   const [overlayReady, setOverlayReady] = useState(false);
-  const showSkeleton = phase === "skeleton" || phase === "reveal";
-  const hideImage = phase === "skeleton" && overlayReady;
+  const [chunkFailed, setChunkFailed] = useState(false);
+  const showSkeleton = !chunkFailed && (phase === "skeleton" || phase === "reveal");
+  const hideImage = phase === "skeleton" && (immediate || overlayReady);
   const markOverlayReady = useCallback(() => setOverlayReady(true), []);
   const dropSkeleton = useCallback(() => {
+    setChunkFailed(true);
     setOverlayReady(false);
     setPhase((current) => (current === "ready" ? current : "pending"));
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const img = imgRef.current;
     if (!img) return;
-    if (img.complete) {
+    if (img.complete && img.naturalWidth > 0) {
       setPhase("ready");
       setOverlayReady(false);
+      return;
+    }
+
+    if (immediate) {
+      setPhase("skeleton");
       return;
     }
 
@@ -87,7 +117,7 @@ export function SkulletImage({
         timerRef.current = null;
       }
     };
-  }, [rest.src]);
+  }, [rest.src, immediate]);
 
   useEffect(() => {
     if (phase !== "reveal") return;
@@ -103,7 +133,7 @@ export function SkulletImage({
       window.clearTimeout(timerRef.current);
       timerRef.current = null;
     }
-    const fade = phase === "skeleton" && overlayReady && !failed && !prefersReducedMotion();
+    const fade = phase === "skeleton" && (overlayReady || immediate) && !failed && !chunkFailed && !prefersReducedMotion();
     if (fade) {
       flushSync(() => setPhase("reveal"));
     } else {
@@ -129,10 +159,11 @@ export function SkulletImage({
     />
   );
 
+  const OverlayView = readyOverlay ?? SkulletOverlay;
   const skeleton = showSkeleton ? (
     <SkulletBoundary onFail={dropSkeleton}>
-      <Suspense fallback={null}>
-        <SkulletOverlay
+      {readyOverlay ? (
+        <OverlayView
           label={label}
           className={`${frame ? styles.frame : styles.overlay}${phase === "reveal" ? ` ${styles.fading}` : ""}`}
           blockClassName={styles.block}
@@ -140,7 +171,18 @@ export function SkulletImage({
           inset={inset}
           onReady={markOverlayReady}
         />
-      </Suspense>
+      ) : (
+        <Suspense fallback={null}>
+          <SkulletOverlay
+            label={label}
+            className={`${frame ? styles.frame : styles.overlay}${phase === "reveal" ? ` ${styles.fading}` : ""}`}
+            blockClassName={styles.block}
+            radius={radius}
+            inset={inset}
+            onReady={markOverlayReady}
+          />
+        </Suspense>
+      )}
     </SkulletBoundary>
   ) : null;
 
