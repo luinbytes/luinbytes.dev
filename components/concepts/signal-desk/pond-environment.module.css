@@ -48,6 +48,10 @@
   image-rendering: pixelated;
 }
 
+.pondCanvas[data-presented="pending"] {
+  visibility: hidden;
+}
+
 .pondGrade {
   z-index: 3;
   background:

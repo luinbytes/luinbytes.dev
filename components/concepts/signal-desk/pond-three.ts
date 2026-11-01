@@ -65,6 +65,15 @@ export function attachFishBend(material: THREE.Material, bend: FishBendUniforms)
   };
 }
 
+export const POND_FISH_COVERAGE_CUT = 0.35;
+
+export function pondFishCellInside(alphas: readonly number[], cut = POND_FISH_COVERAGE_CUT) {
+  if (alphas.length === 0) return false;
+  let hits = 0;
+  for (const alpha of alphas) if (alpha >= cut) hits += 1;
+  return hits / alphas.length >= cut;
+}
+
 export function createFishIdMaterial(map: THREE.Texture, bend: FishBendUniforms, tancho: boolean) {
   const uniforms = {
     map: { value: map },
@@ -107,8 +116,30 @@ export function createFishIdMaterial(map: THREE.Texture, bend: FishBendUniforms,
       varying float vS;
       varying float vAcross;
       void main() {
-        vec4 tex = texture2D(map, vUv * uRepeat + uOffset);
-        if (tex.a < 0.35) discard;
+        vec2 footprint = vUv * uRepeat + uOffset;
+        vec2 dx = dFdx(vUv) * uRepeat;
+        vec2 dy = dFdy(vUv) * uRepeat;
+        float hits = 0.0;
+        if (dot(dx, dx) + dot(dy, dy) < 1e-10) {
+          hits = texture2D(map, footprint).a >= ${POND_FISH_COVERAGE_CUT} ? 1.0 : 0.0;
+        } else {
+          for (int y = 0; y < 4; y++) {
+            for (int x = 0; x < 4; x++) {
+              vec2 sampleUv = footprint
+                + dx * ((float(x) + 0.5) / 4.0 - 0.5)
+                + dy * ((float(y) + 0.5) / 4.0 - 0.5);
+              if (texture2D(map, sampleUv).a >= ${POND_FISH_COVERAGE_CUT}) hits += 1.0;
+            }
+          }
+          hits /= 16.0;
+        }
+        if (hits < ${POND_FISH_COVERAGE_CUT}) discard;
+        vec4 tex = texture2D(map, footprint);
+        float across = clamp(abs(vAcross - 0.5) * 2.0, 0.0, 1.0);
+        if (tex.a < ${POND_FISH_COVERAGE_CUT}) {
+          gl_FragColor = vec4(5.0 / 255.0, vS, across, 1.0);
+          return;
+        }
         float luma = dot(tex.rgb, vec3(0.2126, 0.7152, 0.0722));
         float id = 5.0;
         bool eye = luma < 0.14 && vS > 0.05 && vS < 0.22 && abs(vAcross - 0.5) > 0.07 && abs(vAcross - 0.5) < 0.24;
@@ -120,7 +151,7 @@ export function createFishIdMaterial(map: THREE.Texture, bend: FishBendUniforms,
           id = luma < 0.4 ? 6.0 : 5.0;
           if (eye) id = 9.0;
         }
-        gl_FragColor = vec4(id / 255.0, vS, clamp(abs(vAcross - 0.5) * 2.0, 0.0, 1.0), tex.a);
+        gl_FragColor = vec4(id / 255.0, vS, across, 1.0);
       }
     `,
   });

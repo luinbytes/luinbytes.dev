@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { inflateSync } from "node:zlib";
+import * as THREE from "three";
 
 import {
   createPondWorld,
@@ -15,7 +16,13 @@ import {
   type FishSimulationFrame,
   type PondPointerInput,
 } from "../components/concepts/signal-desk/pond-simulation.ts";
-import { POND_ASCII_STATE_CELL, pondAsciiStateCell } from "../components/concepts/signal-desk/pond-ascii.ts";
+import {
+  POND_ASCII_RAMP,
+  POND_BODY_MIN_COLUMN,
+  pondBodyGlyphColumn,
+  pondKoiQuadPixels,
+} from "../components/concepts/signal-desk/pond-ascii.ts";
+import { createFishIdMaterial, pondFishCellInside, type FishBendUniforms } from "../components/concepts/signal-desk/pond-three.ts";
 
 const FRAME_MS = 1000 / 30;
 const ALL_ANCHORS = ROCK_ANCHORS.map((anchor) => anchor.id);
@@ -1160,13 +1167,36 @@ for (const [viewportWidth, viewportHeight, fishCount] of [[1280, 800, 20], [390,
   });
 }
 
-test("the ascii state pass writes each cell into its own texel", () => {
-  assert.equal(POND_ASCII_STATE_CELL.includes("+ 0.5"), false);
-  assert.match(POND_ASCII_STATE_CELL, /vUv\.x, 1\.0 - vUv\.y\) \* uGrid/);
-  for (let count = 1; count <= 160; count += 1) {
-    for (let texel = 0; texel < count; texel += 1) {
-      assert.equal(pondAsciiStateCell(texel, count), texel);
-    }
+test("a koi cell inside the silhouette stays a colon or denser", () => {
+  const crack = [0.04, 1, 1, 1, 1, 0.9, 0.8, 1, 1, 1, 1, 1, 0.95, 1, 1, 1];
+  assert.equal(pondFishCellInside(crack), true);
+  assert.equal(pondFishCellInside([0.2, 0.1, 0.34, 0.0]), false);
+  assert.equal(pondFishCellInside([0.35, 0.35, 0, 0, 0, 0, 0, 0, 0, 0]), false);
+  assert.equal(pondFishCellInside([0.35, 0.35, 0.35, 0.35, 0, 0, 0, 0, 0, 0]), true);
+  for (let step = 0; step <= 20; step += 1) {
+    const column = pondBodyGlyphColumn(step / 20);
+    assert.ok(column >= POND_BODY_MIN_COLUMN);
+    assert.ok(!".',".includes(POND_ASCII_RAMP[column]), POND_ASCII_RAMP[column]);
+  }
+  const bend: FishBendUniforms = { time: { value: 0 }, curve: { value: 0 }, amount: { value: 0 } };
+  const identified = createFishIdMaterial(new THREE.Texture(), bend, false);
+  const source = identified.material.fragmentShader;
+  assert.match(source, /dFdx\(vUv\)/);
+  assert.match(source, /0\.35/);
+  assert.equal(source.includes("tex.a)"), false);
+  identified.material.dispose();
+});
+
+test("koi span meets the desktop and mobile cell floors", () => {
+  for (const length of [14, 15, 16, 17, 18]) {
+    const span = pondKoiQuadPixels(length, 12);
+    assert.ok(span.widthCells >= 5, `${length} is ${span.widthCells} wide`);
+    assert.ok(span.lengthCells >= 14 && span.lengthCells <= 18);
+  }
+  for (const length of [11, 12, 13]) {
+    const span = pondKoiQuadPixels(length, 10);
+    assert.ok(span.widthCells >= 4, `${length} is ${span.widthCells} wide`);
+    assert.equal(span.lengthCells, length);
   }
 });
 
@@ -1205,7 +1235,7 @@ test("a fish just outside the water is brought back without a long teleport", ()
   simulation.destroy();
 });
 
-test("a fish far from water stays put", () => {
+test("a fish far from water is returned without a velocity spike", () => {
   let strict = false;
   const inside = (x: number, y: number) => !strict || (x > 200 && x < 280 && y > 200 && y < 280);
   const simulation = createPondSimulation({
@@ -1219,7 +1249,9 @@ test("a fish far from water stays put", () => {
   });
   strict = true;
   const fish = tickFish(simulation, 1).fish[0];
-  assert.ok(Math.hypot(fish.position.x - 900, fish.position.y - 500) < 1);
+  assert.equal(inside(fish.position.x, fish.position.y), true);
+  assert.ok(Math.hypot(fish.position.x - 900, fish.position.y - 500) > 100);
+  assert.ok(Math.hypot(fish.velocity.x, fish.velocity.y) < 1, `${fish.velocity.x},${fish.velocity.y}`);
   simulation.destroy();
 });
 

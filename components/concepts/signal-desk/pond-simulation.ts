@@ -1133,11 +1133,18 @@ export function createPondSimulation(options: SimulationOptions) {
       const intent = intents.get(agent.id);
       const idle = (intent?.state === "cruising" || intent?.state === "returning-to-cruise") && !intent?.goal && motion.threat <= 0.04;
       if (recoverOutside && !isWater(position.x, position.z)) {
-        const home = waterWithin(position.x, position.z);
-        if (home) {
-          position.x = home.x;
-          position.z = home.y;
-        }
+        const home = waterWithin(position.x, position.z) ?? nearestWater(
+          { x: position.x, y: position.z },
+          width,
+          height,
+          isWater,
+          agent.bodyRadius,
+          undefined,
+          options.waterBounds?.(),
+        );
+        position.x = home.x;
+        position.z = home.y;
+        agent.previous = { x: home.x, y: home.y };
       }
       velocity.set((position.x - agent.previous.x) / input.delta, 0, (position.z - agent.previous.y) / input.delta);
       motion.speed = Math.hypot(velocity.x, velocity.z);

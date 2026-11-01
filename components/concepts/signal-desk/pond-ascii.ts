@@ -47,9 +47,27 @@ export function pondAsciiGrid(width: number, height: number): PondAsciiGrid {
   return { cell, cols, rows };
 }
 
-export function pondAsciiStateCell(texel: number, count: number) {
-  const pixelCenterUv = (texel + 0.5) / Math.max(1, count);
-  return Math.floor(pixelCenterUv * count);
+export const POND_ASCII_RAMP = RAMP;
+export const POND_BODY_MIN_COLUMN = 3;
+export const POND_KOI_FRAME_WIDTH = 314;
+export const POND_KOI_BOUNDS_HEIGHT = 303;
+export const POND_KOI_OPAQUE_WIDTH = 181;
+export const POND_KOI_OPAQUE_HEIGHT = 295;
+
+export function pondBodyGlyphColumn(shade: number) {
+  const rounded = Math.min(11, Math.max(0, Math.floor(shade * 11 + 0.5)));
+  return Math.max(POND_BODY_MIN_COLUMN, rounded);
+}
+
+export function pondKoiQuadPixels(lengthCells: number, cell: number) {
+  const lengthPx = lengthCells * cell;
+  const widthPx = lengthPx * POND_KOI_OPAQUE_WIDTH / POND_KOI_OPAQUE_HEIGHT;
+  return {
+    lengthCells,
+    widthCells: widthPx / cell,
+    scaleX: widthPx * POND_KOI_FRAME_WIDTH / POND_KOI_OPAQUE_WIDTH,
+    scaleY: lengthPx * POND_KOI_BOUNDS_HEIGHT / POND_KOI_OPAQUE_HEIGHT,
+  };
 }
 
 function themeVector(hex: string, alpha: number) {
@@ -406,7 +424,7 @@ function createAsciiMaterial() {
             alpha = mix(0.6, 1.0, padCover);
           } else if (id < 8.5) {
             row = 0.0;
-            column = rampColumn(shade);
+            column = max(${POND_BODY_MIN_COLUMN}.0, rampColumn(shade));
           } else if (id < 9.5) {
             row = 8.0;
           } else if (id < 10.5) {

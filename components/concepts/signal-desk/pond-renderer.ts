@@ -5,6 +5,7 @@ import {
   POND_ASCII_FPS_CAP,
   PondAscii,
   pondAsciiGrid,
+  pondKoiQuadPixels,
 } from "./pond-ascii.ts";
 import { installPondInput } from "./pond-input.ts";
 import {
@@ -131,7 +132,6 @@ export async function startPondRenderer(options: StartOptions) {
   const loads = new AbortController();
   let disposed = false;
   let animationFrame: number | null = null;
-  let revealFrame = 0;
   let disposeInput = () => {};
   let destroySimulation = () => {};
   let releaseRenderer = () => {};
@@ -142,7 +142,6 @@ export async function startPondRenderer(options: StartOptions) {
     loads.abort();
     options.signal.removeEventListener("abort", dispose);
     if (animationFrame !== null) window.cancelAnimationFrame(animationFrame);
-    window.cancelAnimationFrame(revealFrame);
     disposeInput();
     removeListeners();
     destroySimulation();
@@ -164,6 +163,7 @@ export async function startPondRenderer(options: StartOptions) {
 
   try {
     const canvas = document.createElement("canvas");
+    if (liveAscii) canvas.dataset.presented = "pending";
     const context = canvas.getContext("webgl2", {
       alpha: !liveAscii,
       antialias: false,
@@ -214,23 +214,41 @@ export async function startPondRenderer(options: StartOptions) {
       own(asset.texture);
       return asset;
     };
-    const [pondTexture, waterTexture, koiAtlas, foregroundTexture, pondWaterTexture, catAtlas, catTurnAtlas] = await Promise.all([
-      load("pixel-pond-world.webp"),
-      load("water-displacement.jpg"),
+    const [koiAtlas, catAtlas, catTurnAtlas] = await Promise.all([
       load("pixel-koi-atlas.webp"),
-      load("pixel-pond-foreground.webp"),
-      load("pixel-pond-water-layer.webp"),
       load("pixel-tabby-atlas.webp"),
       load("pixel-tabby-turn-atlas.webp"),
     ]);
+    const colorAssets = liveAscii ? null : await Promise.all([
+      load("pixel-pond-world.webp"),
+      load("water-displacement.jpg"),
+      load("pixel-pond-foreground.webp"),
+      load("pixel-pond-water-layer.webp"),
+    ]);
     loads.signal.throwIfAborted();
+    const blankAsset = (width: number, height: number): PondAsset => {
+      const surface = document.createElement("canvas");
+      surface.width = 1;
+      surface.height = 1;
+      const texture = new THREE.Texture(surface);
+      texture.needsUpdate = true;
+      own(texture);
+      return { texture, image: surface as unknown as HTMLImageElement, width, height };
+    };
+    const pondTexture = colorAssets ? colorAssets[0] : blankAsset(1586, 992);
+    const waterTexture = colorAssets ? colorAssets[1] : blankAsset(1024, 1024);
+    const foregroundTexture = colorAssets ? colorAssets[2] : blankAsset(1586, 992);
+    const pondWaterTexture = colorAssets ? colorAssets[3] : blankAsset(1586, 992);
     const hitCanvas = document.createElement("canvas");
-    hitCanvas.width = pondWaterTexture.width;
-    hitCanvas.height = pondWaterTexture.height;
-    const hitContext = hitCanvas.getContext("2d", { willReadFrequently: true });
-    if (!hitContext) throw new Error("Unable to create the pond hit map");
-    hitContext.drawImage(pondWaterTexture.image, 0, 0);
-    const hitPixels = hitContext.getImageData(0, 0, hitCanvas.width, hitCanvas.height).data;
+    let hitPixels = new Uint8ClampedArray(0);
+    if (colorAssets) {
+      hitCanvas.width = pondWaterTexture.width;
+      hitCanvas.height = pondWaterTexture.height;
+      const hitContext = hitCanvas.getContext("2d", { willReadFrequently: true });
+      if (!hitContext) throw new Error("Unable to create the pond hit map");
+      hitContext.drawImage(pondWaterTexture.image, 0, 0);
+      hitPixels = hitContext.getImageData(0, 0, hitCanvas.width, hitCanvas.height).data;
+    }
 
     host.replaceChildren(canvas);
     canvas.className = options.canvasClassName;
@@ -408,7 +426,6 @@ export async function startPondRenderer(options: StartOptions) {
     const fishCells = new Map<string, number>();
     const bodyScales = new Map<string, number>();
     const tanchoIds = new Set<string>();
-    const mobileSchool = !testPose && window.innerWidth < 640;
     const fishDefinitions: FishDefinition[] = testPose
       ? [{
         id: "fish-0",
@@ -424,15 +441,15 @@ export async function startPondRenderer(options: StartOptions) {
         species: ["kohaku", "ogon", "showa", "utsuri"][testPose.row] ?? "showa",
       }]
       : (window.innerWidth < 640 ? [
-        { cells: 12, cruise: 34, heading: 0.15, tancho: false, nx: -0.42, ny: -0.22 },
-        { cells: 11, cruise: 27, heading: 0.05, tancho: true, nx: 0.42, ny: -0.22 },
-        { cells: 10, cruise: 32, heading: 0.2, tancho: false, nx: 0, ny: 0.48 },
+        { cells: 13, cruise: 34, heading: 0.15, tancho: false, nx: -0.42, ny: -0.22 },
+        { cells: 12, cruise: 27, heading: 0.05, tancho: true, nx: 0.42, ny: -0.22 },
+        { cells: 11, cruise: 32, heading: 0.2, tancho: false, nx: 0, ny: 0.48 },
       ] : [
         { cells: 18, cruise: 34, heading: 0.15, tancho: false, nx: -0.62, ny: -0.38 },
-        { cells: 16, cruise: 30, heading: 0.55, tancho: false, nx: 0.50, ny: -0.36 },
-        { cells: 15, cruise: 27, heading: -1.15, tancho: true, nx: 0.28, ny: 0.62 },
-        { cells: 13, cruise: 32, heading: 0.68, tancho: false, nx: 0.36, ny: -0.18 },
-        { cells: 12, cruise: 24, heading: 2.45, tancho: false, nx: -0.55, ny: 0.42 },
+        { cells: 17, cruise: 30, heading: 0.55, tancho: false, nx: 0.50, ny: -0.36 },
+        { cells: 16, cruise: 27, heading: -1.15, tancho: true, nx: 0.28, ny: 0.62 },
+        { cells: 15, cruise: 32, heading: 0.68, tancho: false, nx: 0.36, ny: -0.18 },
+        { cells: 14, cruise: 24, heading: 2.45, tancho: false, nx: -0.55, ny: 0.42 },
       ]).map((entry, index) => {
         const id = `fish-${index}`;
         fishCells.set(id, entry.cells);
@@ -472,7 +489,7 @@ export async function startPondRenderer(options: StartOptions) {
       width: pondTexture.width,
       height: pondTexture.height,
       fish: fishDefinitions,
-      headSeparation: mobileSchool ? 6 * pondFrame.cell / viewScale : 0,
+      headSeparation: liveAscii ? 6 * pondFrame.cell / viewScale : 0,
       recoverOutside: liveAscii,
       waterBounds: liveAscii ? () => {
         const rx = Math.max(pondFrame.cell, (pondFrame.rx - 2) * pondFrame.cell);
@@ -1067,7 +1084,14 @@ export async function startPondRenderer(options: StartOptions) {
         const sourceCellCenter = (fish.row + 0.5) * sourceCellHeight;
         const pixelScale = visual.baseScaleX * viewScale * depthScale / sourceCellHeight;
         visual.sprite.position.y = (frameCenter - sourceCellCenter) * pixelScale * (2 - peck);
-        visual.sprite.scale.set(visual.baseScaleX * viewScale * peck * depthScale, frameBounds.height * pixelScale * (2 - peck), 1);
+        if (liveAscii && !testPose) {
+          const span = pondKoiQuadPixels(fishCells.get(fish.id) ?? 14, pondFrame.cell);
+          visual.baseScaleX = span.scaleY / viewScale;
+          visual.sprite.position.y = 0;
+          visual.sprite.scale.set(span.scaleX * peck, span.scaleY * (2 - peck), 1);
+        } else {
+          visual.sprite.scale.set(visual.baseScaleX * viewScale * peck * depthScale, frameBounds.height * pixelScale * (2 - peck), 1);
+        }
         visual.shadow.scale.setScalar((0.86 + fish.depth * 0.24) * viewScale);
         visual.status.visible = fish.stun !== null;
         if (fish.stun) {
@@ -1304,15 +1328,16 @@ export async function startPondRenderer(options: StartOptions) {
       }
       const deltaMs = previousTime === null ? 1000 / POND_ASCII_FPS_CAP : Math.min(Math.max(now - previousTime, 0), 80);
       previousTime = now;
+      const frameInterval = 1000 / POND_ASCII_FPS_CAP;
       if (liveAscii && !reduced) {
         frameBudget += deltaMs;
-        if (frameBudget < 1000 / POND_ASCII_FPS_CAP) {
+        if (frameBudget < frameInterval - 2) {
           animationFrame = window.requestAnimationFrame(draw);
           return;
         }
       }
       const delta = Math.min(0.08, Math.max(1 / 120, (liveAscii && !reduced ? frameBudget : deltaMs) / 1000));
-      frameBudget = 0;
+      if (liveAscii && !reduced) frameBudget %= frameInterval;
       try {
         step(now, delta);
         present();
@@ -1322,9 +1347,12 @@ export async function startPondRenderer(options: StartOptions) {
       }
       if (!revealed) {
         revealed = true;
-        revealFrame = window.requestAnimationFrame(() => {
-          if (!disposed) pond.dataset.renderer = "three";
-        });
+        if (liveAscii) {
+          host.style.transition = "none";
+          canvas.dataset.presented = "ascii";
+          pond.dataset.asciiFrame = "1";
+        }
+        pond.dataset.renderer = "three";
       }
       if (liveAscii && reduced) return;
       animationFrame = window.requestAnimationFrame(draw);
@@ -1339,6 +1367,10 @@ export async function startPondRenderer(options: StartOptions) {
         host.dataset.pondState = "paused";
       } else {
         host.dataset.pondState = "running";
+        if (liveAscii && reduced && frameCount > 0) {
+          present();
+          return;
+        }
         if (animationFrame === null) animationFrame = window.requestAnimationFrame(draw);
       }
     };
@@ -1358,7 +1390,7 @@ export async function startPondRenderer(options: StartOptions) {
         updates.push({ id: fish.id, displayWidth: fish.displayWidth, visualLength });
       }
       simulation.resizeFish(updates);
-      simulation.setHeadSeparation(mobileSchool ? 6 * pondFrame.cell / viewScale : 0);
+      simulation.setHeadSeparation(6 * pondFrame.cell / viewScale);
       if (reduced && frameCount > 0) {
         step(performance.now(), 1 / 60);
         present();

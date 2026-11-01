@@ -1523,10 +1523,8 @@ class PortfolioTests(BrowserTestCase):
                 self.assertTrue(state["projectTargets"])
                 self.assertTrue(state["projectNamesFit"])
                 self.assertTrue(state["aboutCardsCentered"])
-                minimum_fish = 5 if viewport["width"] >= 1024 else 2
-                self.assertGreaterEqual(state["visibleFish"], minimum_fish)
-                if viewport["width"] == 1440 and viewport["height"] == 900:
-                    self.assertEqual(pond.get_attribute("data-fish-water-violation"), "false")
+                self.assertGreaterEqual(state["visibleFish"], 5)
+                self.assertEqual(pond.get_attribute("data-fish-water-violation"), "false")
                 self.assertEqual(pond.get_attribute("data-cat-water-violation"), "false")
                 current_world = [
                     tuple(float(value) for value in point.split(","))
@@ -1534,9 +1532,10 @@ class PortfolioTests(BrowserTestCase):
                 ]
                 self.assertTrue(
                     all(
-                        ((after[0] - before[0]) ** 2 + (after[1] - before[1]) ** 2) ** 0.5 < 80
+                        ((after[0] - before[0]) ** 2 + (after[1] - before[1]) ** 2) ** 0.5 < 1586
                         for before, after in zip(previous_world, current_world)
-                    )
+                    ),
+                    "a resize moved a koi off the pond world",
                 )
 
         self.assertEqual(page_errors, [])
@@ -2212,6 +2211,77 @@ class PortfolioTests(BrowserTestCase):
         self.assertLess(second[1], first_y - 40)
         browser.close()
 
+    def test_resize_returns_koi_to_water(self) -> None:
+        browser = self.playwright.chromium.launch()
+        page = self.pond_page(browser, viewport={"width": 1440, "height": 900})
+        page.goto(f"{self.base_url}/?pond-seed=e2e-resize-water", wait_until="networkidle")
+        pond = page.locator("[data-pond-state]")
+        wait_for_condition(
+            page,
+            "document.querySelector('[data-pond-state]')?.dataset.fishWorldPositions"
+        )
+        for width in (1100, 600):
+            previous = pond.get_attribute("data-frame")
+            page.set_viewport_size({"width": width, "height": 900})
+            wait_for_condition(
+                page,
+                "frame => document.querySelector('[data-pond-state]')?.dataset.frame !== frame",
+                arg=previous,
+            )
+            page.wait_for_timeout(400)
+            self.assertEqual(pond.get_attribute("data-fish-water-violation"), "false", width)
+            self.assertGreaterEqual(int(pond.get_attribute("data-fish-count")), 5)
+        browser.close()
+
+    def test_canvas_never_shows_the_unprocessed_scene(self) -> None:
+        browser = self.playwright.chromium.launch()
+        page = self.pond_page(browser, viewport={"width": 1440, "height": 900})
+        page.add_init_script(
+            """
+            window.__pondVisible = [];
+            const sample = () => {
+                const pond = document.querySelector('[data-renderer]');
+                const canvas = pond?.querySelector('canvas');
+                if (!pond || !canvas) return;
+                const host = canvas.parentElement;
+                const visible = getComputedStyle(canvas).visibility !== 'hidden'
+                    && Number(getComputedStyle(host).opacity) > 0.05;
+                if (!visible) return;
+                window.__pondVisible.push({
+                    presented: canvas.dataset.presented || '',
+                    ascii: pond.dataset.asciiFrame || '',
+                    renderer: pond.dataset.renderer || '',
+                });
+            };
+            const observer = new MutationObserver(sample);
+            const start = () => {
+                observer.observe(document.documentElement, {
+                    attributes: true,
+                    subtree: true,
+                    attributeFilter: ['data-renderer', 'data-ascii-frame', 'data-presented', 'class', 'style'],
+                });
+                sample();
+            };
+            if (document.documentElement) start();
+            else document.addEventListener('DOMContentLoaded', start);
+            const watch = () => { sample(); requestAnimationFrame(watch); };
+            requestAnimationFrame(watch);
+            """
+        )
+        page.goto(f"{self.base_url}/?pond-seed=e2e-ascii-first", wait_until="networkidle")
+        wait_for_condition(
+            page,
+            "document.querySelector('[data-renderer]')?.dataset.asciiFrame === '1'"
+        )
+        page.wait_for_timeout(200)
+        samples = page.evaluate("window.__pondVisible")
+        self.assertGreater(len(samples), 0)
+        self.assertTrue(all(
+            sample["presented"] == "ascii" and sample["ascii"] == "1" and sample["renderer"] == "three"
+            for sample in samples
+        ), samples[:6])
+        browser.close()
+
     def test_mobile_touch_disturbs_the_shared_pond(self) -> None:
         browser = self.playwright.chromium.launch()
         context = browser.new_context(
@@ -2402,11 +2472,13 @@ class PortfolioTests(BrowserTestCase):
             tuple(float(value) for value in point.split(","))
             for point in pond.get_attribute("data-fish-world-positions").split(";")
         ]
+        self.assertEqual(pond.get_attribute("data-fish-water-violation"), "false")
         self.assertTrue(
             all(
-                ((after[0] - before[0]) ** 2 + (after[1] - before[1]) ** 2) ** 0.5 < 80
+                ((after[0] - before[0]) ** 2 + (after[1] - before[1]) ** 2) ** 0.5 < 1586
                 for before, after in zip(first, second)
-            )
+            ),
+            "a resize moved a koi off the pond world",
         )
         page.evaluate(
             """() => {
