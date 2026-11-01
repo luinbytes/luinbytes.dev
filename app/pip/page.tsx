@@ -3,6 +3,7 @@ import { getPipContact } from "@/lib/pip";
 import { PipFace, PipLogo } from "@/components/pip/pip-logo";
 import { PipWebSearchDemo } from "@/components/pip/pip-web-search-demo";
 import { Button } from "@/components/ui/button";
+import { SkulletImage } from "@/components/ui/skullet-image";
 import { PipContact } from "./pip-contact";
 import styles from "./pip.module.css";
 
@@ -60,7 +61,9 @@ export default function PipPage() {
           </div>
 
           <div className={styles.heroVisual}>
-            <img
+            <SkulletImage
+              frame
+              label="Loading illustration"
               src="/images/portfolio/pip-everyday.webp"
               alt="Pixel art of an open notebook, a cup of tea, oranges, and a leafy plant on a desk beside a lake view."
               style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}

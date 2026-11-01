@@ -1,13 +1,29 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowUpRight, Check, Copy, Send, QrCode } from "lucide-react";
 import type { getPipContact } from "@/lib/pip";
 import { Button } from "@/components/ui/button";
+import { loadSkulletOverlay, SKELETON_HOLD_MS, SkulletImage } from "@/components/ui/skullet-image";
 import styles from "./pip.module.css";
+
+function loadQrOverlay() {
+  let timer = 0;
+  const timeout = new Promise<boolean>((resolve) => {
+    timer = window.setTimeout(() => resolve(false), SKELETON_HOLD_MS);
+  });
+  return Promise.race([loadSkulletOverlay(), timeout]).finally(() => {
+    window.clearTimeout(timer);
+  });
+}
 
 export function PipContact({ contact }: { contact: ReturnType<typeof getPipContact> }) {
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
   const [showQr, setShowQr] = useState(false);
+  const [qrImmediate, setQrImmediate] = useState(false);
   const [qrFailed, setQrFailed] = useState(false);
+  const qrOpenRequest = useRef(0);
+  useEffect(() => () => {
+    qrOpenRequest.current++;
+  }, []);
 
   async function copyHandle() {
     if (!contact) return;
@@ -57,7 +73,18 @@ export function PipContact({ contact }: { contact: ReturnType<typeof getPipConta
             disabled={!contact}
             aria-expanded={showQr}
             aria-controls="pip-qr"
-            onClick={() => setShowQr(!showQr)}
+            onClick={() => {
+              const request = ++qrOpenRequest.current;
+              if (showQr) {
+                setShowQr(false);
+                return;
+              }
+              void loadQrOverlay().then((ready) => {
+                if (request !== qrOpenRequest.current) return;
+                setQrImmediate(ready);
+                setShowQr(true);
+              });
+            }}
           >
             <QrCode aria-hidden="true" /> {showQr ? "Hide QR code" : "Show QR code"}
           </Button>
@@ -73,11 +100,15 @@ export function PipContact({ contact }: { contact: ReturnType<typeof getPipConta
                 <p role="status">QR code couldn’t load. Use Message Pip or copy the handle instead.</p>
               ) : (
                 <>
-                  <img
+                  <SkulletImage
+                    immediate={qrImmediate}
+                    label="Loading QR code"
                     src={contact.qrUrl}
                     alt="Scan to message Pip on Telegram"
                     width={240}
                     height={240}
+                    radius="12px"
+                    inset="calc(100% * 4 / 37)"
                     referrerPolicy="no-referrer"
                     onError={() => setQrFailed(true)}
                   />

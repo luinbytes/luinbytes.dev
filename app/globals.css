@@ -55,6 +55,11 @@
   --layer-content: 1;
   --layer-navigation: 30;
   --layer-skip-link: 40;
+  --skullet-base: color-mix(in srgb, var(--site-text) 18%, var(--site-surface-soft));
+  --skullet-highlight: color-mix(in srgb, var(--site-text) 7%, transparent);
+  --skullet-radius: 12px;
+  --skullet-animation: shimmer;
+  --skullet-speed: fast;
 }
 
 @media (prefers-color-scheme: light) {
@@ -78,6 +83,7 @@
     --glass-shadow: var(--site-shadow), inset 0 1px 0 var(--glass-rim), inset 0 -1px 1px rgb(71 47 87 / .1);
     --glass-panel-shadow: var(--site-shadow), inset 0 1px 1px rgb(255 255 255 / .88), inset 0 -1px 1px rgb(71 47 87 / .09);
     --site-panel-bg: linear-gradient(135deg, rgb(249 245 253 / .96), rgb(238 232 243 / .94));
+    --skullet-base: color-mix(in srgb, var(--site-text) 9%, var(--site-surface-soft));
   }
 }
 
@@ -107,6 +113,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .skip-link:focus { transform: none; }
 
 @media (prefers-reduced-motion: reduce) {
+  :root { --skullet-animation: none; }
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
