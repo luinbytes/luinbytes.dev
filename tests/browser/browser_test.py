@@ -2679,3 +2679,43 @@ document.addEventListener("readystatechange", armBoneWatch);
         self.assertFalse(page.locator("#pip-qr").is_hidden())
         self.assertGreaterEqual(len(held_chunks), 1)
         browser.close()
+
+    def test_stale_qr_overlay_does_not_reopen_the_panel(self) -> None:
+        browser = self.playwright.chromium.launch()
+        page = browser.new_page(viewport={"width": 390, "height": 844})
+        page.goto(f"{self.base_url}/pip", wait_until="networkidle")
+        held_chunks = []
+
+        def hold_chunk(route):
+            url = route.request.url
+            if "skullet-overlay" in url and url.endswith(".js"):
+                held_chunks.append(route)
+                return
+            route.continue_()
+
+        page.route("**/*", hold_chunk)
+        second_label = page.evaluate(
+            """() => new Promise((resolve) => {
+              const button = document.querySelector("#text-pip button[aria-controls='pip-qr']");
+              button.click();
+              window.setTimeout(() => {
+                button.click();
+                resolve(button.textContent);
+              }, 130);
+            })"""
+        )
+        self.assertIn("Show QR code", second_label)
+        page.wait_for_function(
+            """() => {
+              const button = document.querySelector("#text-pip button[aria-controls='pip-qr']");
+              const panel = document.getElementById("pip-qr");
+              return button && button.getAttribute("aria-expanded") === "true" && panel && !panel.hidden;
+            }""",
+            timeout=500,
+        )
+        page.locator("#text-pip").get_by_role("button", name="Hide QR code", exact=True).click()
+        page.wait_for_timeout(250)
+        self.assertEqual(page.locator("#text-pip button[aria-controls='pip-qr']").get_attribute("aria-expanded"), "false")
+        self.assertTrue(page.locator("#pip-qr").is_hidden())
+        self.assertGreaterEqual(len(held_chunks), 1)
+        browser.close()

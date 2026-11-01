@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ArrowUpRight, Check, Copy, Send, QrCode } from "lucide-react";
 import type { getPipContact } from "@/lib/pip";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ export function PipContact({ contact }: { contact: ReturnType<typeof getPipConta
   const [showQr, setShowQr] = useState(false);
   const [qrImmediate, setQrImmediate] = useState(false);
   const [qrFailed, setQrFailed] = useState(false);
+  const qrOpenRequest = useRef(0);
 
   async function copyHandle() {
     if (!contact) return;
@@ -69,11 +70,13 @@ export function PipContact({ contact }: { contact: ReturnType<typeof getPipConta
             aria-expanded={showQr}
             aria-controls="pip-qr"
             onClick={() => {
+              const request = ++qrOpenRequest.current;
               if (showQr) {
                 setShowQr(false);
                 return;
               }
               void loadQrOverlay().then((ready) => {
+                if (request !== qrOpenRequest.current) return;
                 setQrImmediate(ready);
                 setShowQr(true);
               });
