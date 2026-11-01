@@ -2649,3 +2649,33 @@ document.addEventListener("readystatechange", armBoneWatch);
             }"""
         )
         browser.close()
+
+    def test_stalled_skullet_chunk_still_opens_the_qr_panel(self) -> None:
+        browser = self.playwright.chromium.launch()
+        page = browser.new_page(viewport={"width": 390, "height": 844})
+        page.goto(f"{self.base_url}/pip", wait_until="networkidle")
+        held_chunks = []
+
+        def hold_chunk(route):
+            url = route.request.url
+            if "skullet-overlay" in url and url.endswith(".js"):
+                held_chunks.append(route)
+                return
+            route.continue_()
+
+        page.route("**/*", hold_chunk)
+        started = time.monotonic()
+        page.locator("#text-pip").get_by_role("button", name="Show QR code", exact=True).click()
+        page.wait_for_function(
+            """() => {
+              const button = document.querySelector("#text-pip button[aria-controls='pip-qr']");
+              const panel = document.getElementById("pip-qr");
+              return button && button.getAttribute("aria-expanded") === "true" && panel && !panel.hidden;
+            }""",
+            timeout=300,
+        )
+        self.assertLess(time.monotonic() - started, 0.3)
+        self.assertEqual(page.locator("#text-pip button[aria-controls='pip-qr']").get_attribute("aria-expanded"), "true")
+        self.assertFalse(page.locator("#pip-qr").is_hidden())
+        self.assertGreaterEqual(len(held_chunks), 1)
+        browser.close()

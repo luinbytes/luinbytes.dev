@@ -2,8 +2,17 @@ import { useState } from "react";
 import { ArrowUpRight, Check, Copy, Send, QrCode } from "lucide-react";
 import type { getPipContact } from "@/lib/pip";
 import { Button } from "@/components/ui/button";
-import { loadSkulletOverlay, SkulletImage } from "@/components/ui/skullet-image";
+import { loadSkulletOverlay, SKELETON_HOLD_MS, SkulletImage } from "@/components/ui/skullet-image";
 import styles from "./pip.module.css";
+
+function loadQrOverlay() {
+  return Promise.race([
+    loadSkulletOverlay(),
+    new Promise<boolean>((resolve) => {
+      window.setTimeout(() => resolve(false), SKELETON_HOLD_MS);
+    }),
+  ]);
+}
 
 export function PipContact({ contact }: { contact: ReturnType<typeof getPipContact> }) {
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
@@ -64,7 +73,7 @@ export function PipContact({ contact }: { contact: ReturnType<typeof getPipConta
                 setShowQr(false);
                 return;
               }
-              void loadSkulletOverlay().then((ready) => {
+              void loadQrOverlay().then((ready) => {
                 setQrImmediate(ready);
                 setShowQr(true);
               });

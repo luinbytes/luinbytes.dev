@@ -3,7 +3,7 @@ import { flushSync } from "react-dom";
 
 import styles from "./skullet-image.module.css";
 
-const SKELETON_HOLD_MS = 150;
+export const SKELETON_HOLD_MS = 150;
 const REVEAL_MS = 200;
 
 type OverlayComponent = typeof import("./skullet-overlay").default;
