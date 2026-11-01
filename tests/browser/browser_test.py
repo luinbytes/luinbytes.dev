@@ -2180,6 +2180,38 @@ class PortfolioTests(BrowserTestCase):
         self.assertEqual(console_issues, [])
         browser.close()
 
+    def test_hero_card_dim_follows_scroll(self) -> None:
+        browser = self.playwright.chromium.launch()
+        page = self.pond_page(browser, viewport={"width": 1440, "height": 900})
+        page.goto(f"{self.base_url}/?pond-seed=e2e-scroll", wait_until="networkidle")
+        pond = page.locator("[data-pond-state]")
+        wait_for_condition(
+            page,
+            """() => {
+                const pond = document.querySelector('[data-pond-state]');
+                return pond?.dataset.pondState === 'running' && pond.dataset.pondCard;
+            }"""
+        )
+        first = pond.get_attribute("data-pond-card")
+        first_y = float(first.split(",")[1])
+        page.evaluate("""() => {
+            const root = document.scrollingElement;
+            root.style.scrollBehavior = "auto";
+            root.scrollTop = 360;
+        }""")
+        wait_for_condition(
+            page,
+            """initial => {
+                const raw = document.querySelector('[data-pond-state]')?.dataset.pondCard ?? "";
+                const y = Number(raw.split(",")[1]);
+                return Number.isFinite(y) && y < Number(initial) - 40;
+            }""",
+            arg=first_y,
+        )
+        second = [float(value) for value in pond.get_attribute("data-pond-card").split(",")]
+        self.assertLess(second[1], first_y - 40)
+        browser.close()
+
     def test_mobile_touch_disturbs_the_shared_pond(self) -> None:
         browser = self.playwright.chromium.launch()
         context = browser.new_context(
@@ -2196,6 +2228,10 @@ class PortfolioTests(BrowserTestCase):
             tuple(float(value) for value in point.split(","))
             for point in pond.get_attribute("data-fish-positions").split(";")
         ]
+        self.assertGreaterEqual(len(fish_points), 3)
+        for earlier, later in ((0, 1), (0, 2), (1, 2)):
+            gap = ((fish_points[earlier][0] - fish_points[later][0]) ** 2 + (fish_points[earlier][1] - fish_points[later][1]) ** 2) ** 0.5
+            self.assertGreaterEqual(gap, 6 * 10 - 4, fish_points)
         fish_x, fish_y = find_open_water(page, pond, fish_points)
         page.evaluate("""() => {
             window.__pondTouchEvents = [];

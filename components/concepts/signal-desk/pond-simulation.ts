@@ -29,6 +29,7 @@ export type FishDefinition = {
   cruise: number;
   alpha: number;
   species: string;
+  visualLength?: number;
 };
 
 export type FlyDefinition = {
@@ -153,6 +154,8 @@ type SimulationOptions = {
   fish: readonly FishDefinition[];
   flies: readonly FlyDefinition[];
   isWater: (x: number, y: number) => boolean;
+  waterBounds?: () => { minX: number; minY: number; maxX: number; maxY: number };
+  headSeparation?: number;
 };
 
 type SimulationInput = {
@@ -292,6 +295,7 @@ function nearestWater(
   isWater: SimulationOptions["isWater"],
   clearance = 12,
   fallback?: PondPoint,
+  bounds?: { minX: number; minY: number; maxX: number; maxY: number },
 ) {
   const hasClearance = (candidate: PondPoint) => {
     if (candidate.x < 20 + clearance || candidate.x > width - 20 - clearance ||
@@ -318,8 +322,12 @@ function nearestWater(
   if (fallback && hasClearance(fallback)) return { ...fallback };
   let closest: PondPoint | null = null;
   let closestDistance = Infinity;
-  for (let x = 20 + clearance; x < width - 20 - clearance; x += 8) {
-    for (let y = 20 + clearance; y < height - 20 - clearance; y += 8) {
+  const minX = bounds ? Math.max(20 + clearance, bounds.minX) : 20 + clearance;
+  const maxX = bounds ? Math.min(width - 20 - clearance, bounds.maxX) : width - 20 - clearance;
+  const minY = bounds ? Math.max(20 + clearance, bounds.minY) : 20 + clearance;
+  const maxY = bounds ? Math.min(height - 20 - clearance, bounds.maxY) : height - 20 - clearance;
+  for (let x = minX; x < maxX; x += 8) {
+    for (let y = minY; y < maxY; y += 8) {
       const candidate = { x, y };
       const distance = pondDistance(position, candidate);
       if (distance < closestDistance && hasClearance(candidate)) {
@@ -360,6 +368,7 @@ export function createPondSimulation(options: SimulationOptions) {
       isWater,
       agent.bodyRadius,
       { x: agent.vehicle.position.x, y: agent.vehicle.position.z },
+      options.waterBounds?.(),
     );
     const from = { x: agent.vehicle.position.x, y: agent.vehicle.position.z };
     if (waterPath(from, Math.atan2(goal.y - from.y, goal.x - from.x), pondDistance(from, goal), agent.bodyRadius)) return goal;
@@ -379,7 +388,7 @@ export function createPondSimulation(options: SimulationOptions) {
     // Three discs cover the atlas, including its 1.08 depth scale and stroke flex.
     // Their 1.12 by 0.72 cell envelope applies equally to every swimming depth.
     const bodyRadius = definition.displayWidth * 0.56;
-    const initial = nearestWater(definition.position, width, height, isWater, bodyRadius);
+    const initial = nearestWater(definition.position, width, height, isWater, bodyRadius, undefined, options.waterBounds?.());
     const vehicle = new YUKA.Vehicle();
     vehicle.position.set(initial.x, 0, initial.y);
     vehicle.velocity.set(
@@ -495,6 +504,41 @@ export function createPondSimulation(options: SimulationOptions) {
   }));
 
   let lastFrame: PondSimulationFrame | null = null;
+  let headSeparation = options.headSeparation ?? 0;
+
+  function headPoint(agent: FishAgent) {
+    const length = agent.visualLength ?? agent.displayWidth;
+    return {
+      x: agent.vehicle.position.x + Math.cos(agent.motion.heading) * length * 0.46,
+      y: agent.vehicle.position.z + Math.sin(agent.motion.heading) * length * 0.46,
+    };
+  }
+
+  function nudgeFish(agent: FishAgent, x: number, y: number) {
+    const next = { x: agent.vehicle.position.x + x, y: agent.vehicle.position.z + y };
+    if (!isWater(next.x, next.y)) return;
+    agent.vehicle.position.x = next.x;
+    agent.vehicle.position.z = next.y;
+  }
+
+  function separateHeads() {
+    if (headSeparation <= 0) return;
+    for (let pass = 0; pass < 2; pass += 1) {
+      for (const pair of pairs) {
+        const first = headPoint(pair.first);
+        const second = headPoint(pair.second);
+        const dx = second.x - first.x;
+        const dy = second.y - first.y;
+        const distance = Math.hypot(dx, dy);
+        if (distance >= headSeparation || distance < 1e-4) continue;
+        const push = Math.min(8, (headSeparation - distance) / 2);
+        const nx = dx / distance;
+        const ny = dy / distance;
+        nudgeFish(pair.first, -nx * push, -ny * push);
+        nudgeFish(pair.second, nx * push, ny * push);
+      }
+    }
+  }
 
   function fishTargets(input: SimulationInput): PondTarget[] {
     return fish.map((agent) => {
@@ -970,7 +1014,7 @@ export function createPondSimulation(options: SimulationOptions) {
       agent.catFlee.weight = 2.8 + catThreat * 2.8;
 
       if (intent?.goal) {
-        const goal = nearestWater(intent.goal, width, height, isWater, agent.bodyRadius, agent.previous);
+        const goal = nearestWater(intent.goal, width, height, isWater, agent.bodyRadius, agent.previous, options.waterBounds?.());
         agent.goalTarget.set(goal.x, 0, goal.y);
         agent.goalArrive.active = true;
         agent.goalArrive.weight = intent.state === "feeding" ? 1.25 : intent.state === "circling" ? 0.95 : 2.5;
@@ -1068,6 +1112,7 @@ export function createPondSimulation(options: SimulationOptions) {
     }
 
     resolveFishContacts(starts, ends, input.delta);
+    separateHeads();
     for (const agent of fish) {
       const { motion, vehicle } = agent;
       const position = vehicle.position;
@@ -1228,10 +1273,26 @@ export function createPondSimulation(options: SimulationOptions) {
 
   separateInitialFish();
 
+  function resizeFish(updates: readonly { id: string; displayWidth: number; visualLength?: number }[]) {
+    for (const update of updates) {
+      const agent = fish.find((item) => item.id === update.id);
+      if (!agent) continue;
+      agent.displayWidth = update.displayWidth;
+      agent.bodyRadius = update.displayWidth * 0.56;
+      if (update.visualLength !== undefined) agent.visualLength = update.visualLength;
+    }
+  }
+
+  function setHeadSeparation(distance: number) {
+    headSeparation = distance;
+  }
+
   return {
     dropFood: world.dropFood,
     requestHop: world.requestHop,
     step,
+    resizeFish,
+    setHeadSeparation,
     destroy: () => manager.clear(),
     get frame() {
       return lastFrame;

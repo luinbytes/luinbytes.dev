@@ -15,6 +15,7 @@ import {
   type FishSimulationFrame,
   type PondPointerInput,
 } from "../components/concepts/signal-desk/pond-simulation.ts";
+import { POND_ASCII_STATE_CELL, pondAsciiStateCell } from "../components/concepts/signal-desk/pond-ascii.ts";
 
 const FRAME_MS = 1000 / 30;
 const ALL_ANCHORS = ROCK_ANCHORS.map((anchor) => anchor.id);
@@ -1158,3 +1159,50 @@ for (const [viewportWidth, viewportHeight, fishCount] of [[1280, 800, 20], [390,
     simulation.destroy();
   });
 }
+
+test("the ascii state pass writes each cell into its own texel", () => {
+  assert.equal(POND_ASCII_STATE_CELL.includes("+ 0.5"), false);
+  assert.match(POND_ASCII_STATE_CELL, /vUv\.x, 1\.0 - vUv\.y\) \* uGrid/);
+  for (let count = 1; count <= 160; count += 1) {
+    for (let texel = 0; texel < count; texel += 1) {
+      assert.equal(pondAsciiStateCell(texel, count), texel);
+    }
+  }
+});
+
+test("resizeFish replaces the body used by later steps", () => {
+  const simulation = contactSimulation([
+    { ...MOTION_FISH, id: "a", displayWidth: 40, position: { x: 400, y: 500 } },
+    { ...MOTION_FISH, id: "b", displayWidth: 40, position: { x: 900, y: 500 } },
+  ]);
+  assert.equal(tickFish(simulation, 1).fish.find((fish) => fish.id === "a")?.displayWidth, 40);
+  simulation.resizeFish([{ id: "a", displayWidth: 80, visualLength: 160 }]);
+  assert.equal(tickFish(simulation, 2).fish.find((fish) => fish.id === "a")?.displayWidth, 80);
+  simulation.destroy();
+});
+
+test("head separation keeps noses at least the requested distance apart", () => {
+  const simulation = createPondSimulation({
+    seed: "heads",
+    width: 1586,
+    height: 1024,
+    isWater: () => true,
+    headSeparation: 80,
+    fish: [
+      { ...MOTION_FISH, id: "a", displayWidth: 20, visualLength: 100, position: { x: 500, y: 500 }, heading: 0, cruise: 0.1 },
+      { ...MOTION_FISH, id: "b", displayWidth: 20, visualLength: 100, position: { x: 540, y: 500 }, heading: 0, cruise: 0.1 },
+    ],
+    flies: [],
+  });
+  let frame = tickFish(simulation, 1);
+  for (let index = 2; index <= 30; index += 1) frame = tickFish(simulation, index);
+  const [first, second] = frame.fish;
+  const nose = (fish: FishSimulationFrame) => ({
+    x: fish.position.x + Math.cos(fish.heading) * 46,
+    y: fish.position.y + Math.sin(fish.heading) * 46,
+  });
+  const left = nose(first);
+  const right = nose(second);
+  assert.ok(Math.hypot(left.x - right.x, left.y - right.y) >= 79, `${left.x},${left.y} vs ${right.x},${right.y}`);
+  simulation.destroy();
+});

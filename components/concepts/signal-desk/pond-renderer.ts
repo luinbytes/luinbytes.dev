@@ -165,7 +165,7 @@ export async function startPondRenderer(options: StartOptions) {
   try {
     const canvas = document.createElement("canvas");
     const context = canvas.getContext("webgl2", {
-      alpha: true,
+      alpha: !liveAscii,
       antialias: false,
       powerPreference: "high-performance",
       preserveDrawingBuffer: Boolean(testPose),
@@ -176,13 +176,14 @@ export async function startPondRenderer(options: StartOptions) {
     }
     let renderer: THREE.WebGLRenderer;
     try {
-      renderer = new THREE.WebGLRenderer({ canvas, context, alpha: true, antialias: false });
+      renderer = new THREE.WebGLRenderer({ canvas, context, alpha: !liveAscii, antialias: false });
     } catch (error) {
       context.getExtension("WEBGL_lose_context")?.loseContext();
       throw error;
     }
     renderer.outputColorSpace = THREE.SRGBColorSpace;
-    renderer.setClearColor(0x000000, 0);
+    renderer.setClearColor(liveAscii ? 0x252031 : 0x000000, liveAscii ? 1 : 0);
+    if (liveAscii && window.matchMedia("(prefers-color-scheme: light)").matches) renderer.setClearColor(0xeee8f3, 1);
     renderer.debug.onShaderError = (gl, program, vertexShader, fragmentShader) => {
       const programLog = gl.getProgramInfoLog(program) ?? "";
       const vertexLog = gl.getShaderInfoLog(vertexShader) ?? "";
@@ -315,9 +316,23 @@ export async function startPondRenderer(options: StartOptions) {
       pondFrame.cy = cy;
       pondFrame.rx = rx;
       pondFrame.ry = ry;
-      if (cardRect && cardRect.width > 0 && cardRect.height > 0) {
-        pondFrame.card.set(cardRect.left - cell, cardRect.top - cell, cardRect.right + cell, cardRect.bottom + cell);
-      } else pondFrame.card.set(-1, -1, -1, -1);
+      measureCard();
+    };
+    const measureCard = () => {
+      const cardEl = document.querySelector("[data-hero-card]");
+      const cell = pondFrame.cell;
+      if (cardEl instanceof HTMLElement) {
+        const rect = cardEl.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          pondFrame.card.set(rect.left - cell, rect.top - cell, rect.right + cell, rect.bottom + cell);
+          if (diagnostics) {
+            host.dataset.pondCard = `${pondFrame.card.x.toFixed(1)},${pondFrame.card.y.toFixed(1)},${pondFrame.card.z.toFixed(1)},${pondFrame.card.w.toFixed(1)}`;
+          }
+          return;
+        }
+      }
+      pondFrame.card.set(-1, -1, -1, -1);
+      if (diagnostics) host.dataset.pondCard = "none";
     };
     const isWaterWorld = (x: number, y: number) => {
       if (!liveAscii) {
@@ -374,12 +389,15 @@ export async function startPondRenderer(options: StartOptions) {
       renderer.setSize(window.innerWidth, window.innerHeight, false);
       measureFrame();
       ascii?.resize(window.innerWidth, window.innerHeight, pixelRatio);
+      if (diagnostics && ascii) {
+        host.dataset.glyphInk = `${ascii.ink.cssWidth.toFixed(2)},${ascii.ink.cssHeight.toFixed(2)}`;
+      }
     };
     let ascii: PondAscii | null = null;
     layout();
     if (liveAscii) {
       await Promise.race([
-        document.fonts.load('700 24px "Space Mono"'),
+        document.fonts.load(`700 ${pondFrame.cell}px "Space Mono"`),
         new Promise((resolve) => { window.setTimeout(resolve, 1200); }),
       ]);
       if (disposed) throw new DOMException("Pond initialization cancelled", "AbortError");
@@ -388,7 +406,9 @@ export async function startPondRenderer(options: StartOptions) {
     }
 
     const fishCells = new Map<string, number>();
+    const bodyScales = new Map<string, number>();
     const tanchoIds = new Set<string>();
+    const mobileSchool = !testPose && window.innerWidth < 640;
     const fishDefinitions: FishDefinition[] = testPose
       ? [{
         id: "fish-0",
@@ -404,9 +424,9 @@ export async function startPondRenderer(options: StartOptions) {
         species: ["kohaku", "ogon", "showa", "utsuri"][testPose.row] ?? "showa",
       }]
       : (window.innerWidth < 640 ? [
-        { cells: 12, cruise: 34, heading: 0.35, tancho: false, nx: -0.42, ny: -0.28 },
-        { cells: 11, cruise: 27, heading: -0.7, tancho: true, nx: 0.38, ny: 0.22 },
-        { cells: 10, cruise: 32, heading: 1.8, tancho: false, nx: -0.08, ny: 0.48 },
+        { cells: 12, cruise: 34, heading: 0.15, tancho: false, nx: -0.42, ny: -0.22 },
+        { cells: 11, cruise: 27, heading: 0.05, tancho: true, nx: 0.42, ny: -0.22 },
+        { cells: 10, cruise: 32, heading: 0.2, tancho: false, nx: 0, ny: 0.48 },
       ] : [
         { cells: 18, cruise: 34, heading: 0.15, tancho: false, nx: -0.62, ny: -0.38 },
         { cells: 16, cruise: 30, heading: 0.55, tancho: false, nx: 0.50, ny: -0.36 },
@@ -418,10 +438,13 @@ export async function startPondRenderer(options: StartOptions) {
         fishCells.set(id, entry.cells);
         if (entry.tancho) tanchoIds.add(id);
         const bodyScale = window.innerWidth < 640 ? 0.48 : 0.26;
+        bodyScales.set(id, bodyScale);
+        const visualLength = entry.cells * pondFrame.cell / viewScale;
         return {
           id,
           row: 2,
-          displayWidth: entry.cells * pondFrame.cell / viewScale * bodyScale,
+          displayWidth: visualLength * bodyScale,
+          visualLength,
           position: nearestWater(screenToWorld(
             pondFrame.cx + entry.nx * (pondFrame.rx - 2) * pondFrame.cell,
             pondFrame.cy + entry.ny * (pondFrame.ry - 2) * pondFrame.cell,
@@ -449,6 +472,21 @@ export async function startPondRenderer(options: StartOptions) {
       width: pondTexture.width,
       height: pondTexture.height,
       fish: fishDefinitions,
+      headSeparation: mobileSchool ? 6 * pondFrame.cell / viewScale : 0,
+      waterBounds: liveAscii ? () => {
+        const rx = Math.max(pondFrame.cell, (pondFrame.rx - 2) * pondFrame.cell);
+        const ry = Math.max(pondFrame.cell, (pondFrame.ry - 2) * pondFrame.cell);
+        const west = screenToWorld(pondFrame.cx - rx, pondFrame.cy);
+        const east = screenToWorld(pondFrame.cx + rx, pondFrame.cy);
+        const north = screenToWorld(pondFrame.cx, pondFrame.cy - ry);
+        const south = screenToWorld(pondFrame.cx, pondFrame.cy + ry);
+        return {
+          minX: Math.min(west.x, east.x),
+          maxX: Math.max(west.x, east.x),
+          minY: Math.min(north.y, south.y),
+          maxY: Math.max(north.y, south.y),
+        };
+      } : undefined,
       flies: [
         { id: "fly-0", position: screenToWorld(window.innerWidth * 0.72, window.innerHeight * 0.25), orbitX: 240, orbitY: 90, phase: 0.4, speed: 0.021, color: 0x56d7c8 },
         { id: "fly-1", position: screenToWorld(window.innerWidth * 0.33, window.innerHeight * 0.36), orbitX: 190, orbitY: 115, phase: 2.7, speed: 0.019, color: 0xe8a64f },
@@ -710,7 +748,7 @@ export async function startPondRenderer(options: StartOptions) {
       glyphWakes.push({ x, y, born: performance.now(), life });
       if (glyphWakes.length > 120) glyphWakes = glyphWakes.slice(-120);
     };
-    const wakeLayer = pixels(3.25, 760);
+    const wakeLayer = pixels(1.2, 760);
     wakeLayer.material = own(createWakeIdMaterial()) as unknown as THREE.MeshBasicMaterial;
     wakeLayer.visible = false;
     stage.add(wakeLayer);
@@ -799,7 +837,11 @@ export async function startPondRenderer(options: StartOptions) {
       }
       animate(catAnimation, delta);
       const contactY = CAT_FRAME_CONTACT_Y[row][catAnimation.frame] ?? CAT_FRAME_CONTACT_Y[row][0];
-      const contact = worldToScreen(next.cat.contact);
+      const rawContact = worldToScreen(next.cat.contact);
+      const contact = liveAscii ? {
+        x: pondFrame.cx + Math.max(-pondFrame.rx * 0.42, Math.min(pondFrame.rx * 0.42, (rawContact.x - pondFrame.cx) / pondFrame.cell)) * pondFrame.cell,
+        y: pondFrame.cy + (pondFrame.ry + 1.15) * pondFrame.cell,
+      } : rawContact;
       const aim = worldToScreen(next.cat.aim);
       const lift = next.cat.lift * viewScale * (reduced ? 0.25 : 1);
       const desiredFacing = Math.abs(aim.x - contact.x) < 16 ? renderedFacing : next.cat.facing;
@@ -976,7 +1018,15 @@ export async function startPondRenderer(options: StartOptions) {
         const visual = flyVisuals.get(fly.id);
         if (!visual) continue;
         const point = worldToScreen(fly.position);
-        visual.container.position.set(point.x, point.y, 0);
+        if (liveAscii) {
+          const angle = fly.id === "fly-0" ? -2.35 : 0.55;
+          const band = 1.15 + Math.sin(simulationNow * 0.001 + (fly.id === "fly-0" ? 0.4 : 2.1)) * 0.35;
+          visual.container.position.set(
+            pondFrame.cx + Math.cos(angle) * (pondFrame.rx + band) * pondFrame.cell,
+            pondFrame.cy + Math.sin(angle) * (pondFrame.ry + band) * pondFrame.cell,
+            0,
+          );
+        } else visual.container.position.set(point.x, point.y, 0);
         visual.container.scale.setScalar((1 + fly.lift * 0.008) * (liveAscii ? 1.7 : 1));
         const speed = Math.hypot(fly.velocity.x, fly.velocity.y);
         if (speed > 2) visual.container.rotation.z += pondAngleDelta(visual.container.rotation.z, fly.heading) * (1 - Math.exp(-delta * 8));
@@ -1202,15 +1252,16 @@ export async function startPondRenderer(options: StartOptions) {
       feedAffordance.visible = false;
     }
 
+    const idClear = new THREE.Color();
     const present = () => {
       if (!liveAscii || !ascii) {
         renderer.render(stage, camera);
         return;
       }
       const previousTarget = renderer.getRenderTarget();
-      renderer.setRenderTarget(ascii.sceneBuffer);
-      renderer.clear();
-      renderer.render(stage, camera);
+      renderer.getClearColor(idClear);
+      const clearAlpha = renderer.getClearAlpha();
+      renderer.setClearColor(0x000000, 0);
       wakeLayer.visible = true;
       for (const swap of swaps) {
         swap.sync?.();
@@ -1224,6 +1275,7 @@ export async function startPondRenderer(options: StartOptions) {
         for (const swap of swaps) swap.mesh.material = swap.colorMaterial;
         wakeLayer.visible = false;
         renderer.setRenderTarget(previousTarget);
+        renderer.setClearColor(idClear, clearAlpha);
       }
       const stamp = performance.now();
       ellipseUniform.set(pondFrame.cx / pondFrame.cell, pondFrame.cy / pondFrame.cell, pondFrame.rx, pondFrame.ry);
@@ -1292,15 +1344,29 @@ export async function startPondRenderer(options: StartOptions) {
     const onResize = () => {
       layout();
       if (!liveAscii) return;
+      const updates: { id: string; displayWidth: number; visualLength: number }[] = [];
       for (const fish of fishDefinitions) {
         const visual = fishVisuals.get(fish.id);
         const cells = fishCells.get(fish.id);
-        if (visual && cells) visual.baseScaleX = cells * pondFrame.cell / viewScale;
+        const bodyScale = bodyScales.get(fish.id);
+        if (!visual || !cells || bodyScale === undefined) continue;
+        const visualLength = cells * pondFrame.cell / viewScale;
+        visual.baseScaleX = visualLength;
+        fish.displayWidth = visualLength * bodyScale;
+        fish.visualLength = visualLength;
+        updates.push({ id: fish.id, displayWidth: fish.displayWidth, visualLength });
       }
+      simulation.resizeFish(updates);
+      simulation.setHeadSeparation(mobileSchool ? 6 * pondFrame.cell / viewScale : 0);
       if (reduced && frameCount > 0) {
         step(performance.now(), 1 / 60);
         present();
       }
+    };
+    const onScroll = () => {
+      if (!liveAscii || disposed) return;
+      measureCard();
+      if (reduced && frameCount > 0) present();
     };
     const heroCard = liveAscii ? document.querySelector("[data-hero-card]") : null;
     const heroObserver = heroCard ? new IntersectionObserver((entries) => {
@@ -1311,13 +1377,16 @@ export async function startPondRenderer(options: StartOptions) {
     const themeMedia = window.matchMedia("(prefers-color-scheme: light)");
     const onTheme = () => {
       ascii?.setTheme(!themeMedia.matches);
+      if (liveAscii) renderer.setClearColor(themeMedia.matches ? 0xeee8f3 : 0x252031, 1);
       if (liveAscii && reduced && frameCount > 0) present();
     };
     if (liveAscii) themeMedia.addEventListener("change", onTheme);
     window.addEventListener("resize", onResize);
+    window.addEventListener("scroll", onScroll, { capture: true, passive: true });
     document.addEventListener("visibilitychange", visibility);
     removeListeners = () => {
       window.removeEventListener("resize", onResize);
+      window.removeEventListener("scroll", onScroll, { capture: true });
       document.removeEventListener("visibilitychange", visibility);
       heroObserver?.disconnect();
       if (liveAscii) themeMedia.removeEventListener("change", onTheme);

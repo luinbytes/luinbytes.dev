@@ -108,14 +108,19 @@ export function createFishIdMaterial(map: THREE.Texture, bend: FishBendUniforms,
       varying float vAcross;
       void main() {
         vec4 tex = texture2D(map, vUv * uRepeat + uOffset);
-        if (tex.a < 0.28) discard;
+        if (tex.a < 0.35) discard;
         float luma = dot(tex.rgb, vec3(0.2126, 0.7152, 0.0722));
         float id = 5.0;
-        if (tex.b > tex.r + 0.045 && luma > 0.34 && luma < 0.8) id = 8.0;
-        else if (luma < 0.4) id = 6.0;
-        if (id == 6.0 && vS > 0.05 && vS < 0.2 && luma < 0.14) id = 9.0;
-        if (uTancho > 0.5 && distance(vec2(vAcross, vS), vec2(0.5, 0.11)) < 0.075) id = 7.0;
-        gl_FragColor = vec4(id / 255.0, luma, 0.0, 1.0);
+        bool eye = luma < 0.14 && vS > 0.05 && vS < 0.22 && abs(vAcross - 0.5) > 0.07 && abs(vAcross - 0.5) < 0.24;
+        bool crown = abs(vAcross - 0.5) < 0.09 && vS > 0.035 && vS < 0.20;
+        if (uTancho > 0.5) {
+          if (eye) id = 9.0;
+          if (crown) id = 7.0;
+        } else {
+          id = luma < 0.4 ? 6.0 : 5.0;
+          if (eye) id = 9.0;
+        }
+        gl_FragColor = vec4(id / 255.0, vS, clamp(abs(vAcross - 0.5) * 2.0, 0.0, 1.0), tex.a);
       }
     `,
   });
