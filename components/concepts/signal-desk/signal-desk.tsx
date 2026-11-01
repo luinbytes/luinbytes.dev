@@ -243,7 +243,7 @@ export function SignalDesk() {
       <PondEnvironment reduced={reduced} />
       <p className={styles.srOnly}>The decorative pond responds to pointer movement. Right-click open water, or double-tap it on touch devices, to feed the fish.</p>
 
-      <header className={styles.header}>
+      <header className={styles.header} data-site-header>
         <a className={styles.brand} href="#top">
           <ProfileCard reducedMotion={reduced} compact />
           <span className={styles.srOnly}>Back to top</span>
@@ -258,7 +258,7 @@ export function SignalDesk() {
 
       <div className={styles.content}>
         <section className={styles.hero} aria-labelledby="hero-title">
-          <div className={styles.heroCopy}>
+          <div className={styles.heroCopy} data-hero-card>
             <span className={styles.eyebrow}>Software engineer</span>
             <h1 id="hero-title">I make stubborn software <em>behave.</em></h1>
             <p>I build Orchid.ai’s native Android app, agent systems, and Linux tools that do the useful part without making a fuss.</p>

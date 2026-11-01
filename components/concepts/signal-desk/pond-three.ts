@@ -35,6 +35,188 @@ export function createYDownPondQuad() {
   return geometry;
 }
 
+export function createBentFishGeometry() {
+  const geometry = new THREE.PlaneGeometry(1, 1, 1, 12);
+  const uv = geometry.getAttribute("uv");
+  for (let index = 0; index < uv.count; index += 1) uv.setY(index, 1 - uv.getY(index));
+  return geometry;
+}
+
+export type FishBendUniforms = {
+  time: { value: number };
+  curve: { value: number };
+  amount: { value: number };
+};
+
+const FISH_BEND_SNIPPET = `
+float pondS = clamp(position.y + 0.5, 0.0, 1.0);
+float pondWave = sin(7.539822 * pondS - uBendTime);
+transformed.x += (0.06 * pondS * pondWave + uBendCurve * pondS * pondS) * uBendAmount;
+`;
+
+export function attachFishBend(material: THREE.Material, bend: FishBendUniforms) {
+  material.customProgramCacheKey = () => "pond-fish-bend";
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.uBendTime = bend.time;
+    shader.uniforms.uBendCurve = bend.curve;
+    shader.uniforms.uBendAmount = bend.amount;
+    shader.vertexShader = `uniform float uBendTime;\nuniform float uBendCurve;\nuniform float uBendAmount;\n${shader.vertexShader}`;
+    shader.vertexShader = shader.vertexShader.replace("#include <begin_vertex>", `vec3 transformed = vec3(position);\n${FISH_BEND_SNIPPET}`);
+  };
+}
+
+export function createFishIdMaterial(map: THREE.Texture, bend: FishBendUniforms, tancho: boolean) {
+  const uniforms = {
+    map: { value: map },
+    uOffset: { value: new THREE.Vector2() },
+    uRepeat: { value: new THREE.Vector2(1, 1) },
+    uTancho: { value: tancho ? 1 : 0 },
+    uBendTime: bend.time,
+    uBendCurve: bend.curve,
+    uBendAmount: bend.amount,
+  };
+  const material = new THREE.ShaderMaterial({
+    uniforms,
+    depthTest: false,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    forceSinglePass: true,
+    toneMapped: false,
+    vertexShader: `
+      uniform float uBendTime;
+      uniform float uBendCurve;
+      uniform float uBendAmount;
+      varying vec2 vUv;
+      varying float vS;
+      varying float vAcross;
+      void main() {
+        vUv = uv;
+        vec3 transformed = vec3(position);
+        ${FISH_BEND_SNIPPET}
+        vS = clamp(position.y + 0.5, 0.0, 1.0);
+        vAcross = position.x + 0.5;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(transformed, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform sampler2D map;
+      uniform vec2 uOffset;
+      uniform vec2 uRepeat;
+      uniform float uTancho;
+      varying vec2 vUv;
+      varying float vS;
+      varying float vAcross;
+      void main() {
+        vec4 tex = texture2D(map, vUv * uRepeat + uOffset);
+        if (tex.a < 0.28) discard;
+        float luma = dot(tex.rgb, vec3(0.2126, 0.7152, 0.0722));
+        float id = 5.0;
+        if (tex.b > tex.r + 0.045 && luma > 0.34 && luma < 0.8) id = 8.0;
+        else if (luma < 0.4) id = 6.0;
+        if (id == 6.0 && vS > 0.05 && vS < 0.2 && luma < 0.14) id = 9.0;
+        if (uTancho > 0.5 && distance(vec2(vAcross, vS), vec2(0.5, 0.11)) < 0.075) id = 7.0;
+        gl_FragColor = vec4(id / 255.0, luma, 0.0, 1.0);
+      }
+    `,
+  });
+  return {
+    material,
+    sync() {
+      uniforms.uOffset.value.copy(map.offset);
+      uniforms.uRepeat.value.copy(map.repeat);
+    },
+  };
+}
+
+export function createFlatIdMaterial(id: number) {
+  return new THREE.ShaderMaterial({
+    uniforms: { uId: { value: id } },
+    depthTest: false,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    forceSinglePass: true,
+    toneMapped: false,
+    vertexShader: `
+      void main() {
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform float uId;
+      void main() {
+        gl_FragColor = vec4(uId / 255.0, 0.0, 0.0, 1.0);
+      }
+    `,
+  });
+}
+
+export function createWakeIdMaterial() {
+  return new THREE.ShaderMaterial({
+    uniforms: {},
+    depthTest: false,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    forceSinglePass: true,
+    toneMapped: false,
+    vertexShader: `
+      attribute vec4 color;
+      varying float vLife;
+      void main() {
+        vLife = color.a;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      varying float vLife;
+      void main() {
+        gl_FragColor = vec4(11.0 / 255.0, vLife, 0.0, 1.0);
+      }
+    `,
+  });
+}
+
+export function createSilhouetteIdMaterial(map: THREE.Texture, id: number) {
+  const uniforms = {
+    map: { value: map },
+    uOffset: { value: new THREE.Vector2() },
+    uRepeat: { value: new THREE.Vector2(1, 1) },
+    uId: { value: id },
+  };
+  const material = new THREE.ShaderMaterial({
+    uniforms,
+    depthTest: false,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    forceSinglePass: true,
+    toneMapped: false,
+    vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform sampler2D map;
+      uniform vec2 uOffset;
+      uniform vec2 uRepeat;
+      uniform float uId;
+      varying vec2 vUv;
+      void main() {
+        if (texture2D(map, vUv * uRepeat + uOffset).a < 0.35) discard;
+        gl_FragColor = vec4(uId / 255.0, 0.0, 0.0, 1.0);
+      }
+    `,
+  });
+  return {
+    material,
+    sync() {
+      uniforms.uOffset.value.copy(map.offset);
+      uniforms.uRepeat.value.copy(map.repeat);
+    },
+  };
+}
+
 export function createPondSprite(geometry: THREE.BufferGeometry, texture: THREE.Texture, order: number) {
   const material = new THREE.MeshBasicMaterial({
     map: texture,

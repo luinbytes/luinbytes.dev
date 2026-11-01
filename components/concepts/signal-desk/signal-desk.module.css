@@ -910,6 +910,40 @@
   }
 }
 
+@media (prefers-color-scheme: light) {
+  .heroCopy {
+    color: #35223f;
+    text-shadow: none;
+    background: rgb(255 255 255 / .42);
+    border-color: rgb(53 34 63 / .16);
+  }
+
+  .heroCopy .eyebrow,
+  .hero h1,
+  .heroCopy > p {
+    color: #35223f;
+    text-shadow: none;
+  }
+
+  .heroActions a {
+    border-color: #35223f;
+    color: #fff;
+    background: #35223f;
+    text-shadow: none;
+  }
+
+  .heroActions a:nth-child(2) {
+    border-color: #35223f;
+    color: #35223f;
+    background: #fff;
+    text-shadow: none;
+  }
+
+  .heroActions a:focus-visible {
+    outline-color: #35223f;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .heroActions a,
   .primaryAction,

@@ -4,7 +4,7 @@
   z-index: -2;
   overflow: hidden;
   pointer-events: none;
-  background: #073d3a;
+  background: var(--site-bg);
 }
 
 .pondInput {
@@ -69,8 +69,11 @@
   animation: glint 11s ease-in-out infinite alternate;
 }
 
+.pond[data-renderer="three"] .pondImage,
+.pond[data-renderer="three"] .pondGrade,
 .pond[data-renderer="three"] .surfaceLight {
-  opacity: 0.16;
+  opacity: 0;
+  visibility: hidden;
   animation: none;
 }
 

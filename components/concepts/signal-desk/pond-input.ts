@@ -20,7 +20,7 @@ function isCompletedTap(touch: { moved: boolean; started: number }, now: number,
 function isDoubleTap(previous: TouchTap | null, current: PondPoint, now: number) {
   if (!previous) return false;
   const elapsed = now - previous.time;
-  return elapsed >= 70 && elapsed <= 430 && Math.hypot(current.x - previous.x, current.y - previous.y) <= 34;
+  return elapsed >= 70 && elapsed <= 640 && Math.hypot(current.x - previous.x, current.y - previous.y) <= 34;
 }
 
 export function installPondInput(options: PondInputOptions) {
@@ -121,7 +121,7 @@ export function installPondInput(options: PondInputOptions) {
         options.onGesture?.("single-tap-impact");
       }
       clearPendingTap();
-    }, 440);
+    }, 660);
   };
 
   const cancel = (event: PointerEvent) => {
