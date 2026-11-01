@@ -1181,6 +1181,48 @@ test("resizeFish replaces the body used by later steps", () => {
   simulation.destroy();
 });
 
+test("a fish just outside the water is brought back without a long teleport", () => {
+  let strict = false;
+  const inside = (x: number, y: number) => {
+    if (!strict) return true;
+    const dx = (x - 800) / 200;
+    const dy = (y - 500) / 120;
+    return dx * dx + dy * dy <= 1;
+  };
+  const simulation = createPondSimulation({
+    seed: "recover-near",
+    width: 1586,
+    height: 1024,
+    isWater: inside,
+    recoverOutside: true,
+    fish: [{ ...MOTION_FISH, position: { x: 1030, y: 500 }, heading: Math.PI, cruise: 0.1 }],
+    flies: [],
+  });
+  strict = true;
+  const fish = tickFish(simulation, 1).fish[0];
+  assert.equal(inside(fish.position.x, fish.position.y), true);
+  assert.ok(Math.hypot(fish.position.x - 1030, fish.position.y - 500) <= 64);
+  simulation.destroy();
+});
+
+test("a fish far from water stays put", () => {
+  let strict = false;
+  const inside = (x: number, y: number) => !strict || (x > 200 && x < 280 && y > 200 && y < 280);
+  const simulation = createPondSimulation({
+    seed: "recover-far",
+    width: 1586,
+    height: 1024,
+    isWater: inside,
+    recoverOutside: true,
+    fish: [{ ...MOTION_FISH, position: { x: 900, y: 500 }, heading: Math.PI, cruise: 0.1 }],
+    flies: [],
+  });
+  strict = true;
+  const fish = tickFish(simulation, 1).fish[0];
+  assert.ok(Math.hypot(fish.position.x - 900, fish.position.y - 500) < 1);
+  simulation.destroy();
+});
+
 test("head separation keeps noses at least the requested distance apart", () => {
   const simulation = createPondSimulation({
     seed: "heads",

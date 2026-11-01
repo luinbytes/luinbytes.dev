@@ -473,6 +473,7 @@ export async function startPondRenderer(options: StartOptions) {
       height: pondTexture.height,
       fish: fishDefinitions,
       headSeparation: mobileSchool ? 6 * pondFrame.cell / viewScale : 0,
+      recoverOutside: liveAscii,
       waterBounds: liveAscii ? () => {
         const rx = Math.max(pondFrame.cell, (pondFrame.rx - 2) * pondFrame.cell);
         const ry = Math.max(pondFrame.cell, (pondFrame.ry - 2) * pondFrame.cell);

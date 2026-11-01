@@ -156,6 +156,7 @@ type SimulationOptions = {
   isWater: (x: number, y: number) => boolean;
   waterBounds?: () => { minX: number; minY: number; maxX: number; maxY: number };
   headSeparation?: number;
+  recoverOutside?: boolean;
 };
 
 type SimulationInput = {
@@ -505,6 +506,18 @@ export function createPondSimulation(options: SimulationOptions) {
 
   let lastFrame: PondSimulationFrame | null = null;
   let headSeparation = options.headSeparation ?? 0;
+  const recoverOutside = options.recoverOutside === true;
+
+  function waterWithin(x: number, y: number) {
+    for (let radius = 4; radius <= 64; radius += 4) {
+      for (let sample = 0; sample < 16; sample += 1) {
+        const angle = (sample + 0.5) / 16 * Math.PI * 2;
+        const candidate = { x: x + Math.cos(angle) * radius, y: y + Math.sin(angle) * radius };
+        if (isWater(candidate.x, candidate.y)) return candidate;
+      }
+    }
+    return null;
+  }
 
   function headPoint(agent: FishAgent) {
     const length = agent.visualLength ?? agent.displayWidth;
@@ -1119,6 +1132,13 @@ export function createPondSimulation(options: SimulationOptions) {
       const velocity = vehicle.velocity;
       const intent = intents.get(agent.id);
       const idle = (intent?.state === "cruising" || intent?.state === "returning-to-cruise") && !intent?.goal && motion.threat <= 0.04;
+      if (recoverOutside && !isWater(position.x, position.z)) {
+        const home = waterWithin(position.x, position.z);
+        if (home) {
+          position.x = home.x;
+          position.z = home.y;
+        }
+      }
       velocity.set((position.x - agent.previous.x) / input.delta, 0, (position.z - agent.previous.y) / input.delta);
       motion.speed = Math.hypot(velocity.x, velocity.z);
       motion.turnRate = pondAngleDelta(starts.get(agent)!.heading, motion.heading) / input.delta;
