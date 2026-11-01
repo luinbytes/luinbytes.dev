@@ -56,9 +56,9 @@
   --layer-navigation: 30;
   --layer-skip-link: 40;
   --skullet-base: color-mix(in srgb, var(--site-text) 18%, transparent);
-  --skullet-highlight: color-mix(in srgb, var(--site-accent) 48%, white);
+  --skullet-highlight: color-mix(in srgb, var(--site-text) 7%, transparent);
   --skullet-radius: 12px;
-  --skullet-animation: shimmer;
+  --skullet-animation: none;
   --skullet-speed: slow;
 }
 

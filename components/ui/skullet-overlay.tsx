@@ -7,6 +7,7 @@ type SkulletOverlayProps = {
   className: string;
   blockClassName: string;
   radius?: string;
+  inset?: string;
   onReady: () => void;
 };
 
@@ -15,6 +16,7 @@ export default function SkulletOverlay({
   className,
   blockClassName,
   radius,
+  inset,
   onReady,
 }: SkulletOverlayProps) {
   useEffect(() => {
@@ -26,7 +28,10 @@ export default function SkulletOverlay({
       <span
         {...{ "skullet-block": "" }}
         className={blockClassName}
-        style={radius ? { borderRadius: radius } : undefined}
+        style={{
+          ...(radius ? { borderRadius: radius } : {}),
+          ...(inset ? { inset } : {}),
+        }}
       />
     </Skeleton>
   );

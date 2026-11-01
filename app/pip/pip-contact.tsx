@@ -81,6 +81,7 @@ export function PipContact({ contact }: { contact: ReturnType<typeof getPipConta
                     width={240}
                     height={240}
                     radius="12px"
+                    inset="calc(100% * 4 / 37)"
                     referrerPolicy="no-referrer"
                     onError={() => setQrFailed(true)}
                   />

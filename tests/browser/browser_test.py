@@ -2441,3 +2441,110 @@ class PortfolioTests(BrowserTestCase):
             page.evaluate("document.documentElement.scrollWidth"), 1280
         )
         browser.close()
+
+
+class SkulletImageTests(BrowserTestCase):
+    HERO_ALT = "Pixel art of an open notebook, a cup of tea, oranges, and a leafy plant on a desk beside a lake view."
+
+    def hold_matching(self, page, token):
+        held = []
+
+        def handler(route):
+            if token in route.request.url:
+                held.append(route)
+                return
+            route.continue_()
+
+        page.route("**/*", handler)
+        return held
+
+    def release(self, held):
+        for route in held:
+            route.continue_()
+
+    def test_delayed_image_shows_a_skeleton_then_clears_it(self) -> None:
+        browser = self.playwright.chromium.launch()
+        page = browser.new_page(viewport={"width": 1440, "height": 900})
+        license_text = page.request.get(f"{self.base_url}/third-party-licenses.txt").text()
+        self.assertIn("Copyright (c) 2025 Lochie Axon", license_text)
+        self.assertIn("Permission is hereby granted, free of charge", license_text)
+        held = self.hold_matching(page, "pip-everyday.webp")
+        page.goto(f"{self.base_url}/pip", wait_until="domcontentloaded")
+        page.wait_for_selector("[skullet-loading]")
+        image = page.get_by_alt_text(self.HERO_ALT)
+        self.assertEqual(image.get_attribute("aria-hidden"), "true")
+        self.assertIn("Loading illustration", page.locator("[skullet-status]").inner_text())
+        self.release(held)
+        page.wait_for_selector("[skullet-loading]", state="detached")
+        self.assertIsNone(image.get_attribute("aria-hidden"))
+        self.assertGreater(image.evaluate("node => node.naturalWidth"), 0)
+        browser.close()
+
+    def test_image_error_clears_the_skeleton_and_shows_the_qr_fallback(self) -> None:
+        browser = self.playwright.chromium.launch()
+        page = browser.new_page(viewport={"width": 390, "height": 844})
+        held = self.hold_matching(page, "/qr/")
+        page.goto(f"{self.base_url}/pip", wait_until="networkidle")
+        page.locator("#text-pip").get_by_role("button", name="Show QR code", exact=True).click()
+        page.wait_for_selector("#pip-qr [skullet-loading]")
+        for route in held:
+            route.abort()
+        fallback = page.get_by_text(re.compile(r"QR code.*couldn.t load", re.IGNORECASE))
+        fallback.wait_for(state="visible")
+        self.assertTrue(fallback.is_visible())
+        self.assertEqual(page.locator("#pip-qr [skullet-loading]").count(), 0)
+        self.assertEqual(page.locator("#pip-qr img").count(), 0)
+        browser.close()
+
+    def test_complete_image_never_shows_a_skeleton(self) -> None:
+        browser = self.playwright.chromium.launch()
+        page = browser.new_page(viewport={"width": 1440, "height": 900})
+        page.add_init_script(
+            """() => {
+              window.__skulletShown = false;
+              const mark = () => {
+                if (document.querySelector("[skullet-loading]")) window.__skulletShown = true;
+              };
+              new MutationObserver(mark).observe(document.documentElement, {
+                subtree: true,
+                childList: true,
+                attributes: true,
+              });
+            }"""
+        )
+        page.goto(f"{self.base_url}/pip", wait_until="networkidle")
+        image = page.get_by_alt_text(self.HERO_ALT)
+        self.assertGreater(image.evaluate("node => node.naturalWidth"), 0)
+        self.assertIsNone(image.get_attribute("aria-hidden"))
+        self.assertFalse(page.evaluate("window.__skulletShown"))
+        self.assertEqual(page.locator("[skullet-loading]").count(), 0)
+        browser.close()
+
+    def test_failed_skullet_chunk_still_shows_the_image(self) -> None:
+        browser = self.playwright.chromium.launch()
+        page = browser.new_page(viewport={"width": 1440, "height": 900})
+        page_errors = []
+        page.on("pageerror", lambda error: page_errors.append(str(error)))
+        held = []
+
+        def handler(route):
+            url = route.request.url
+            if "skullet-overlay" in url and url.endswith(".js"):
+                route.abort()
+                return
+            if "pip-everyday.webp" in url:
+                held.append(route)
+                return
+            route.continue_()
+
+        page.route("**/*", handler)
+        page.goto(f"{self.base_url}/pip", wait_until="domcontentloaded")
+        page.wait_for_timeout(500)
+        self.assertTrue(page.get_by_role("heading", name="A little help.").is_visible())
+        self.release(held)
+        image = page.get_by_alt_text(self.HERO_ALT)
+        image.wait_for(state="visible")
+        self.assertGreater(image.evaluate("node => node.naturalWidth"), 0)
+        self.assertIsNone(image.get_attribute("aria-hidden"))
+        self.assertEqual(page_errors, [])
+        browser.close()
