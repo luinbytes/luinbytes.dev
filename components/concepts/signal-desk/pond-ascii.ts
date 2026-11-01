@@ -70,6 +70,15 @@ export function pondKoiQuadPixels(lengthCells: number, cell: number) {
   };
 }
 
+export const POND_ASCII_FRAME_TOLERANCE_MS = 2;
+
+export function pondFrameBudget(budget: number, deltaMs: number, interval: number, tolerance = POND_ASCII_FRAME_TOLERANCE_MS) {
+  const accumulated = budget + deltaMs;
+  if (accumulated < interval - tolerance) return { budget: accumulated, stepMs: 0 };
+  const remainder = accumulated >= interval ? accumulated % interval : 0;
+  return { budget: remainder, stepMs: accumulated - remainder };
+}
+
 function themeVector(hex: string, alpha: number) {
   const color = new THREE.Color(hex);
   return new THREE.Vector4(color.r, color.g, color.b, alpha);

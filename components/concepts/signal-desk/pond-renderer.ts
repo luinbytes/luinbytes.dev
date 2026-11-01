@@ -5,6 +5,7 @@ import {
   POND_ASCII_FPS_CAP,
   PondAscii,
   pondAsciiGrid,
+  pondFrameBudget,
   pondKoiQuadPixels,
 } from "./pond-ascii.ts";
 import { installPondInput } from "./pond-input.ts";
@@ -1329,15 +1330,17 @@ export async function startPondRenderer(options: StartOptions) {
       const deltaMs = previousTime === null ? 1000 / POND_ASCII_FPS_CAP : Math.min(Math.max(now - previousTime, 0), 80);
       previousTime = now;
       const frameInterval = 1000 / POND_ASCII_FPS_CAP;
+      let stepMs = deltaMs;
       if (liveAscii && !reduced) {
-        frameBudget += deltaMs;
-        if (frameBudget < frameInterval - 2) {
+        const paced = pondFrameBudget(frameBudget, deltaMs, frameInterval);
+        frameBudget = paced.budget;
+        if (paced.stepMs === 0) {
           animationFrame = window.requestAnimationFrame(draw);
           return;
         }
+        stepMs = paced.stepMs;
       }
-      const delta = Math.min(0.08, Math.max(1 / 120, (liveAscii && !reduced ? frameBudget : deltaMs) / 1000));
-      if (liveAscii && !reduced) frameBudget %= frameInterval;
+      const delta = Math.min(0.08, Math.max(1 / 120, stepMs / 1000));
       try {
         step(now, delta);
         present();

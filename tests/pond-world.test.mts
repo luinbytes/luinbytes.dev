@@ -20,6 +20,7 @@ import {
   POND_ASCII_RAMP,
   POND_BODY_MIN_COLUMN,
   pondBodyGlyphColumn,
+  pondFrameBudget,
   pondKoiQuadPixels,
 } from "../components/concepts/signal-desk/pond-ascii.ts";
 import { createFishIdMaterial, pondFishCellInside, type FishBendUniforms } from "../components/concepts/signal-desk/pond-three.ts";
@@ -1185,6 +1186,32 @@ test("a koi cell inside the silhouette stays a colon or denser", () => {
   assert.match(source, /0\.35/);
   assert.equal(source.includes("tex.a)"), false);
   identified.material.dispose();
+});
+
+test("frame budget keeps a scheduling remainder out of the next step", () => {
+  const interval = 1000 / 60;
+  let budget = 0;
+  let stepped = 0;
+  let wall = 0;
+  for (let frame = 0; frame < 8; frame += 1) {
+    const paced = pondFrameBudget(budget, 16, interval);
+    budget = paced.budget;
+    stepped += paced.stepMs;
+    wall += 16;
+    assert.ok(paced.stepMs > 0);
+    assert.ok(paced.stepMs < interval + 2, `stepped ${paced.stepMs}`);
+  }
+  assert.ok(Math.abs(stepped + budget - wall) < 1e-6);
+  assert.ok(stepped < wall * 1.05);
+
+  budget = 0;
+  let renders = 0;
+  for (let frame = 0; frame < 30; frame += 1) {
+    const paced = pondFrameBudget(budget, 1000 / 120, interval);
+    budget = paced.budget;
+    if (paced.stepMs > 0) renders += 1;
+  }
+  assert.equal(renders, 15);
 });
 
 test("koi span meets the desktop and mobile cell floors", () => {
