@@ -24,11 +24,6 @@
 
 .pondImage {
   z-index: 0;
-  background-image: url("/images/portfolio/pixel-pond-world.webp");
-  background-position: center;
-  background-size: cover;
-  transform: scale(1.015);
-  image-rendering: pixelated;
 }
 
 .pondHost {
@@ -85,12 +80,6 @@
   0% { opacity: 0.36; transform: translate3d(-4px, -2px, 0) scale(1.01); }
   55% { opacity: 0.7; }
   100% { opacity: 0.46; transform: translate3d(7px, 5px, 0) scale(1.035); }
-}
-
-@media (max-width: 720px) {
-  .pondImage {
-    background-position: calc(50% - 17.15vh) center;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -278,6 +278,11 @@ class SeededWanderBehavior extends YUKA.SteeringBehavior {
     this.turnIn = 0.7 + random() * 1.8;
   }
 
+  aim(heading: number) {
+    this.angle = heading;
+    this.targetAngle = heading;
+  }
+
   calculate(vehicle: YUKA.Vehicle, force: YUKA.Vector3, delta: number) {
     this.turnIn -= delta;
     if (this.turnIn <= 0) {
@@ -384,6 +389,24 @@ export function createPondSimulation(options: SimulationOptions) {
     }
     return from;
   };
+
+  function goalInBounds(agent: FishAgent, desired: PondPoint) {
+    const bounds = options.waterBounds?.();
+    if (!bounds) return desired;
+    const center = { x: (bounds.minX + bounds.maxX) / 2, y: (bounds.minY + bounds.maxY) / 2 };
+    let projected = center;
+    try {
+      projected = nearestWater(desired, width, height, isWater, Math.min(agent.bodyRadius, 12), center, bounds);
+    } catch {
+      projected = center;
+    }
+    const dx = projected.x - center.x;
+    const dy = projected.y - center.y;
+    const angle = Math.atan2(dy, dx) + agent.routeVisits * 0.9;
+    const ring = Math.min(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY) * 0.18;
+    const goal = { x: center.x + Math.cos(angle) * ring, y: center.y + Math.sin(angle) * ring };
+    return isWater(goal.x, goal.y) ? goal : center;
+  }
 
   const fish = options.fish.map((definition): FishAgent => {
     // Three discs cover the atlas, including its 1.08 depth scale and stroke flex.
@@ -506,7 +529,44 @@ export function createPondSimulation(options: SimulationOptions) {
 
   let lastFrame: PondSimulationFrame | null = null;
   let headSeparation = options.headSeparation ?? 0;
+  let simulationNow = 0;
   const recoverOutside = options.recoverOutside === true;
+
+  function snapHome(agent: FishAgent, seed: PondPoint, allowRim = true) {
+    const bounds = options.waterBounds?.();
+    const center = bounds
+      ? { x: (bounds.minX + bounds.maxX) / 2, y: (bounds.minY + bounds.maxY) / 2 }
+      : { x: width / 2, y: height / 2 };
+    const nearby = waterWithin(seed.x, seed.y);
+    const blocked = (point: PondPoint) => fish.some((other) => {
+      if (other === agent) return false;
+      const otherPoint = { x: other.vehicle.position.x, y: other.vehicle.position.z };
+      if (!isWater(otherPoint.x, otherPoint.y)) return false;
+      return pondDistance(point, otherPoint) < (agent.displayWidth + other.displayWidth) * 0.36;
+    });
+    if (allowRim && nearby && pondDistance(nearby, seed) <= 64 && !blocked(nearby)) return nearby;
+    const search = (origin: PondPoint, radius: number, reach: number) => {
+      for (let ring = 0; ring <= reach; ring += 8) {
+        const samples = ring === 0 ? 1 : 24;
+        for (let sample = 0; sample < samples; sample += 1) {
+          const angle = agent.motion.heading + sample / samples * TAU;
+          const candidate = {
+            x: origin.x + Math.cos(angle) * ring,
+            y: origin.y + Math.sin(angle) * ring,
+          };
+          if (waterClearance(candidate, radius) && !blocked(candidate)) return candidate;
+        }
+      }
+      return null;
+    };
+    for (const radius of [agent.bodyRadius, Math.min(12, agent.bodyRadius)]) {
+      const local = search(seed, radius, 280);
+      if (local) return local;
+      const inland = search(center, radius, Math.max(bounds ? bounds.maxX - bounds.minX : width, bounds ? bounds.maxY - bounds.minY : height));
+      if (inland) return inland;
+    }
+    return nearestWater(seed, width, height, isWater, 0, center, bounds);
+  }
 
   function waterWithin(x: number, y: number) {
     for (let radius = 4; radius <= 64; radius += 4) {
@@ -529,7 +589,7 @@ export function createPondSimulation(options: SimulationOptions) {
 
   function nudgeFish(agent: FishAgent, x: number, y: number) {
     const next = { x: agent.vehicle.position.x + x, y: agent.vehicle.position.z + y };
-    if (!isWater(next.x, next.y)) return;
+    if (!waterClearance(next, Math.min(agent.bodyRadius, 12))) return;
     agent.vehicle.position.x = next.x;
     agent.vehicle.position.z = next.y;
   }
@@ -1132,16 +1192,10 @@ export function createPondSimulation(options: SimulationOptions) {
       const velocity = vehicle.velocity;
       const intent = intents.get(agent.id);
       const idle = (intent?.state === "cruising" || intent?.state === "returning-to-cruise") && !intent?.goal && motion.threat <= 0.04;
-      if (recoverOutside && !isWater(position.x, position.z)) {
-        const home = waterWithin(position.x, position.z) ?? nearestWater(
-          { x: position.x, y: position.z },
-          width,
-          height,
-          isWater,
-          agent.bodyRadius,
-          undefined,
-          options.waterBounds?.(),
-        );
+      const shell = isWater(position.x, position.z) &&
+        !waterClearance({ x: position.x, y: position.z }, agent.bodyRadius);
+      if (recoverOutside && (!isWater(position.x, position.z) || shell)) {
+        const home = snapHome(agent, { x: position.x, y: position.z }, !shell);
         position.x = home.x;
         position.z = home.y;
         agent.previous = { x: home.x, y: home.y };
@@ -1156,7 +1210,7 @@ export function createPondSimulation(options: SimulationOptions) {
       const step = pondDistance(agent.previous, { x: position.x, y: position.z });
       agent.maxStep = Math.max(agent.maxStep, step);
       agent.previous = { x: position.x, y: position.z };
-      if (recoveredFish.has(agent) && !intents.get(agent.id)?.goal) {
+      if (recoveredFish.has(agent) && !intents.get(agent.id)?.goal && !isWater(agent.routeGoal.x, agent.routeGoal.y)) {
         agent.routeGoal = routePoint(agent);
         agent.goalTarget.set(agent.routeGoal.x, 0, agent.routeGoal.y);
         agent.nextRouteAt = input.now + duration(3200, 7200);
@@ -1282,6 +1336,7 @@ export function createPondSimulation(options: SimulationOptions) {
 
   function step(input: SimulationInput) {
     input = { ...input, delta: Number.isFinite(input.delta) ? pondClamp(input.delta, 0, 0.1) : 0 };
+    simulationNow = input.now;
     const targets = [...fishTargets(input), ...flyTargets(input)];
     const frame = world.step({
       now: input.now,
@@ -1307,6 +1362,21 @@ export function createPondSimulation(options: SimulationOptions) {
       agent.displayWidth = update.displayWidth;
       agent.bodyRadius = update.displayWidth * 0.56;
       if (update.visualLength !== undefined) agent.visualLength = update.visualLength;
+    }
+    if (!options.waterBounds) return;
+    for (const agent of fish) {
+      const here = { x: agent.vehicle.position.x, y: agent.vehicle.position.z };
+      agent.routeGoal = goalInBounds(agent, agent.routeGoal);
+      agent.goalTarget.set(agent.routeGoal.x, 0, agent.routeGoal.y);
+      agent.nextRouteAt = Math.max(agent.nextRouteAt, simulationNow + 6000);
+      agent.motion.activityIndex = 0;
+      agent.motion.activity = "swimming";
+      agent.motion.activityRemaining = 8;
+      const heading = Math.atan2(agent.routeGoal.y - here.y, agent.routeGoal.x - here.x);
+      if (Number.isFinite(heading)) {
+        agent.wander.aim(heading);
+        agent.motion.heading = heading;
+      }
     }
   }
 

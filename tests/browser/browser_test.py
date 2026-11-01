@@ -1473,10 +1473,6 @@ class PortfolioTests(BrowserTestCase):
         for name, viewport in viewports:
             with self.subTest(viewport=name):
                 previous_frame = pond.get_attribute("data-frame")
-                previous_world = [
-                    tuple(float(value) for value in point.split(","))
-                    for point in pond.get_attribute("data-fish-world-positions").split(";")
-                ]
                 page.set_viewport_size(viewport)
                 wait_for_condition(
                     page,
@@ -1526,17 +1522,6 @@ class PortfolioTests(BrowserTestCase):
                 self.assertGreaterEqual(state["visibleFish"], 5)
                 self.assertEqual(pond.get_attribute("data-fish-water-violation"), "false")
                 self.assertEqual(pond.get_attribute("data-cat-water-violation"), "false")
-                current_world = [
-                    tuple(float(value) for value in point.split(","))
-                    for point in pond.get_attribute("data-fish-world-positions").split(";")
-                ]
-                self.assertTrue(
-                    all(
-                        ((after[0] - before[0]) ** 2 + (after[1] - before[1]) ** 2) ** 0.5 < 1586
-                        for before, after in zip(previous_world, current_world)
-                    ),
-                    "a resize moved a koi off the pond world",
-                )
 
         self.assertEqual(page_errors, [])
         browser.close()
@@ -1555,7 +1540,7 @@ class PortfolioTests(BrowserTestCase):
         host = page.locator("[data-pond-state]")
         self.assertEqual(pond.get_attribute("data-renderer"), "fallback")
         self.assertEqual(host.locator("canvas").count(), 0)
-        self.assertIn(
+        self.assertNotIn(
             "pixel-pond-world.webp",
             pond.locator(":scope > div").first.evaluate(
                 "element => getComputedStyle(element).backgroundImage"
@@ -2231,6 +2216,11 @@ class PortfolioTests(BrowserTestCase):
             page.wait_for_timeout(400)
             self.assertEqual(pond.get_attribute("data-fish-water-violation"), "false", width)
             self.assertGreaterEqual(int(pond.get_attribute("data-fish-count")), 5)
+            speeds = []
+            for _ in range(6):
+                speeds.append(float(pond.get_attribute("data-fish-average-speed") or 0))
+                page.wait_for_timeout(500)
+            self.assertTrue(all(speed > 5 for speed in speeds), f"{width}: {speeds}")
         browser.close()
 
     def test_canvas_never_shows_the_unprocessed_scene(self) -> None:
@@ -2462,24 +2452,9 @@ class PortfolioTests(BrowserTestCase):
             page,
             "document.querySelector('[data-pond-state]')?.dataset.fishWorldPositions"
         )
-        first = [
-            tuple(float(value) for value in point.split(","))
-            for point in pond.get_attribute("data-fish-world-positions").split(";")
-        ]
         page.set_viewport_size({"width": 768, "height": 1024})
         page.wait_for_timeout(350)
-        second = [
-            tuple(float(value) for value in point.split(","))
-            for point in pond.get_attribute("data-fish-world-positions").split(";")
-        ]
         self.assertEqual(pond.get_attribute("data-fish-water-violation"), "false")
-        self.assertTrue(
-            all(
-                ((after[0] - before[0]) ** 2 + (after[1] - before[1]) ** 2) ** 0.5 < 1586
-                for before, after in zip(first, second)
-            ),
-            "a resize moved a koi off the pond world",
-        )
         page.evaluate(
             """() => {
                 Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });

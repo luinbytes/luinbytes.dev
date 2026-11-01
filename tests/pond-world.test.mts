@@ -1307,3 +1307,78 @@ test("head separation keeps noses at least the requested distance apart", () => 
   assert.ok(Math.hypot(left.x - right.x, left.y - right.y) >= 79, `${left.x},${left.y} vs ${right.x},${right.y}`);
   simulation.destroy();
 });
+
+test("a shifted pond keeps remapped koi moving", () => {
+  const ponds = {
+    wide: { cx: 1234.6, cy: 430.9, rx: 273.4, ry: 208.3 },
+    narrow: { cx: 793, cy: 326.6, rx: 143.3, ry: 104.2 },
+  };
+  let pond: keyof typeof ponds = "wide";
+  const ellipse = () => ponds[pond];
+  const inside = (x: number, y: number) => {
+    const shape = ellipse();
+    const dx = (x - shape.cx) / shape.rx;
+    const dy = (y - shape.cy) / shape.ry;
+    return dx * dx + dy * dy <= 1;
+  };
+  const placed = [
+    { nx: -0.62, ny: -0.38, cruise: 34, heading: 0.15, cells: 18 },
+    { nx: 0.5, ny: -0.36, cruise: 30, heading: 0.55, cells: 17 },
+    { nx: 0.28, ny: 0.62, cruise: 27, heading: -1.15, cells: 16 },
+    { nx: 0.36, ny: -0.18, cruise: 32, heading: 0.68, cells: 15 },
+    { nx: -0.55, ny: 0.42, cruise: 24, heading: 2.45, cells: 14 },
+  ];
+  const fish = placed.map((entry, index) => {
+    const visualLength = entry.cells * 12 / 0.9216;
+    return {
+      id: `fish-${index}`,
+      row: 2,
+      displayWidth: visualLength * 0.26,
+      visualLength,
+      position: {
+        x: ponds.wide.cx + entry.nx * ponds.wide.rx * 0.7,
+        y: ponds.wide.cy + entry.ny * ponds.wide.ry * 0.7,
+      },
+      heading: entry.heading,
+      cruise: entry.cruise,
+      alpha: 0.94,
+      species: "showa",
+    };
+  });
+  const simulation = createPondSimulation({
+    seed: "shift-pond",
+    width: 1586,
+    height: 992,
+    fish,
+    flies: [],
+    isWater: inside,
+    waterBounds: () => {
+      const shape = ellipse();
+      return { minX: shape.cx - shape.rx, maxX: shape.cx + shape.rx, minY: shape.cy - shape.ry, maxY: shape.cy + shape.ry };
+    },
+    recoverOutside: true,
+    headSeparation: 6 * 12 / 0.9216,
+  });
+  const step = (index: number) => simulation.step({
+    now: index * (1000 / 60),
+    delta: 1 / 60,
+    pointer: QUIET_POINTER,
+    visibleAnchorIds: [],
+  });
+  for (let index = 1; index <= 120; index += 1) step(index);
+  pond = "narrow";
+  simulation.resizeFish(fish.map((entry) => ({ id: entry.id, displayWidth: entry.displayWidth, visualLength: entry.visualLength })));
+  const means: number[] = [];
+  for (let index = 121; index <= 120 + 180; index += 1) {
+    const frame = step(index);
+    assert.equal(frame.fish.every((agent) => inside(agent.position.x, agent.position.y)), true);
+    if ((index - 121) % 30 === 29) {
+      means.push(frame.fish.reduce((sum, agent) => sum + Math.hypot(agent.velocity.x, agent.velocity.y), 0) / frame.fish.length);
+    }
+  }
+  assert.ok(means.length >= 6, `${means.length}`);
+  const listed = means.map((speed) => speed.toFixed(2)).join(",");
+  assert.ok(means.every((speed) => speed > 4), listed);
+  assert.ok(means.slice(0, 3).every((speed) => speed > 10), listed);
+  simulation.destroy();
+});
