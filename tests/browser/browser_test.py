@@ -2463,6 +2463,22 @@ const armSkulletWatch = () => {
 armSkulletWatch();
 document.addEventListener("readystatechange", armSkulletWatch);
 """
+    BONE_STAYS = """
+window.__boneHost = null;
+window.__boneReplaced = false;
+const armBoneWatch = () => {
+  if (window.__boneArmed || !document.documentElement) return;
+  window.__boneArmed = true;
+  new MutationObserver(() => {
+    const host = document.querySelector("[skullet-loading]");
+    if (!host) return;
+    if (!window.__boneHost) window.__boneHost = host;
+    else if (host !== window.__boneHost) window.__boneReplaced = true;
+  }).observe(document.documentElement, { childList: true, subtree: true });
+};
+armBoneWatch();
+document.addEventListener("readystatechange", armBoneWatch);
+"""
 
     def hold_matching(self, page, token):
         held = []
@@ -2484,6 +2500,7 @@ document.addEventListener("readystatechange", armSkulletWatch);
         browser = self.playwright.chromium.launch()
         page = browser.new_page(viewport={"width": 1440, "height": 900})
         page.add_init_script(self.SKULLET_WATCH)
+        page.add_init_script(self.BONE_STAYS)
         license_text = page.request.get(f"{self.base_url}/third-party-licenses.txt").text()
         self.assertIn("Copyright (c) 2025 Lochie Axon", license_text)
         self.assertIn("Permission is hereby granted, free of charge", license_text)
@@ -2493,6 +2510,15 @@ document.addEventListener("readystatechange", armSkulletWatch);
         self.assertIs(page.evaluate("window.__skulletShown"), True)
         image = page.get_by_alt_text(self.HERO_ALT)
         self.assertEqual(image.get_attribute("aria-hidden"), "true")
+        page.wait_for_timeout(300)
+        self.assertFalse(page.evaluate("window.__boneReplaced"))
+        self.assertTrue(page.evaluate("""() => {
+          const host = window.__boneHost;
+          const layer = host && host.querySelector("[skullet-layer]");
+          const bar = layer && layer.shadowRoot ? layer.shadowRoot.querySelector("[skullet-rect]") : null;
+          const box = bar ? bar.getBoundingClientRect() : null;
+          return !!(host && host.isConnected && box && box.width > 8 && box.height > 8);
+        }"""))
         self.assertIn("Loading illustration", page.locator("[skullet-status]").inner_text())
         self.release(held)
         page.wait_for_selector("[skullet-loading]", state="detached")

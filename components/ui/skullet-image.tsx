@@ -81,8 +81,14 @@ export function SkulletImage({
   const [phase, setPhase] = useState<Phase>(immediate ? "skeleton" : "pending");
   const [overlayReady, setOverlayReady] = useState(false);
   const [chunkFailed, setChunkFailed] = useState(false);
+  // The cached module and the lazy tree are different parents. Choosing again
+  // after onReady would remount the bone on the same render that hides the image.
+  const [cachedOnFirstPaint, setCachedOnFirstPaint] = useState<boolean | null>(null);
   const showSkeleton = !chunkFailed && (phase === "skeleton" || phase === "reveal");
   const hideImage = phase === "skeleton" && (immediate || overlayReady);
+  if (showSkeleton && cachedOnFirstPaint === null) {
+    setCachedOnFirstPaint(readyOverlay !== null);
+  }
   const markOverlayReady = useCallback(() => setOverlayReady(true), []);
   const dropSkeleton = useCallback(() => {
     setChunkFailed(true);
@@ -159,13 +165,14 @@ export function SkulletImage({
     />
   );
 
-  const OverlayView = readyOverlay ?? SkulletOverlay;
+  const CachedOverlay = readyOverlay;
+  const overlayClassName = `${frame ? styles.frame : styles.overlay}${phase === "reveal" ? ` ${styles.fading}` : ""}`;
   const skeleton = showSkeleton ? (
     <SkulletBoundary onFail={dropSkeleton}>
-      {readyOverlay ? (
-        <OverlayView
+      {cachedOnFirstPaint && CachedOverlay ? (
+        <CachedOverlay
           label={label}
-          className={`${frame ? styles.frame : styles.overlay}${phase === "reveal" ? ` ${styles.fading}` : ""}`}
+          className={overlayClassName}
           blockClassName={styles.block}
           radius={radius}
           inset={inset}
@@ -175,7 +182,7 @@ export function SkulletImage({
         <Suspense fallback={null}>
           <SkulletOverlay
             label={label}
-            className={`${frame ? styles.frame : styles.overlay}${phase === "reveal" ? ` ${styles.fading}` : ""}`}
+            className={overlayClassName}
             blockClassName={styles.block}
             radius={radius}
             inset={inset}
