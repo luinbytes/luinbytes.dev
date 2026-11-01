@@ -1382,3 +1382,124 @@ test("a shifted pond keeps remapped koi moving", () => {
   assert.ok(means.slice(0, 3).every((speed) => speed > 10), listed);
   simulation.destroy();
 });
+
+test("resizeFish keeps a wet route when the pond does not move", () => {
+  const shape = { cx: 800, cy: 500, rx: 320, ry: 220 };
+  const inside = (x: number, y: number) => {
+    const dx = (x - shape.cx) / shape.rx;
+    const dy = (y - shape.cy) / shape.ry;
+    return dx * dx + dy * dy <= 1;
+  };
+  const fish = { ...MOTION_FISH, position: { x: shape.cx + 140, y: shape.cy }, heading: 0, cruise: 28, displayWidth: 40 };
+  const options = {
+    seed: "still-pond",
+    width: 1586,
+    height: 1024,
+    isWater: inside,
+    waterBounds: () => ({ minX: shape.cx - shape.rx, maxX: shape.cx + shape.rx, minY: shape.cy - shape.ry, maxY: shape.cy + shape.ry }),
+    recoverOutside: true,
+    fish: [fish],
+    flies: [],
+  };
+  const step = (simulation: ReturnType<typeof createPondSimulation>, index: number) => simulation.step({
+    now: index * (1000 / 60),
+    delta: 1 / 60,
+    pointer: QUIET_POINTER,
+    visibleAnchorIds: [],
+  });
+  const settled = createPondSimulation(options);
+  const resized = createPondSimulation(options);
+  resized.resizeFish([{ id: fish.id, displayWidth: fish.displayWidth }]);
+  const before = step(settled, 1).fish[0];
+  const after = step(resized, 1).fish[0];
+  const turn = Math.abs(Math.atan2(Math.sin(after.heading - before.heading), Math.cos(after.heading - before.heading)));
+  assert.ok(turn < 0.05, `heading ${before.heading} became ${after.heading}`);
+  assert.ok(Math.hypot(after.position.x - before.position.x, after.position.y - before.position.y) < 1, `${after.position.x},${after.position.y}`);
+  settled.destroy();
+  resized.destroy();
+});
+
+test("resizeFish retargets a route that the pond no longer covers", () => {
+  const wide = { cx: 800, cy: 500, rx: 340, ry: 240 };
+  const pocket = { cx: 800, cy: 500, rx: 90, ry: 70 };
+  let covered = wide;
+  const inside = (x: number, y: number) => {
+    const dx = (x - covered.cx) / covered.rx;
+    const dy = (y - covered.cy) / covered.ry;
+    return dx * dx + dy * dy <= 1;
+  };
+  const fish = { ...MOTION_FISH, position: { x: wide.cx, y: wide.cy - 40 }, heading: 0, cruise: 30, displayWidth: 36 };
+  const options = {
+    seed: "dry-goal",
+    width: 1586,
+    height: 1024,
+    isWater: inside,
+    waterBounds: () => ({ minX: wide.cx - wide.rx, maxX: wide.cx + wide.rx, minY: wide.cy - wide.ry, maxY: wide.cy + wide.ry }),
+    recoverOutside: true,
+    fish: [fish],
+    flies: [],
+  };
+  const control = createPondSimulation(options);
+  const retargeted = createPondSimulation(options);
+  covered = pocket;
+  retargeted.resizeFish([{ id: fish.id, displayWidth: fish.displayWidth }]);
+  const step = (simulation: ReturnType<typeof createPondSimulation>, index: number) => simulation.step({
+    now: index * (1000 / 60),
+    delta: 1 / 60,
+    pointer: QUIET_POINTER,
+    visibleAnchorIds: [],
+  });
+  const left = step(control, 1).fish[0];
+  const right = step(retargeted, 1).fish[0];
+  const turn = Math.abs(Math.atan2(Math.sin(right.heading - left.heading), Math.cos(right.heading - left.heading)));
+  assert.ok(turn > 0.4, `heading stayed ${left.heading} vs ${right.heading}`);
+  for (let index = 2; index <= 120; index += 1) {
+    const agent = step(retargeted, index).fish[0];
+    assert.equal(inside(agent.position.x, agent.position.y), true);
+  }
+  control.destroy();
+  retargeted.destroy();
+});
+
+test("a shore nudge slides along the rim instead of stopping the koi", () => {
+  const shape = { cx: 800, cy: 500, rx: 260, ry: 170 };
+  const inside = (x: number, y: number) => {
+    const dx = (x - shape.cx) / shape.rx;
+    const dy = (y - shape.cy) / shape.ry;
+    return dx * dx + dy * dy <= 1;
+  };
+  const shore = { ...MOTION_FISH, id: "shore", displayWidth: 54, visualLength: 120, position: { x: 1024, y: 500 }, heading: Math.PI / 2, cruise: 32 };
+  const inland = { ...MOTION_FISH, id: "inland", displayWidth: 54, visualLength: 120, position: { x: 974, y: 500 }, heading: Math.PI / 2, cruise: 32 };
+  const simulation = createPondSimulation({
+    seed: "shore-nudge",
+    width: 1586,
+    height: 1024,
+    isWater: inside,
+    waterBounds: () => ({ minX: shape.cx - shape.rx, maxX: shape.cx + shape.rx, minY: shape.cy - shape.ry, maxY: shape.cy + shape.ry }),
+    recoverOutside: true,
+    headSeparation: 90,
+    fish: [shore, inland],
+    flies: [],
+  });
+  let previous = { x: shore.position.x, y: shore.position.y };
+  let maxStep = 0;
+  const speeds: number[] = [];
+  for (let index = 1; index <= 180; index += 1) {
+    const frame = simulation.step({
+      now: index * (1000 / 60),
+      delta: 1 / 60,
+      pointer: QUIET_POINTER,
+      visibleAnchorIds: [],
+    });
+    const agent = frame.fish.find((entry) => entry.id === "shore");
+    assert.ok(agent);
+    assert.equal(inside(agent.position.x, agent.position.y), true);
+    maxStep = Math.max(maxStep, Math.hypot(agent.position.x - previous.x, agent.position.y - previous.y));
+    previous = { ...agent.position };
+    if (index % 30 === 0) speeds.push(Math.hypot(agent.velocity.x, agent.velocity.y));
+  }
+  const listed = speeds.map((speed) => speed.toFixed(2)).join(",");
+  assert.ok(maxStep < 24, `step ${maxStep.toFixed(2)}`);
+  assert.ok(speeds.every((speed) => speed > 5), listed);
+  simulation.destroy();
+});
