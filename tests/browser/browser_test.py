@@ -9,6 +9,7 @@ import signal
 import socket
 import subprocess
 import tempfile
+import threading
 import time
 import unittest
 import urllib.request
@@ -1530,28 +1531,33 @@ class PortfolioTests(BrowserTestCase):
         browser = self.playwright.chromium.launch()
         page = self.pond_page(browser, viewport={"width": 1280, "height": 800})
 
+        release_atlas = threading.Event()
+
         def delay_koi_atlas(route) -> None:
-            time.sleep(0.7)
+            release_atlas.wait(5)
             route.continue_()
 
         page.route("**/pixel-koi-atlas.webp", delay_koi_atlas)
         page.goto(f"{self.base_url}/?pond-seed=e2e-loading", wait_until="domcontentloaded")
         pond = page.locator("[data-renderer]")
         host = page.locator("[data-pond-state]")
-        self.assertEqual(pond.get_attribute("data-renderer"), "fallback")
-        self.assertEqual(host.locator("canvas").count(), 0)
-        self.assertNotIn(
-            "pixel-pond-world.webp",
-            pond.locator(":scope > div").first.evaluate(
-                "element => getComputedStyle(element).backgroundImage"
-            ),
-        )
-        self.assertFalse(
-            page.locator("div").evaluate_all(
-                "elements => elements.some(element => /pixel-(koi|tabby)-atlas/.test(getComputedStyle(element).backgroundImage))"
+        try:
+            self.assertEqual(pond.get_attribute("data-renderer"), "fallback")
+            self.assertEqual(host.locator("canvas").count(), 0)
+            self.assertNotIn(
+                "pixel-pond-world.webp",
+                pond.locator(":scope > div").first.evaluate(
+                    "element => getComputedStyle(element).backgroundImage"
+                ),
             )
-        )
-        self.assertEqual(host.evaluate("element => getComputedStyle(element).opacity"), "0")
+            self.assertFalse(
+                page.locator("div").evaluate_all(
+                    "elements => elements.some(element => /pixel-(koi|tabby)-atlas/.test(getComputedStyle(element).backgroundImage))"
+                )
+            )
+            self.assertEqual(host.evaluate("element => getComputedStyle(element).opacity"), "0")
+        finally:
+            release_atlas.set()
         wait_for_condition(
             page,
             "document.querySelector('[data-renderer]')?.dataset.renderer === 'three'"
