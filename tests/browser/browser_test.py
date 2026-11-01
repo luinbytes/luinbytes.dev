@@ -9,7 +9,6 @@ import signal
 import socket
 import subprocess
 import tempfile
-import threading
 import time
 import unittest
 import urllib.request
@@ -1531,17 +1530,32 @@ class PortfolioTests(BrowserTestCase):
         browser = self.playwright.chromium.launch()
         page = self.pond_page(browser, viewport={"width": 1280, "height": 800})
 
-        release_atlas = threading.Event()
+        held_atlases = []
+        atlas_open = False
 
         def delay_koi_atlas(route) -> None:
-            release_atlas.wait(5)
-            route.continue_()
+            if atlas_open:
+                route.continue_()
+                return
+            held_atlases.append(route)
+
+        def release_atlas() -> None:
+            nonlocal atlas_open
+            atlas_open = True
+            pending = held_atlases[:]
+            held_atlases.clear()
+            for route in pending:
+                route.continue_()
 
         page.route("**/pixel-koi-atlas.webp", delay_koi_atlas)
         page.goto(f"{self.base_url}/?pond-seed=e2e-loading", wait_until="domcontentloaded")
         pond = page.locator("[data-renderer]")
         host = page.locator("[data-pond-state]")
         try:
+            deadline = time.monotonic() + 5
+            while not held_atlases and time.monotonic() < deadline:
+                page.wait_for_timeout(50)
+            self.assertTrue(held_atlases, "koi atlas request was not held")
             self.assertEqual(pond.get_attribute("data-renderer"), "fallback")
             self.assertEqual(host.locator("canvas").count(), 0)
             self.assertNotIn(
@@ -1557,7 +1571,7 @@ class PortfolioTests(BrowserTestCase):
             )
             self.assertEqual(host.evaluate("element => getComputedStyle(element).opacity"), "0")
         finally:
-            release_atlas.set()
+            release_atlas()
         wait_for_condition(
             page,
             "document.querySelector('[data-renderer]')?.dataset.renderer === 'three'"
