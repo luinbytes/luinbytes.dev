@@ -1536,7 +1536,7 @@ class PortfolioTests(BrowserTestCase):
         self.assertEqual(page_errors, [])
         browser.close()
 
-    def test_loading_shows_only_the_pond_then_fades_in_the_live_ecosystem(self) -> None:
+    def test_loading_shows_skeleton_then_fades_in_the_live_ecosystem(self) -> None:
         browser = self.playwright.chromium.launch()
         page = self.pond_page(browser, viewport={"width": 1280, "height": 800})
 
@@ -1548,7 +1548,7 @@ class PortfolioTests(BrowserTestCase):
         page.goto(f"{self.base_url}/?pond-seed=e2e-loading", wait_until="domcontentloaded")
         pond = page.locator("[data-renderer]")
         host = page.locator("[data-pond-state]")
-        self.assertEqual(pond.get_attribute("data-renderer"), "fallback")
+        self.assertEqual(pond.get_attribute("data-renderer"), "loading")
         self.assertEqual(host.locator("canvas").count(), 0)
         self.assertIn(
             "pixel-pond-world.webp",
@@ -1556,6 +1556,8 @@ class PortfolioTests(BrowserTestCase):
                 "element => getComputedStyle(element).backgroundImage"
             ),
         )
+        self.assertEqual(pond.locator(":scope > div").first.evaluate("element => getComputedStyle(element).visibility"), "hidden")
+        self.assertTrue(pond.locator("[skullet-loading]").is_visible())
         self.assertFalse(
             page.locator("div").evaluate_all(
                 "elements => elements.some(element => /pixel-(koi|tabby)-atlas/.test(getComputedStyle(element).backgroundImage))"
