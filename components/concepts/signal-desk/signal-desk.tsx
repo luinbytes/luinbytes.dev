@@ -87,8 +87,8 @@ function ProjectArtwork({ project }: { project: PortfolioProject }) {
         alt={project.imageAlt ?? `${project.name} project artwork`}
         style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
         sizes="(max-width: 820px) 92vw, 48vw"
-        loading={project.id === "rakazo-android" ? "eager" : "lazy"}
-        fetchPriority={project.id === "rakazo-android" ? "high" : "auto"}
+        loading={project.id === portfolioProjects[0]?.id ? "eager" : "lazy"}
+        fetchPriority={project.id === portfolioProjects[0]?.id ? "high" : "auto"}
       />
     </div>
   );
@@ -190,7 +190,7 @@ function ProjectPanel({ project, reduced }: { project: PortfolioProject; reduced
 }
 
 function ProjectExplorer({ reduced, entrance, ready }: { reduced: boolean; entrance: boolean; ready: boolean }) {
-  const [activeId, setActiveId] = useState(portfolioProjects[0]?.id ?? "rakazo-android");
+  const [activeId, setActiveId] = useState<PortfolioProjectId | undefined>(portfolioProjects[0]?.id);
   const activeIndex = Math.max(0, portfolioProjects.findIndex((project) => project.id === activeId));
   const activeProject = portfolioProjects[activeIndex] ?? portfolioProjects[0];
 
