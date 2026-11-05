@@ -1,5 +1,4 @@
 export type PortfolioProjectId =
-  | "orchid-android"
   | "rakazo-android"
   | "linux-sonar"
   | "homebot"
@@ -21,21 +20,6 @@ export type PortfolioProject = {
 };
 
 export const portfolioProjects: PortfolioProject[] = [
-  {
-    id: "orchid-android",
-    name: "Orchid.ai",
-    category: "Native Android",
-    eyebrow: "Current work / channel 01",
-    summary: "Building the native Android home for an assistant that gets things done.",
-    detail:
-      "I am building Orchid's native Android app, bringing its message-first assistant into a platform-native experience that feels at home on the device.",
-    href: "https://orchid.ai",
-    image: "/images/portfolio/orchid-desk.jpg",
-    imageAlt: "Orchid's public campaign artwork showing a softly lit working desk",
-    secondaryHref: "https://orchid.ai/blog/introducing-keiki",
-    secondaryLabel: "Meet Orchid",
-    proof: ["Native Android", "Message-first UX", "In active development"],
-  },
   {
     id: "rakazo-android",
     name: "Rakazo",
@@ -94,5 +78,4 @@ export const portfolioIdentity = {
   calendar: "https://cal.com/luinbytes",
   github: "https://github.com/luinbytes",
   x: "https://x.com/x6c75",
-  orchid: "https://orchid.ai",
 } as const;

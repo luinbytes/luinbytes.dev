@@ -17,14 +17,6 @@
   },
   {
     "page": "homepage",
-    "area": "Work - Orchid.ai",
-    "device": "desktop1440x900-light",
-    "viewport": "1440x900",
-    "colorScheme": "light",
-    "path": "review-previews/homepage-desktop1440x900-light-work-orchid-ai.jpg"
-  },
-  {
-    "page": "homepage",
     "area": "Work - Rakazo",
     "device": "desktop1440x900-light",
     "viewport": "1440x900",
@@ -78,14 +70,6 @@
     "viewport": "390x844",
     "colorScheme": "dark",
     "path": "review-previews/homepage-mobile390x844-dark-pip-feature.jpg"
-  },
-  {
-    "page": "homepage",
-    "area": "Work - Orchid.ai",
-    "device": "mobile390x844-dark",
-    "viewport": "390x844",
-    "colorScheme": "dark",
-    "path": "review-previews/homepage-mobile390x844-dark-work-orchid-ai.jpg"
   },
   {
     "page": "homepage",

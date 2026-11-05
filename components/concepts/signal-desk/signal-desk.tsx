@@ -60,7 +60,6 @@ function SiteFooter({ reduced, entrance, ready }: { reduced: boolean; entrance: 
       <div>
         <a href={portfolioIdentity.github} target="_blank" rel="noreferrer">GitHub</a>
         <a href={portfolioIdentity.x} target="_blank" rel="noreferrer">@x6c75</a>
-        <a href={portfolioIdentity.orchid} target="_blank" rel="noreferrer">Orchid.ai</a>
       </div>
     </motion.footer>
   );
@@ -86,8 +85,8 @@ function ProjectArtwork({ project }: { project: PortfolioProject }) {
         alt={project.imageAlt ?? `${project.name} project artwork`}
         style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
         sizes="(max-width: 820px) 92vw, 48vw"
-        loading={project.id === "orchid-android" ? "eager" : "lazy"}
-        fetchPriority={project.id === "orchid-android" ? "high" : "auto"}
+        loading={project.id === portfolioProjects[0]?.id ? "eager" : "lazy"}
+        fetchPriority={project.id === portfolioProjects[0]?.id ? "high" : "auto"}
       />
     </div>
   );
@@ -189,7 +188,7 @@ function ProjectPanel({ project, reduced }: { project: PortfolioProject; reduced
 }
 
 function ProjectExplorer({ reduced, entrance, ready }: { reduced: boolean; entrance: boolean; ready: boolean }) {
-  const [activeId, setActiveId] = useState(portfolioProjects[0]?.id ?? "orchid-android");
+  const [activeId, setActiveId] = useState<PortfolioProjectId | undefined>(portfolioProjects[0]?.id);
   const activeIndex = Math.max(0, portfolioProjects.findIndex((project) => project.id === activeId));
   const activeProject = portfolioProjects[activeIndex] ?? portfolioProjects[0];
 
@@ -261,7 +260,7 @@ export function SignalDesk() {
           <div className={styles.heroCopy}>
             <span className={styles.eyebrow}>Software engineer</span>
             <h1 id="hero-title">I make stubborn software <em>behave.</em></h1>
-            <p>I build Orchid.ai’s native Android app, agent systems, and Linux tools that do the useful part without making a fuss.</p>
+            <p>I build native Android apps, agent systems, and Linux tools that do the useful part without making a fuss.</p>
             <div className={styles.heroActions}>
               <a href="#work">See the work <ArrowDown aria-hidden="true" /></a>
               <a href={portfolioIdentity.calendar}>Start a conversation <Mail aria-hidden="true" /></a>

@@ -816,7 +816,7 @@ class PortfolioTests(BrowserTestCase):
                     ).is_visible()
                 )
                 expect(page.locator("#hero-title")).to_have_css("clip-path", "none")
-                for project in ("Orchid.ai", "Rakazo", "linux-sonar", "HomeBot", "ConnectorMap"):
+                for project in ("Rakazo", "linux-sonar", "HomeBot", "ConnectorMap"):
                     self.assertTrue(
                         page.get_by_role("button", name=re.compile(project, re.I)).is_visible()
                     )
@@ -1000,7 +1000,7 @@ class PortfolioTests(BrowserTestCase):
                             headingInside: heading.left >= -1 && heading.right <= width + 1 && heading.width > 120,
                             headerInside: header.left >= -1 && header.right <= width + 1,
                             pondFits: Math.abs(pond.width - width) < 1 && Math.abs(pond.height - height) < 1,
-                            projectTargets: buttons.length === 5 && buttons.every(button => button.width >= 44 && button.height >= 44),
+                            projectTargets: buttons.length === 4 && buttons.every(button => button.width >= 44 && button.height >= 44),
                             projectNamesFit: width > 430 || projectNames.every(element => {
                                 const range = document.createRange();
                                 range.selectNodeContents(element);
@@ -1209,7 +1209,7 @@ class PortfolioTests(BrowserTestCase):
             )
         )
         category_labels = page.locator("[aria-label='Featured projects'] button small")
-        self.assertEqual(category_labels.count(), 5)
+        self.assertEqual(category_labels.count(), 4)
         self.assertTrue(
             category_labels.evaluate_all(
                 "elements => elements.every(element => parseFloat(getComputedStyle(element).fontSize) >= 10)"
@@ -1822,7 +1822,7 @@ class PortfolioTests(BrowserTestCase):
             impacts_before_food,
         )
         dropped_count = int(pond.get_attribute("data-food-dropped-count"))
-        project_button = page.get_by_role("button", name=re.compile("Orchid.ai", re.I))
+        project_button = page.get_by_role("button", name=re.compile("Rakazo", re.I))
         project_button.scroll_into_view_if_needed()
         box = project_button.bounding_box()
         double_tap(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)

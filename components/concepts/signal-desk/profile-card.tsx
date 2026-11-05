@@ -463,7 +463,7 @@ export function ProfileCard({ reducedMotion, compact = false }: { reducedMotion:
             </span>
           </span>
           <span className={styles.profileStatus}>
-            <span>Android at Orchid.ai</span>
+            <span>Software engineer</span>
           </span>
         </span>
       </div>

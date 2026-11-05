@@ -2,7 +2,7 @@
 
 Lu's interactive personal portfolio, built around the living pixel pond version of Signal Desk.
 
-The homepage focuses on Lu's current work at [Orchid.ai](https://orchid.ai), selected public projects, and an interactive procedural pond rather than a catalogue of product pages.
+The homepage focuses on Lu's selected public projects and an interactive procedural pond rather than a catalogue of product pages.
 
 The site has two public routes: `/`, the interactive portfolio, and `/privacy`, a short personal-use privacy policy. Retired concept and product URLs resolve to the pond-themed 404.
 

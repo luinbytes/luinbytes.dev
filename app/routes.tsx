@@ -25,7 +25,7 @@ export type SiteRoute = {
 const homeMetadata: RouteMetadata = {
   title: "Lu | Software Engineer",
   socialTitle: "Lu | Software Engineer",
-  description: "Lu makes stubborn software behave: Orchid.ai's native Android app, agent systems, Linux tools, and practical software.",
+  description: "Lu makes stubborn software behave: native Android apps, agent systems, Linux tools, and practical software.",
   socialDescription: "I make stubborn software behave. Native Android, agent systems, Linux tools, and practical software.",
   canonical: siteConfig.siteUrl,
   image: `${siteConfig.siteUrl}/share-cards/luinbytes-dev-pond.png`,
@@ -71,7 +71,7 @@ export function RouteHead({ route }: { route: SiteRoute }) {
     <>
       <title>{metadata.title}</title>
       <meta name="description" content={metadata.description} />
-      <meta name="keywords" content="Software Engineer,Next.js,TypeScript,Android,Kotlin,Orchid.ai,AI Agents,HomeBot,Rakazo,Linux,PipeWire,CLI Tool,Open Source" />
+      <meta name="keywords" content="Software Engineer,Next.js,TypeScript,Android,Kotlin,AI Agents,HomeBot,Rakazo,Linux,PipeWire,CLI Tool,Open Source" />
       {metadata.noindex && <meta name="robots" content="noindex" />}
       <link rel="canonical" href={metadata.canonical} />
       <meta property="og:type" content="website" />

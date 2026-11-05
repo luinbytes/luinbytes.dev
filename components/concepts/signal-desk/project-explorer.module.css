@@ -123,10 +123,6 @@
   object-fit: cover;
 }
 
-.mediaorchidandroid > img {
-  object-position: center;
-}
-
 .mediarakazoandroid {
   background:
     radial-gradient(ellipse at 50% 45%, color-mix(in srgb, var(--site-surface-soft) 72%, var(--site-accent) 12%), transparent 58%),
