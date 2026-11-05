@@ -4,9 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "predev": "node scripts/generate-pip-qr.mjs",
     "dev": "vite --host 127.0.0.1",
-    "prebuild": "node scripts/generate-sitemap.js && node scripts/generate-pip-qr.mjs",
+    "prebuild": "node scripts/generate-sitemap.js",
     "build": "tsc --noEmit && vite build && vite build --ssr app/entry-server.tsx && node scripts/prerender.mjs",
     "check": "tsc --noEmit",
     "start": "node scripts/serve-preview.mjs",
@@ -14,7 +13,6 @@
     "lint": "eslint",
     "test:e2e:setup": "python3 -m pip install -r requirements-test.txt && python3 -m playwright install chromium",
     "test:e2e": "npm run build && python3 -m unittest discover -s tests/browser -p '*_test.py' -v",
-    "test:pip": "node --test tests/pip-contact.test.mts",
     "test:pond": "node --test tests/pond-world.test.mts"
   },
   "dependencies": {
@@ -45,7 +43,6 @@
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "globals": "^16.5.0",
-    "qrcode": "1.5.4",
     "typescript": "5.9.3",
     "typescript-eslint": "^8.48.1",
     "vite": "8.3.3"

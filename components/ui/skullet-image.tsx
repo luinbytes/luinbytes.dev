@@ -26,7 +26,7 @@ export function loadSkulletOverlay() {
 }
 
 // Loaded only after an image is still incomplete. A static import pulls Skullet
-// into Pip's initial script. A failed chunk drops the skeleton and leaves the image.
+// into the initial script. A failed chunk drops the skeleton and leaves the image.
 const SkulletOverlay = lazy(() =>
   import("./skullet-overlay")
     .then((mod) => ({ default: rememberOverlay(mod.default) }))

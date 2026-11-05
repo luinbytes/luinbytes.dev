@@ -26,6 +26,8 @@ SERVER_LOG = SCREENSHOTS / "dev-server.log"
 READY_PATTERN = re.compile(r"\bReady in\b", re.IGNORECASE)
 ANSI_COLOR_PATTERN = re.compile(r"\x1b\[[0-9;]*m")
 LEGACY_ROUTES = (
+    "/pip",
+    "/pip.html",
     "/concepts/signal-desk",
     "/concepts/signal-field",
     "/concepts/trace",
@@ -41,7 +43,6 @@ LEGACY_ROUTES = (
 )
 PORTFOLIO_NAV_LINKS = (
     ("Work", "#work"),
-    ("Pip", "/pip"),
     ("About", "#about"),
     ("Contact", "#contact"),
 )
@@ -197,7 +198,41 @@ class ServerStartupTests(unittest.TestCase):
 
 
 class GeneratedArtifactTests(unittest.TestCase):
-    def test_sitemap_exposes_the_portfolio_pip_and_privacy(self) -> None:
+    def test_exported_internal_links_resolve(self) -> None:
+        class Links(HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self.hrefs = []
+                self.ids = set()
+
+            def handle_starttag(self, tag, attrs):
+                attrs = dict(attrs)
+                if attrs.get("id"):
+                    self.ids.add(attrs["id"])
+                if tag == "a" and attrs.get("href"):
+                    self.hrefs.append(attrs["href"])
+
+        root = Path("out")
+        for source in root.glob("*.html"):
+            document = Links()
+            document.feed(source.read_text())
+            for href in document.hrefs:
+                url = urlparse(href)
+                if url.scheme or url.netloc:
+                    continue
+                target = root / (url.path.lstrip("/") or source.name)
+                if url.path == "/":
+                    target = root / "index.html"
+                elif url.path and not target.suffix:
+                    target = target.with_suffix(".html")
+                with self.subTest(source=source, href=href):
+                    self.assertTrue(target.is_file())
+                    if url.fragment and target.is_file() and target.suffix == ".html":
+                        destination = Links()
+                        destination.feed(target.read_text())
+                        self.assertIn(url.fragment, destination.ids)
+
+    def test_sitemap_exposes_the_portfolio_and_privacy(self) -> None:
         root = ET.parse("public/sitemap.xml").getroot()
         locations = [
             location.text
@@ -211,7 +246,6 @@ class GeneratedArtifactTests(unittest.TestCase):
             locations,
             [
                 "https://luinbytes.dev",
-                "https://luinbytes.dev/pip",
                 "https://luinbytes.dev/privacy",
             ],
         )
@@ -252,15 +286,12 @@ class ShareCardStaticExportTests(unittest.TestCase):
     )
     route_cards = {
         "/": "/share-cards/luinbytes-dev-pond.png",
-        "/pip": "/share-cards/luinbytes-dev-pip.png",
     }
     expected_sha256 = {
         "/share-cards/luinbytes-dev-pond.png": "60bddd42c8ecc43ac42f94933f15af50cb71c7039574b4d203be4fb2dc46b811",
-        "/share-cards/luinbytes-dev-pip.png": "e8ad43690346c7b2ff683e1da1676e82822ec0cc2498365dc095188b56e72789",
     }
     route_alts = {
         "/": "Lu | Software Engineer",
-        "/pip": "Pip - Your Telegram mate",
     }
 
     def test_editable_source_contains_the_original_card_copy(self) -> None:
@@ -317,35 +348,6 @@ class ShareCardStaticExportTests(unittest.TestCase):
                             if item.get("rel") == "canonical"
                         ),
                         "https://luinbytes.dev",
-                    )
-                if route == "/pip":
-                    self.assertIn(
-                        "<title>Pip - Your Telegram mate | Lu</title>",
-                        html,
-                    )
-                    self.assertEqual(
-                        properties.get("og:title"),
-                        "Pip - Your Telegram mate",
-                    )
-                    self.assertEqual(
-                        properties.get("og:description"),
-                        "A little help, one message away. Pip is your warm, easygoing Telegram agent for questions, web searches, reminders, and everyday life. Built on Keiki.",
-                    )
-                    self.assertEqual(
-                        properties.get("og:url"),
-                        "https://luinbytes.dev/pip",
-                    )
-                    self.assertEqual(
-                        names.get("description"),
-                        "A little help, one message away. Pip is your warm, easygoing Telegram agent for questions, web searches, reminders, and everyday life. Built on Keiki.",
-                    )
-                    self.assertEqual(
-                        next(
-                            item.get("href")
-                            for item in parser.metadata
-                            if item.get("rel") == "canonical"
-                        ),
-                        "https://luinbytes.dev/pip",
                     )
                 for attribute, key in (("property", "og:image"), ("name", "twitter:image")):
                     self.assertEqual(
@@ -444,8 +446,8 @@ class DevelopmentRoutingTests(BrowserTestCase):
         page = browser.new_page(reduced_motion="reduce")
         for path, status, entry in (
             ("/", 200, "entry-client.tsx"),
-            ("/pip", 200, "entry-pip.tsx"),
-            ("/pip.html", 200, "entry-pip.tsx"),
+            ("/pip", 404, "entry-not-found.tsx"),
+            ("/pip.html", 404, "entry-not-found.tsx"),
             ("/privacy", 200, "entry-privacy.tsx"),
             ("/privacy.html", 200, "entry-privacy.tsx"),
             ("/missing.html", 404, "entry-not-found.tsx"),
@@ -456,9 +458,7 @@ class DevelopmentRoutingTests(BrowserTestCase):
                 self.assertEqual(response.status, status)
                 self.assertIn(f'/app/{entry}', response.text())
                 expect(page.locator("h1")).to_be_visible()
-        response = page.request.get(f"{self.base_url}/qr/PIPSOFTWARE_BOT.svg", headers={"Accept": "text/html"})
-        self.assertEqual(response.status, 200)
-        self.assertIn("image/svg+xml", response.headers["content-type"])
+
 
 
 class SecurityBoundaryTests(BrowserTestCase):
@@ -480,7 +480,7 @@ class SecurityBoundaryTests(BrowserTestCase):
 
         browser = self.playwright.chromium.launch()
         self.addCleanup(browser.close)
-        for path in ("/", "/pip", "/missing/nested/page"):
+        for path in ("/", "/privacy", "/missing/nested/page"):
             with self.subTest(path=path):
                 context = browser.new_context(reduced_motion="reduce")
                 try:
@@ -527,7 +527,7 @@ class SecurityBoundaryTests(BrowserTestCase):
                 self.assertEqual(status, 400)
                 self.assertEqual(headers.get("X-Content-Type-Options"), "nosniff")
         self.assertEqual(self.request("/", "POST")[0], 405)
-        status, headers, body = self.request("/pip", "HEAD")
+        status, headers, body = self.request("/privacy", "HEAD")
         self.assertEqual(status, 200)
         self.assertEqual(body, b"")
         self.assertGreater(int(headers["Content-Length"]), 0)
@@ -538,7 +538,7 @@ class SecurityBoundaryTests(BrowserTestCase):
         self.assertIn(b"Lumi Health", privacy_body)
         for path in ("/404", "/404.html", "/missing/nested/page"):
             self.assertEqual(self.request(path)[0], 404)
-        self.assertEqual(self.request("/pip///")[0], 200)
+        self.assertEqual(self.request("/pip///")[0], 404)
         self.assertEqual(self.request("/privacy///")[0], 200)
 
     def test_preview_does_not_follow_symlinks_outside_the_export(self) -> None:
@@ -748,334 +748,6 @@ class KoiAtlasBrowserTests(BrowserTestCase):
             )
 
 
-class PipRouteTests(BrowserTestCase):
-    def test_initial_page_keeps_scripts_below_300_kb_and_requests_only_local_assets(self) -> None:
-        browser = self.playwright.chromium.launch()
-        self.addCleanup(browser.close)
-        context = browser.new_context(viewport={"width": 390, "height": 844}, reduced_motion="reduce")
-        requests = []
-        page = context.new_page()
-        page.on("request", lambda request: requests.append(request.url))
-        page.goto(f"{self.base_url}/pip", wait_until="networkidle")
-        scripts = page.evaluate("""() => performance.getEntriesByType('resource')
-            .filter(entry => new URL(entry.name).pathname.endsWith('.js'))
-            .map(entry => entry.decodedBodySize)""")
-        self.assertGreater(len(scripts), 0)
-        self.assertTrue(all(size > 0 for size in scripts))
-        self.assertLess(sum(scripts), 300_000)
-        self.assertTrue(all(urlparse(url).netloc == urlparse(self.base_url).netloc for url in requests))
-        self.assertFalse(any("/qr/" in url for url in requests))
-        context.close()
-
-    def test_browsing_demo_renders_and_suspends_offscreen(self) -> None:
-        browser = self.playwright.chromium.launch()
-        context = browser.new_context(viewport={"width": 1440, "height": 900})
-        page = context.new_page()
-        page.goto(f"{self.base_url}/pip", wait_until="networkidle")
-        demo = page.get_by_test_id("pip-browser-demo")
-        demo.scroll_into_view_if_needed()
-        expect(demo).to_have_attribute("data-renderer", "three", timeout=15000)
-        expect(demo).to_have_attribute("data-playback", "playing")
-        self.assertEqual(demo.locator("canvas").count(), 1)
-        expect(demo.locator("canvas")).to_be_visible()
-        first_phase = demo.get_attribute("data-phase")
-        wait_for_condition(
-            page,
-            "phase => document.querySelector('[data-testid=pip-browser-demo]').dataset.phase !== phase",
-            arg=first_phase,
-            timeout=12000,
-        )
-        self.assertEqual(demo.get_by_role("button").count(), 0)
-        self.assertNotIn("demo", demo.inner_text().lower())
-        page.locator("header").scroll_into_view_if_needed()
-        expect(demo).to_have_attribute("data-playback", "paused")
-        paused_phase = demo.get_attribute("data-phase")
-        page.wait_for_timeout(3500)
-        self.assertEqual(demo.get_attribute("data-phase"), paused_phase)
-        demo.scroll_into_view_if_needed()
-        expect(demo).to_have_attribute("data-playback", "playing")
-        demo.screenshot(path=SCREENSHOTS / "pip-browsing-demo-1440.png")
-        expect(demo).to_have_attribute("data-phase", "postage", timeout=12000)
-        for width in (320, 390, 1440):
-            page.set_viewport_size({"width": width, "height": 900})
-            demo.scroll_into_view_if_needed()
-            expect(demo).to_have_attribute("data-phase", "postage", timeout=25000)
-            bounds = demo.locator("[data-demo-browser]").bounding_box()
-            target = demo.locator("[data-demo-target]").bounding_box()
-            self.assertIsNotNone(bounds)
-            self.assertIsNotNone(target)
-            self.assertGreaterEqual(target["x"], bounds["x"])
-            self.assertLessEqual(target["x"] + target["width"], bounds["x"] + bounds["width"])
-            self.assertLessEqual(target["y"] + target["height"], bounds["y"] + bounds["height"])
-        page.locator("header").scroll_into_view_if_needed()
-        expect(demo).to_have_attribute("data-playback", "paused")
-        demo.scroll_into_view_if_needed()
-        expect(demo).to_have_attribute("data-playback", "playing")
-        page.goto(f"{self.base_url}/", wait_until="networkidle")
-        page.goto(f"{self.base_url}/pip", wait_until="networkidle")
-        demo.scroll_into_view_if_needed()
-        expect(demo).to_have_attribute("data-renderer", "three", timeout=15000)
-        self.assertEqual(demo.locator("canvas").count(), 1)
-        context.close()
-        browser.close()
-
-    def test_browsing_demo_respects_reduced_motion(self) -> None:
-        browser = self.playwright.chromium.launch()
-        context = browser.new_context(
-            viewport={"width": 320, "height": 844}, reduced_motion="reduce"
-        )
-        page = context.new_page()
-        page.goto(f"{self.base_url}/pip", wait_until="networkidle")
-        demo = page.get_by_test_id("pip-browser-demo")
-        demo.scroll_into_view_if_needed()
-        expect(demo).to_have_attribute("data-playback", "paused")
-        self.assertEqual(demo.locator("canvas").count(), 0)
-        phase = demo.get_attribute("data-phase")
-        page.wait_for_timeout(1000)
-        self.assertEqual(demo.get_attribute("data-phase"), phase)
-        self.assertLessEqual(page.evaluate("document.documentElement.scrollWidth"), 320)
-        demo.screenshot(path=SCREENSHOTS / "pip-browsing-demo-reduced-320.png")
-        page.emulate_media(reduced_motion="no-preference")
-        expect(demo).to_have_attribute("data-renderer", "three", timeout=15000)
-        expect(demo).to_have_attribute("data-playback", "playing")
-        page.emulate_media(reduced_motion="reduce")
-        expect(demo).to_have_attribute("data-playback", "paused")
-        context.close()
-        browser.close()
-
-    def test_browsing_demo_keeps_its_fallback_when_webgl_fails(self) -> None:
-        browser = self.playwright.chromium.launch()
-        context = browser.new_context(viewport={"width": 390, "height": 844})
-        context.add_init_script(
-            """const original = HTMLCanvasElement.prototype.getContext;
-            HTMLCanvasElement.prototype.getContext = function(kind, ...args) {
-                if (kind === 'webgl' || kind === 'webgl2' || kind === 'experimental-webgl') return null;
-                return original.call(this, kind, ...args);
-            };"""
-        )
-        page = context.new_page()
-        page.goto(f"{self.base_url}/pip", wait_until="networkidle")
-        demo = page.get_by_test_id("pip-browser-demo")
-        demo.scroll_into_view_if_needed()
-        expect(demo).to_have_attribute("data-renderer", "fallback", timeout=15000)
-        expect(demo).to_have_attribute("data-playback", "paused")
-        self.assertEqual(demo.locator("canvas").count(), 0)
-        expect(demo.locator("[data-demo-stage]")).to_be_visible()
-        self.assertGreater(demo.locator("svg").count(), 0)
-        self.assertLessEqual(page.evaluate("document.documentElement.scrollWidth"), 390)
-        demo.screenshot(path=SCREENSHOTS / "pip-browsing-demo-fallback-390.png")
-        context.close()
-        browser.close()
-
-    def test_pip_page_has_static_content_and_configured_telegram_contact(self) -> None:
-        browser = self.playwright.chromium.launch()
-        page = browser.new_page(viewport={"width": 1440, "height": 900})
-        response = page.goto(f"{self.base_url}/pip", wait_until="networkidle")
-        self.assertIsNotNone(response)
-        self.assertEqual(response.status, 200)
-        self.assertEqual(page.title(), "Pip - Your Telegram mate | Lu")
-        self.assertTrue(
-            page.get_by_role(
-                "heading", name=re.compile(r"A little help\.\s*A little banter\.")
-            ).is_visible()
-        )
-        self.assertTrue(page.get_by_role("figure", name="Example conversation").is_visible())
-        contact = page.locator("#text-pip")
-        self.assertTrue(contact.is_visible())
-        self.assertTrue(page.get_by_role("heading", name="Say hey to Pip.").is_visible())
-        self.assertTrue(contact.get_by_text("PIP’S TELEGRAM HANDLE", exact=True).is_visible())
-        self.assertTrue(contact.get_by_text("@PIPSOFTWARE_BOT", exact=True).is_visible())
-        self.assertTrue(contact.get_by_text("Opens Pip in Telegram.", exact=True).is_visible())
-        self.assertTrue(page.get_by_text("Built on Keiki", exact=False).is_visible())
-
-        self.assertGreaterEqual(
-            page.get_by_role("link", name="Message Pip", exact=True).count(), 2
-        )
-        message_link = contact.get_by_role("link", name="Message Pip", exact=True)
-        self.assertEqual(message_link.get_attribute("href"), "https://t.me/PIPSOFTWARE_BOT")
-        copy_button = contact.get_by_role("button", name="Copy handle", exact=True)
-        qr_button = contact.get_by_role("button", name="Show QR code", exact=True)
-        self.assertFalse(copy_button.is_disabled())
-        self.assertFalse(qr_button.is_disabled())
-        self.assertEqual(qr_button.get_attribute("aria-expanded"), "false")
-        for theme in ("dark", "light"):
-            page.emulate_media(color_scheme=theme)
-            page.wait_for_timeout(40)
-            for link in page.get_by_role("link", name="Message Pip", exact=True).all():
-                self.assertGreaterEqual(control_contrast(link), 4.5)
-        page.screenshot(path=SCREENSHOTS / "pip-final-1440.png", full_page=True)
-
-        browser.close()
-
-    def test_telegram_contact_copy_reports_success_and_failure(self) -> None:
-        browser = self.playwright.chromium.launch()
-
-        success_context = browser.new_context(
-            viewport={"width": 390, "height": 844},
-            permissions=["clipboard-read", "clipboard-write"],
-        )
-        success_context.add_init_script(
-            """window.__pipClipboardCalls = [];
-            Object.defineProperty(navigator, 'clipboard', {
-                configurable: true,
-                value: { writeText: async value => window.__pipClipboardCalls.push(value) },
-            });"""
-        )
-        success_page = success_context.new_page()
-        success_page.goto(f"{self.base_url}/pip", wait_until="networkidle")
-        success_page.locator("#text-pip").get_by_role(
-            "button", name="Copy handle", exact=True
-        ).click()
-        success_page.get_by_text("Handle copied.", exact=True).wait_for(state="visible")
-        self.assertTrue(success_page.get_by_text("Handle copied.", exact=True).is_visible())
-        self.assertEqual(
-            success_page.evaluate("window.__pipClipboardCalls"),
-            ["@PIPSOFTWARE_BOT"],
-        )
-        success_context.close()
-
-        failure_context = browser.new_context(viewport={"width": 390, "height": 844})
-        failure_context.add_init_script(
-            """Object.defineProperty(navigator, 'clipboard', {
-                configurable: true,
-                value: { writeText: async () => { throw new Error('blocked') } },
-            });"""
-        )
-        failure_page = failure_context.new_page()
-        failure_page.goto(f"{self.base_url}/pip", wait_until="networkidle")
-        failure_page.locator("#text-pip").get_by_role(
-            "button", name="Copy handle", exact=True
-        ).click()
-        failure_page.get_by_text(
-            "Couldn’t copy. Select the handle above and copy it manually.", exact=True
-        ).wait_for(state="visible")
-        self.assertTrue(
-            failure_page.get_by_text(
-                "Couldn’t copy. Select the handle above and copy it manually.", exact=True
-            ).is_visible()
-        )
-        failure_context.close()
-        browser.close()
-
-    def test_telegram_qr_loads_locally_on_demand_and_reports_failure(self) -> None:
-        browser = self.playwright.chromium.launch()
-        requests = []
-        fulfilled_context = browser.new_context(viewport={"width": 390, "height": 844})
-        fulfilled_page = fulfilled_context.new_page()
-        fulfilled_page.on("request", lambda request: requests.append(request.url))
-        fulfilled_page.goto(f"{self.base_url}/pip", wait_until="networkidle")
-        self.assertFalse(any("/qr/" in url for url in requests))
-        contact = fulfilled_page.locator("#text-pip")
-        qr_button = contact.get_by_role("button", name="Show QR code", exact=True)
-        qr_button.click()
-        image = contact.get_by_alt_text("Scan to message Pip on Telegram")
-        image.wait_for(state="visible")
-        self.assertEqual(
-            contact.locator("button[aria-controls='pip-qr']").get_attribute("aria-expanded"),
-            "true",
-        )
-        self.assertTrue(image.is_visible())
-        expect(image).to_have_attribute("src", "/qr/PIPSOFTWARE_BOT.svg")
-        wait_for_condition(
-            fulfilled_page,
-            "() => document.querySelector('#pip-qr img')?.naturalWidth === 240"
-        )
-        self.assertIn(f"{self.base_url}/qr/PIPSOFTWARE_BOT.svg", requests)
-        self.assertTrue(all(urlparse(url).netloc == urlparse(self.base_url).netloc for url in requests))
-        fulfilled_context.close()
-
-        aborted_context = browser.new_context(viewport={"width": 390, "height": 844})
-        aborted_page = aborted_context.new_page()
-        aborted_page.route("**/qr/*.svg", lambda route: route.abort())
-        aborted_page.goto(f"{self.base_url}/pip", wait_until="networkidle")
-        aborted_page.locator("#text-pip").get_by_role(
-            "button", name="Show QR code", exact=True
-        ).click()
-        qr_failure = aborted_page.get_by_text(
-            re.compile(r"QR code.*couldn.t load", re.IGNORECASE)
-        )
-        qr_failure.wait_for(state="visible")
-        self.assertTrue(qr_failure.is_visible())
-        aborted_context.close()
-        browser.close()
-
-    def test_pip_page_fits_mobile_viewports_and_exposes_keyboard_skip_and_nav(self) -> None:
-        browser = self.playwright.chromium.launch()
-        page = browser.new_page(viewport={"width": 390, "height": 844})
-        page.goto(f"{self.base_url}/pip", wait_until="networkidle")
-
-        for width in (320, 390, 430):
-            with self.subTest(viewport=width):
-                page.set_viewport_size({"width": width, "height": 844})
-                page.wait_for_timeout(80)
-                self.assertLessEqual(
-                    page.evaluate("document.documentElement.scrollWidth"), width
-                )
-                self.assertLessEqual(
-                    page.evaluate("document.body.scrollWidth"), width
-                )
-                bounds = page.locator("#text-pip").bounding_box()
-                self.assertIsNotNone(bounds)
-                self.assertGreaterEqual(bounds["x"], -1)
-                self.assertLessEqual(bounds["x"] + bounds["width"], width + 1)
-                if width in (320, 390):
-                    page.screenshot(
-                        path=SCREENSHOTS / f"pip-final-{width}.png",
-                        full_page=True,
-                    )
-
-        page.set_viewport_size({"width": 390, "height": 844})
-        page.keyboard.press("Tab")
-        self.assertEqual(
-            page.evaluate(
-                """() => ({
-                    href: document.activeElement?.getAttribute('href'),
-                    text: document.activeElement?.textContent?.trim(),
-                })"""
-            ),
-            {"href": "#main", "text": "Skip to content"},
-        )
-        page.keyboard.press("Enter")
-        self.assertEqual(page.evaluate("document.activeElement?.id"), "main")
-
-        navigation = page.locator("header")
-        self.assertTrue(navigation.is_visible())
-        links = navigation.get_by_role("link")
-        self.assertGreaterEqual(links.count(), 2)
-        for index in range(links.count()):
-            with self.subTest(nav_link=index):
-                link = links.nth(index)
-                link.focus()
-                self.assertTrue(link.evaluate("element => document.activeElement === element"))
-
-        browser.close()
-
-    def test_pip_page_remains_readable_without_javascript(self) -> None:
-        browser = self.playwright.chromium.launch()
-        context = browser.new_context(
-            java_script_enabled=False,
-            viewport={"width": 390, "height": 844},
-        )
-        page = context.new_page()
-        response = page.goto(f"{self.base_url}/pip", wait_until="domcontentloaded")
-        self.assertIsNotNone(response)
-        self.assertEqual(response.status, 200)
-        self.assertTrue(
-            page.get_by_role(
-                "heading", name=re.compile(r"A little help\.\s*A little banter\.")
-            ).is_visible()
-        )
-        self.assertTrue(page.get_by_role("figure", name="Example conversation").is_visible())
-        self.assertTrue(page.get_by_role("heading", name="Say hey to Pip.").is_visible())
-        self.assertTrue(page.get_by_text("@PIPSOFTWARE_BOT", exact=True).is_visible())
-        self.assertTrue(page.get_by_text("Opens Pip in Telegram.", exact=True).is_visible())
-        self.assertGreaterEqual(
-            page.get_by_role("link", name="Message Pip", exact=True).count(), 2
-        )
-        self.assertTrue(page.locator("#text-pip").is_visible())
-        self.assertLessEqual(page.evaluate("document.documentElement.scrollWidth"), 390)
-        context.close()
-        browser.close()
 
 
 class PondProductionTests(BrowserTestCase):
@@ -1271,177 +943,8 @@ class PortfolioTests(BrowserTestCase):
 
                 self.assertNotEqual(light_signature, dark_signature)
 
-    def test_homepage_pip_section_roundtrips_to_pip_and_back(self) -> None:
-        browser = self.playwright.chromium.launch()
-        try:
-            for viewport_name, viewport in (
-                ("desktop", {"width": 1440, "height": 900}),
-                ("mobile", {"width": 390, "height": 844}),
-            ):
-                with self.subTest(viewport=viewport_name):
-                    context = browser.new_context(viewport=viewport)
-                    page = self.pond_page(context)
-                    console_issues = []
-                    page.on(
-                        "console",
-                        lambda message: record_console_issue(console_issues, message),
-                    )
-                    page.goto(
-                        f"{self.base_url}/?pond-seed=e2e-homepage-pip",
-                        wait_until="networkidle",
-                    )
 
-                    section = page.locator("#pip")
-                    self.assertTrue(section.is_visible())
-                    self.assertTrue(
-                        page.evaluate(
-                            """() => {
-                                const hero = document.querySelector('section[aria-labelledby="hero-title"]');
-                                const pip = document.querySelector('section#pip');
-                                const work = document.querySelector('section#work');
-                                return hero?.nextElementSibling === pip && pip?.nextElementSibling === work;
-                            }"""
-                        )
-                    )
-                    self.assertTrue(
-                        section.get_by_role(
-                            "heading",
-                            name=re.compile(r"A little help\.\s*A little banter\."),
-                        ).is_visible()
-                    )
-                    self.assertTrue(
-                        section.get_by_text(
-                            "Meet Pip, your AI mate on Telegram. Quick questions, useful reminders, and a little everyday company.",
-                            exact=True,
-                        ).is_visible()
-                    )
 
-                    meet_pip = section.get_by_role("link", name="Meet Pip", exact=True)
-                    self.assertTrue(meet_pip.is_visible())
-                    self.assertEqual(meet_pip.get_attribute("href"), "/pip")
-                    for theme in ("dark", "light"):
-                        page.emulate_media(color_scheme=theme)
-                        page.wait_for_timeout(40)
-                        self.assertGreaterEqual(control_contrast(meet_pip), 4.5)
-                    meet_bounds = meet_pip.bounding_box()
-                    self.assertIsNotNone(meet_bounds)
-                    self.assertGreaterEqual(meet_bounds["width"], 44)
-                    self.assertGreaterEqual(meet_bounds["height"], 44)
-
-                    section.scroll_into_view_if_needed()
-                    page.wait_for_timeout(120)
-                    page.screenshot(
-                        path=SCREENSHOTS / f"homepage-pip-{viewport['width']}.png",
-                        full_page=False,
-                    )
-
-                    if viewport["width"] > 820:
-                        navigation = page.locator("header nav a")
-                        self.assertEqual(navigation.count(), 4)
-                        for index in range(navigation.count()):
-                            link = navigation.nth(index)
-                            self.assertTrue(link.is_visible())
-                            bounds = link.bounding_box()
-                            self.assertIsNotNone(bounds)
-                            self.assertGreaterEqual(bounds["width"], 44)
-                            self.assertGreaterEqual(bounds["height"], 44)
-
-                    meet_pip.click()
-                    page.wait_for_url(re.compile(rf"^{re.escape(self.base_url)}/pip$"))
-                    self.assertEqual(urlparse(page.url).path, "/pip")
-
-                    home_link = page.locator("header a[href='/']")
-                    self.assertEqual(home_link.count(), 1)
-                    self.assertTrue(home_link.is_visible())
-                    home_bounds = home_link.bounding_box()
-                    self.assertIsNotNone(home_bounds)
-                    self.assertGreaterEqual(home_bounds["width"], 44)
-                    self.assertGreaterEqual(home_bounds["height"], 44)
-
-                    home_link.click()
-                    page.wait_for_url(re.compile(rf"^{re.escape(self.base_url)}/$"))
-                    self.assertEqual(urlparse(page.url).path, "/")
-                    self.assertEqual(console_issues, [])
-                    context.close()
-        finally:
-            browser.close()
-
-    def test_homepage_pip_link_works_without_javascript(self) -> None:
-        browser = self.playwright.chromium.launch()
-        context = browser.new_context(
-            java_script_enabled=False,
-            viewport={"width": 390, "height": 844},
-        )
-        page = self.pond_page(context)
-        page.goto(f"{self.base_url}/", wait_until="domcontentloaded")
-
-        navigation = page.get_by_role("navigation", name="Portfolio navigation")
-        links = navigation.get_by_role("link")
-        self.assertEqual(
-            [
-                (links.nth(index).inner_text().strip(), links.nth(index).get_attribute("href"))
-                for index in range(links.count())
-            ],
-            list(PORTFOLIO_NAV_LINKS),
-        )
-        self.assertTrue(all(links.nth(index).is_visible() for index in range(links.count())))
-
-        section = page.locator("#pip")
-        self.assertTrue(section.is_visible())
-        meet_pip = section.get_by_role("link", name="Meet Pip", exact=True)
-        self.assertTrue(meet_pip.is_visible())
-        self.assertEqual(meet_pip.get_attribute("href"), "/pip")
-        meet_pip.click()
-        page.wait_for_url(re.compile(rf"^{re.escape(self.base_url)}/pip$"))
-        self.assertEqual(urlparse(page.url).path, "/pip")
-        self.assertTrue(
-            page.get_by_role(
-                "heading", name=re.compile(r"A little help\.\s*A little banter\.")
-            ).is_visible()
-        )
-        self.assertLessEqual(page.evaluate("document.documentElement.scrollWidth"), 390)
-
-        context.close()
-        browser.close()
-
-    def test_homepage_pip_section_fits_320px_with_reduced_motion(self) -> None:
-        browser = self.playwright.chromium.launch()
-        context = browser.new_context(
-            reduced_motion="reduce",
-            viewport={"width": 320, "height": 568},
-        )
-        page = self.pond_page(context)
-        page.goto(
-            f"{self.base_url}/?pond-seed=e2e-homepage-pip-reduced",
-            wait_until="networkidle",
-        )
-
-        section = page.locator("#pip")
-        self.assertTrue(section.is_visible())
-        self.assertTrue(
-            section.get_by_role(
-                "heading", name=re.compile(r"A little help\.\s*A little banter\.")
-            ).is_visible()
-        )
-        self.assertLessEqual(page.evaluate("document.documentElement.scrollWidth"), 320)
-        self.assertLessEqual(page.evaluate("document.body.scrollWidth"), 320)
-
-        section.scroll_into_view_if_needed()
-        page.wait_for_timeout(120)
-        section_bounds = section.bounding_box()
-        self.assertIsNotNone(section_bounds)
-        self.assertGreaterEqual(section_bounds["x"], -1)
-        self.assertLessEqual(section_bounds["x"] + section_bounds["width"], 321)
-        meet_pip = section.get_by_role("link", name="Meet Pip", exact=True)
-        self.assertTrue(meet_pip.is_visible())
-        meet_bounds = meet_pip.bounding_box()
-        self.assertIsNotNone(meet_bounds)
-        self.assertGreaterEqual(meet_bounds["width"], 44)
-        self.assertGreaterEqual(meet_bounds["height"], 44)
-        page.screenshot(path=SCREENSHOTS / "homepage-pip-320.png", full_page=False)
-
-        context.close()
-        browser.close()
 
     def test_homepage_preserves_layout_and_world_state_across_viewport_matrix(self) -> None:
         viewports = (
@@ -1634,12 +1137,12 @@ class PortfolioTests(BrowserTestCase):
 
         self.assertEqual(page.get_by_text("Building at Orchid.ai", exact=True).count(), 0)
         navigation = page.locator("header nav a")
-        self.assertEqual(navigation.count(), 4)
+        self.assertEqual(navigation.count(), 3)
         self.assertEqual(
             navigation.evaluate_all(
                 "elements => elements.map(element => [element.textContent.trim(), element.getAttribute('href')])"
             ),
-            [["Work", "#work"], ["Pip", "/pip"], ["About", "#about"], ["Contact", "#contact"]],
+            [["Work", "#work"], ["About", "#about"], ["Contact", "#contact"]],
         )
         self.assertEqual(page.locator("header [class*='profileTilt']").count(), 1)
         self.assertEqual(page.locator("#about [class*='profileTilt']").count(), 0)
@@ -2443,8 +1946,10 @@ class PortfolioTests(BrowserTestCase):
         browser.close()
 
 
+
+
 class SkulletImageTests(BrowserTestCase):
-    HERO_ALT = "Pixel art of an open notebook, a cup of tea, oranges, and a leafy plant on a desk beside a lake view."
+    HERO_ALT = "Lu's illustrated avatar wearing a pink cap"
     SKULLET_WATCH = """
 window.__skulletShown = false;
 const markSkullet = () => {
@@ -2504,8 +2009,8 @@ document.addEventListener("readystatechange", armBoneWatch);
         license_text = page.request.get(f"{self.base_url}/third-party-licenses.txt").text()
         self.assertIn("Copyright (c) 2025 Lochie Axon", license_text)
         self.assertIn("Permission is hereby granted, free of charge", license_text)
-        held = self.hold_matching(page, "pip-everyday.webp")
-        page.goto(f"{self.base_url}/pip", wait_until="domcontentloaded")
+        held = self.hold_matching(page, "lu-avatar.jpg")
+        page.goto(f"{self.base_url}/", wait_until="domcontentloaded")
         page.wait_for_selector("[skullet-loading]")
         self.assertIs(page.evaluate("window.__skulletShown"), True)
         image = page.get_by_alt_text(self.HERO_ALT)
@@ -2519,28 +2024,13 @@ document.addEventListener("readystatechange", armBoneWatch);
           const box = bar ? bar.getBoundingClientRect() : null;
           return !!(host && host.isConnected && box && box.width > 8 && box.height > 8);
         }"""))
-        self.assertIn("Loading illustration", page.locator("[skullet-status]").inner_text())
+        self.assertIn("Loading portrait", page.locator("[skullet-status]").inner_text())
         self.release(held)
         page.wait_for_selector("[skullet-loading]", state="detached")
         self.assertIsNone(image.get_attribute("aria-hidden"))
         self.assertGreater(image.evaluate("node => node.naturalWidth"), 0)
         browser.close()
 
-    def test_image_error_clears_the_skeleton_and_shows_the_qr_fallback(self) -> None:
-        browser = self.playwright.chromium.launch()
-        page = browser.new_page(viewport={"width": 390, "height": 844})
-        held = self.hold_matching(page, "/qr/")
-        page.goto(f"{self.base_url}/pip", wait_until="networkidle")
-        page.locator("#text-pip").get_by_role("button", name="Show QR code", exact=True).click()
-        page.wait_for_selector("#pip-qr [skullet-loading]")
-        for route in held:
-            route.abort()
-        fallback = page.get_by_text(re.compile(r"QR code.*couldn.t load", re.IGNORECASE))
-        fallback.wait_for(state="visible")
-        self.assertTrue(fallback.is_visible())
-        self.assertEqual(page.locator("#pip-qr [skullet-loading]").count(), 0)
-        self.assertEqual(page.locator("#pip-qr img").count(), 0)
-        browser.close()
 
     def test_complete_image_never_shows_a_skeleton(self) -> None:
         browser = self.playwright.chromium.launch()
@@ -2555,7 +2045,7 @@ document.addEventListener("readystatechange", armBoneWatch);
             route.continue_()
 
         page.route("**/*", hold_scripts)
-        page.goto(f"{self.base_url}/pip", wait_until="commit")
+        page.goto(f"{self.base_url}/", wait_until="commit")
         page.wait_for_function(
             """(alt) => {
               const image = document.querySelector(`img[alt="${alt}"]`);
@@ -2565,6 +2055,7 @@ document.addEventListener("readystatechange", armBoneWatch);
         )
         for route in held_scripts:
             route.continue_()
+        page.unroute("**/*", hold_scripts)
         page.wait_for_load_state("networkidle")
         page.wait_for_timeout(250)
         image = page.get_by_alt_text(self.HERO_ALT)
@@ -2588,150 +2079,20 @@ document.addEventListener("readystatechange", armBoneWatch);
                 aborted_chunks.append(url)
                 route.abort()
                 return
-            if "pip-everyday.webp" in url:
+            if "lu-avatar.jpg" in url:
                 held.append(route)
                 return
             route.continue_()
 
         page.route("**/*", handler)
-        page.goto(f"{self.base_url}/pip", wait_until="domcontentloaded")
+        page.goto(f"{self.base_url}/", wait_until="domcontentloaded")
         page.wait_for_timeout(500)
         self.assertGreaterEqual(len(aborted_chunks), 1)
-        self.assertTrue(page.get_by_role("heading", name="A little help.").is_visible())
+        self.assertTrue(page.get_by_role("heading", name="I make stubborn software behave.").is_visible())
         self.release(held)
         image = page.get_by_alt_text(self.HERO_ALT)
         image.wait_for(state="visible")
         self.assertGreater(image.evaluate("node => node.naturalWidth"), 0)
         self.assertIsNone(image.get_attribute("aria-hidden"))
         self.assertEqual(page_errors, [])
-        browser.close()
-
-    def test_qr_bone_is_visible_on_the_first_paint(self) -> None:
-        browser = self.playwright.chromium.launch()
-        page = browser.new_page(viewport={"width": 390, "height": 844})
-        held = self.hold_matching(page, "/qr/")
-        page.goto(f"{self.base_url}/pip", wait_until="networkidle")
-        page.evaluate(
-            """() => {
-              window.__qrFirst = null;
-              const root = document.getElementById("pip-qr");
-              const sample = () => {
-                if (!root || root.hidden || window.__qrFirst) return;
-                const layer = root.querySelector("[skullet-layer]");
-                const bar = layer && layer.shadowRoot ? layer.shadowRoot.querySelector("[skullet-rect]") : null;
-                const box = bar ? bar.getBoundingClientRect() : null;
-                const image = root.querySelector("img");
-                window.__qrFirst = {
-                  bone: !!(box && box.width > 8 && box.height > 8),
-                  width: box ? box.width : 0,
-                  height: box ? box.height : 0,
-                  opacity: image ? getComputedStyle(image).opacity : null,
-                  background: image ? getComputedStyle(image).backgroundColor : null,
-                };
-              };
-              new MutationObserver(() => {
-                if (root && !root.hidden) requestAnimationFrame(sample);
-              }).observe(root, { attributes: true, childList: true, subtree: true });
-            }"""
-        )
-        page.locator("#text-pip").get_by_role("button", name="Show QR code", exact=True).click()
-        page.wait_for_function("() => window.__qrFirst && window.__qrFirst.bone")
-        first = page.evaluate("window.__qrFirst")
-        self.assertTrue(first["bone"])
-        self.assertEqual(first["opacity"], "0")
-        self.assertIn("0, 0, 0, 0", first["background"])
-        self.assertAlmostEqual(first["width"], first["height"], delta=1)
-        self.release(held)
-        page.wait_for_function(
-            """() => {
-              const image = document.querySelector("#pip-qr img");
-              return image && image.complete && image.naturalWidth > 0 && image.getAttribute("aria-hidden") === null;
-            }"""
-        )
-        browser.close()
-
-    def test_stalled_skullet_chunk_still_opens_the_qr_panel(self) -> None:
-        browser = self.playwright.chromium.launch()
-        page = browser.new_page(viewport={"width": 390, "height": 844})
-        page.goto(f"{self.base_url}/pip", wait_until="networkidle")
-        held_chunks = []
-
-        def hold_chunk(route):
-            url = route.request.url
-            if "skullet-overlay" in url and url.endswith(".js"):
-                held_chunks.append(route)
-                return
-            route.continue_()
-
-        page.route("**/*", hold_chunk)
-        started = time.monotonic()
-        page.locator("#text-pip").get_by_role("button", name="Show QR code", exact=True).click()
-        page.wait_for_function(
-            """() => {
-              const button = document.querySelector("#text-pip button[aria-controls='pip-qr']");
-              const panel = document.getElementById("pip-qr");
-              return button && button.getAttribute("aria-expanded") === "true" && panel && !panel.hidden;
-            }""",
-            timeout=300,
-        )
-        self.assertLess(time.monotonic() - started, 0.3)
-        self.assertEqual(page.locator("#text-pip button[aria-controls='pip-qr']").get_attribute("aria-expanded"), "true")
-        self.assertFalse(page.locator("#pip-qr").is_hidden())
-        self.assertGreaterEqual(len(held_chunks), 1)
-        browser.close()
-
-    def test_stale_qr_overlay_does_not_reopen_the_panel(self) -> None:
-        browser = self.playwright.chromium.launch()
-        page = browser.new_page(viewport={"width": 390, "height": 844})
-        page.goto(f"{self.base_url}/pip", wait_until="networkidle")
-        held_chunks = []
-
-        def hold_chunk(route):
-            url = route.request.url
-            if "skullet-overlay" in url and url.endswith(".js"):
-                held_chunks.append(route)
-                return
-            route.continue_()
-
-        page.route("**/*", hold_chunk)
-        final = page.evaluate(
-            """() => new Promise((resolve) => {
-              const button = document.querySelector("#text-pip button[aria-controls='pip-qr']");
-              const panel = document.getElementById("pip-qr");
-              let hid = false;
-              let secondWasShow = false;
-              const finish = () => resolve({
-                expanded: button.getAttribute("aria-expanded"),
-                hidden: panel.hidden,
-                secondWasShow,
-              });
-              const observer = new MutationObserver(() => {
-                if (hid || button.getAttribute("aria-expanded") !== "true") return;
-                hid = true;
-                observer.disconnect();
-                button.click();
-                window.setTimeout(finish, 250);
-              });
-              observer.observe(button, { attributes: true, attributeFilter: ["aria-expanded"] });
-              button.click();
-              window.setTimeout(() => {
-                secondWasShow = (button.textContent || "").includes("Show QR code");
-                if (!secondWasShow) {
-                  observer.disconnect();
-                  finish();
-                  return;
-                }
-                button.click();
-              }, 130);
-              window.setTimeout(() => {
-                if (hid) return;
-                observer.disconnect();
-                finish();
-              }, 1000);
-            })"""
-        )
-        self.assertTrue(final["secondWasShow"])
-        self.assertEqual(final["expanded"], "false")
-        self.assertTrue(final["hidden"])
-        self.assertGreaterEqual(len(held_chunks), 1)
         browser.close()

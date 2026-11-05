@@ -112,15 +112,7 @@
   transition: color var(--ui-duration, 280ms) ease, background-color var(--ui-duration, 280ms) ease, border-color var(--ui-duration, 280ms) ease, transform var(--ui-duration, 280ms) var(--ease-out);
 }
 
-.header nav .pipNavLink {
-  gap: 5px;
-}
 
-.pipNavLink svg {
-  width: 18px;
-  height: 18px;
-  color: #e9a982;
-}
 
 .hero {
   position: relative;
@@ -791,14 +783,7 @@
     font-size: 12px;
   }
 
-  .header nav .pipNavLink {
-    gap: 3px;
-  }
 
-  .pipNavLink svg {
-    width: 16px;
-    height: 16px;
-  }
 
   .hero {
     width: min(calc(100% - 24px - env(safe-area-inset-left) - env(safe-area-inset-right)), 540px);
@@ -896,14 +881,7 @@
     font-size: 11px;
   }
 
-  .header nav .pipNavLink {
-    gap: 2px;
-  }
 
-  .pipNavLink svg {
-    width: 15px;
-    height: 15px;
-  }
 
   .footer > div {
     gap: 8px;

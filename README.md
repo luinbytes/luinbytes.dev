@@ -4,19 +4,13 @@ Lu's interactive personal portfolio, built around the living pixel pond version 
 
 The homepage focuses on Lu's current work at [Orchid.ai](https://orchid.ai), selected public projects, and an interactive procedural pond rather than a catalogue of product pages.
 
-The site has three public routes: `/`, the interactive portfolio; `/pip`, a static product page for Pip, Lu's warm, easygoing Telegram agent; and `/privacy`, a short personal-use privacy policy. The Pip page is a deliberate standalone exception to the portfolio's homepage-first structure. Retired concept and product URLs resolve to the pond-themed 404 instead of preserving stale copies of older portfolios.
+The site has two public routes: `/`, the interactive portfolio, and `/privacy`, a short personal-use privacy policy. Retired concept and product URLs resolve to the pond-themed 404.
 
 The portfolio features [HomeBot](https://github.com/luinbytes/HomeBot), [rakazo-android](https://github.com/luinbytes/rakazo-android), [Linux Sonar](https://github.com/luinbytes/linux-sonar), [bongocat](https://github.com/luinbytes/bongocat), and [cursor-barrier](https://github.com/luinbytes/cursor-barrier).
 
-Pip has a dedicated introduction below the homepage hero, a **Meet Pip** link to
-`/pip`, and a navigation link at every screen size. Both pages share the Pip speech-bubble
-logo and Pixelify wordmark from `components/pip/pip-logo.tsx`.
-
 The interface follows the system light/dark preference. The pond, fish, cat,
 feeding controls, and portrait foil retain their existing behavior in both modes.
-Navigation is available at every screen size, including without JavaScript. Pip
-uses a dedicated pixel illustration with a readable example conversation and
-keeps its Telegram, copy-handle, and on-demand QR contact paths.
+Navigation is available at every screen size, including without JavaScript.
 
 ## Stack
 
@@ -41,7 +35,6 @@ Run the production checks:
 ```bash
 npm run lint
 npm run build
-npm run test:pip
 npm run test:pond
 ```
 
@@ -57,45 +50,31 @@ npm run test:e2e
 
 `npm run preview` serves the built `out` directory at http://127.0.0.1:3004 with real 404 responses. The browser suite uses this production export.
 
-The `/pip` page is exported with the rest of the site and keeps its contact action
-available as static, readable HTML. Its Telegram target is defined in
-`PIP_TELEGRAM_HANDLE` in `lib/pip.ts`; rebuild after changing it so the
-configured Telegram handle and contact controls are rendered into the exported
-page. Message Pip and copy-handle fallback are available directly, while the
-QR image is generated locally during development setup and production builds.
-It is requested from this site only after Show QR, without a third-party image service. The
-page's canonical URL is
-`https://luinbytes.dev/pip`, and it uses a Pip-specific share card so embeds keep
-the product page's identity.
-
 ## Deployment
 
 Pushes to `master` build and deploy the static export to [luinbytes.dev](https://luinbytes.dev/) through GitHub Pages.
 
 ## Social preview
 
-Open Graph and Twitter large-image cards use checked-in 1200 x 630 PNGs:
-`public/share-cards/luinbytes-dev-pond.png` for the homepage and
-`public/share-cards/luinbytes-dev-pip.png` for `/pip`. The versioned filenames
-avoid reusing the old pink card's cached image URL. The old PNG remains available
+Open Graph and Twitter large-image cards use the checked-in 1200 x 630 PNG
+`public/share-cards/luinbytes-dev-pond.png` for the homepage. The versioned filename
+avoids reusing the old pink card's cached image URL. The old PNG remains available
 for existing links, but no current metadata references it.
 
-The editable layouts are `scripts/share-card.html` for the homepage and
-`scripts/pip-share-card.html` for Pip. They use local assets/fonts and render
+The editable layout is `scripts/share-card.html` for the homepage. It uses local assets/fonts and renders
 offline. To regenerate after an intentional design edit, use the browser-test
 setup above, then:
 
 ```bash
 npm run build
 python3 scripts/generate-share-card.py
-python3 scripts/generate-pip-share-card.py
 python3 -m unittest discover -s tests/browser -p '*_test.py' -k ShareCardStaticExportTests -v
 ```
 
-The generators embed the original card fonts from installed Fontsource packages, render offline, and check loaded
-fonts plus a 32px text-safe inset. Review both PNGs at full size and at typical
+The generator embeds the original card fonts from installed Fontsource packages, renders offline, and checks loaded
+fonts plus a 32px text-safe inset. Review the PNG at full size and at typical
 embed size before updating the expected SHA-256 values in
-`ShareCardStaticExportTests` to the generators' printed values. The browser suite builds once and checks the metadata, asset dimensions/hash and absence of old
+`ShareCardStaticExportTests` to the generator's printed value. The browser suite builds once and checks the metadata, asset dimensions/hash and absence of old
 image references in exported HTML. Normal Pages builds need no Python, browser,
 image service or runtime route: Vite copies the checked-in PNGs into the static export.
 
@@ -106,7 +85,7 @@ image service or runtime route: Vite copies the checked-in PNGs into the static 
 
 ## Security and page loading
 
-Home, Pip, and the 404 page have separate HTML and client entries. Vite generates
+Home, privacy, and the 404 page have separate HTML and client entries. Vite generates
 their stylesheet and preload links. Run `node scripts/measure-page-assets.mjs`
 after a build to inspect each page's initial uncompressed JavaScript and CSS.
 
