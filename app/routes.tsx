@@ -33,7 +33,7 @@ const homeMetadata: RouteMetadata = {
   imageAlt: "Lu | Software Engineer",
 };
 
-const pipDescription = "A little help, one message away. Pip is your warm, easygoing Telegram agent for questions, web searches, reminders, and everyday life.";
+const pipDescription = "A little help, one message away. Pip is your warm, easygoing Telegram agent for questions, web searches, reminders, and everyday life. Built on Keiki.";
 
 const notFoundRoute: SiteRoute = {
   path: "/404",

@@ -139,7 +139,7 @@ export default function PipPage() {
 
         <footer className={styles.footer}>
           <a href="/">LU / 6C75 <ArrowUpRight aria-hidden="true" /></a>
-          <p>Made to be good company.</p>
+          <p>Built on Keiki. Made to be good company.</p>
           <span className={styles.footerPip} aria-hidden="true">pip.</span>
         </footer>
       </div>

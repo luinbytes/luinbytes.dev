@@ -329,7 +329,7 @@ class ShareCardStaticExportTests(unittest.TestCase):
                     )
                     self.assertEqual(
                         properties.get("og:description"),
-                        "A little help, one message away. Pip is your warm, easygoing Telegram agent for questions, web searches, reminders, and everyday life.",
+                        "A little help, one message away. Pip is your warm, easygoing Telegram agent for questions, web searches, reminders, and everyday life. Built on Keiki.",
                     )
                     self.assertEqual(
                         properties.get("og:url"),
@@ -337,7 +337,7 @@ class ShareCardStaticExportTests(unittest.TestCase):
                     )
                     self.assertEqual(
                         names.get("description"),
-                        "A little help, one message away. Pip is your warm, easygoing Telegram agent for questions, web searches, reminders, and everyday life.",
+                        "A little help, one message away. Pip is your warm, easygoing Telegram agent for questions, web searches, reminders, and everyday life. Built on Keiki.",
                     )
                     self.assertEqual(
                         next(
@@ -886,7 +886,7 @@ class PipRouteTests(BrowserTestCase):
         self.assertTrue(contact.get_by_text("PIP’S TELEGRAM HANDLE", exact=True).is_visible())
         self.assertTrue(contact.get_by_text("@PIPSOFTWARE_BOT", exact=True).is_visible())
         self.assertTrue(contact.get_by_text("Opens Pip in Telegram.", exact=True).is_visible())
-        self.assertTrue(page.get_by_text("Made to be good company.", exact=True).is_visible())
+        self.assertTrue(page.get_by_text("Built on Keiki", exact=False).is_visible())
 
         self.assertGreaterEqual(
             page.get_by_role("link", name="Message Pip", exact=True).count(), 2

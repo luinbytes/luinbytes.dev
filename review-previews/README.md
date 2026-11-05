@@ -16,10 +16,6 @@ Each image shows one page area at its captured viewport. Open an image to inspec
 
 ![Home — Pip feature — Desktop · light](./homepage-desktop1440x900-light-pip-feature.jpg)
 
-**Work - Orchid.ai**
-
-![Home — Work - Orchid.ai — Desktop · light](./homepage-desktop1440x900-light-work-orchid-ai.jpg)
-
 **Work - Rakazo**
 
 ![Home — Work - Rakazo — Desktop · light](./homepage-desktop1440x900-light-work-rakazo.jpg)
@@ -49,10 +45,6 @@ Each image shows one page area at its captured viewport. Open an image to inspec
 **Pip feature**
 
 ![Home — Pip feature — Mobile · dark](./homepage-mobile390x844-dark-pip-feature.jpg)
-
-**Work - Orchid.ai**
-
-![Home — Work - Orchid.ai — Mobile · dark](./homepage-mobile390x844-dark-work-orchid-ai.jpg)
 
 **Work - Rakazo**
 
