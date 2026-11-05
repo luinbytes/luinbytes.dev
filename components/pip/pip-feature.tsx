@@ -20,7 +20,7 @@ export function PipFeature() {
           <Button asChild className={deskStyles.primaryAction}><a href="/pip">
             <span className={styles.actionContent}>Meet Pip <ArrowUpRight aria-hidden="true" /></span>
           </a></Button>
-          <span>Built on Keiki. Made by Lu.</span>
+          <span>Made by Lu.</span>
         </div>
       </div>
     </section>
