@@ -36,6 +36,10 @@
   visibility: visible;
 }
 
+:global(html[data-pond-boot="pending"]) .pond[data-renderer="fallback"] .pondImage {
+  visibility: hidden;
+}
+
 .pondSkeleton[skullet-reveal] {
   position: absolute;
   z-index: 2;

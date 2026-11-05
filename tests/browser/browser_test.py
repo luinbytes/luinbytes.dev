@@ -1546,27 +1546,44 @@ class PortfolioTests(BrowserTestCase):
         self.assertEqual(pond.locator(":scope > div").first.evaluate("element => getComputedStyle(element).visibility"), "visible")
         browser.close()
 
+    def test_pending_entry_script_does_not_flash_the_static_pond(self) -> None:
+        browser = self.playwright.chromium.launch()
+        page = browser.new_page()
+        held = []
+        page.route(re.compile(r".*/assets/index-[^/]+\.js$"), lambda route: held.append(route))
+        page.goto(self.base_url, wait_until="commit")
+        pond = page.locator("[data-renderer]")
+        pond.wait_for()
+        self.assertEqual(pond.locator(":scope > div").first.evaluate("element => getComputedStyle(element).visibility"), "hidden")
+        for route in held:
+            route.abort()
+        browser.close()
+
     def test_reduced_motion_stops_the_loading_skeleton_animation(self) -> None:
         browser = self.playwright.chromium.launch()
-        page = self.pond_page(browser, viewport={"width": 1280, "height": 800})
-        held = []
-        page.route("**/pixel-koi-atlas.webp", lambda route: held.append(route))
-        page.goto(f"{self.base_url}/?pond-seed=e2e-motion-loading", wait_until="domcontentloaded")
         running = """() => {
           const rect = document.querySelector('[data-renderer] [skullet-layer]')
             ?.shadowRoot?.querySelector('[skullet-rect]');
           return rect?.getAnimations().some(animation => animation.playState === 'running');
         }"""
-        wait_for_condition(page, running)
-        page.emulate_media(reduced_motion="reduce")
-        wait_for_condition(page, "document.querySelector('[data-pond-state]')?.dataset.motion === 'reduced'")
-        wait_for_condition(page, """() => {
-          const rect = document.querySelector('[data-renderer] [skullet-layer]')
-            ?.shadowRoot?.querySelector('[skullet-rect]');
-          return rect && !rect.getAnimations().some(animation => animation.playState === 'running');
-        }""")
-        for route in held:
-            route.abort()
+        for path in ("/", "/missing"):
+            with self.subTest(path=path):
+                page = self.pond_page(browser, viewport={"width": 1280, "height": 800})
+                held = []
+                page.route("**/pixel-koi-atlas.webp", lambda route: held.append(route))
+                page.goto(f"{self.base_url}{path}?pond-seed=e2e-motion-loading", wait_until="domcontentloaded")
+                wait_for_condition(page, running)
+                page.wait_for_timeout(500)
+                page.emulate_media(reduced_motion="reduce")
+                wait_for_condition(page, "document.querySelector('[data-pond-state]')?.dataset.motion === 'reduced'")
+                wait_for_condition(page, """() => {
+                  const rect = document.querySelector('[data-renderer] [skullet-layer]')
+                    ?.shadowRoot?.querySelector('[skullet-rect]');
+                  return rect && !rect.getAnimations().some(animation => animation.playState === 'running');
+                }""")
+                for route in held:
+                    route.abort()
+                page.close()
         browser.close()
 
     def test_loading_shows_skeleton_then_fades_in_the_live_ecosystem(self) -> None:

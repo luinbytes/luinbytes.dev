@@ -21,6 +21,7 @@ export function PondEnvironment({ reduced }: { reduced: boolean }) {
     if (!pond || !host || !interaction) return;
 
     pond.dataset.renderer = "loading";
+    delete document.documentElement.dataset.pondBoot;
     const controller = new AbortController();
     let disposed = false;
     let cleanup = () => {};
