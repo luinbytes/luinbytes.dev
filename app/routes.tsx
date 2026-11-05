@@ -1,7 +1,6 @@
 import type { ComponentType } from "react";
 import siteConfig from "@/site.config.json";
 import Home from "./page";
-import PipPage from "./pip/page";
 import PrivacyPage from "./privacy/page";
 import NotFound from "./not-found";
 
@@ -17,8 +16,8 @@ type RouteMetadata = {
 };
 
 export type SiteRoute = {
-  path: "/" | "/pip" | "/privacy" | "/404";
-  output: "index.html" | "pip.html" | "privacy.html" | "404.html";
+  path: "/" | "/privacy" | "/404";
+  output: "index.html" | "privacy.html" | "404.html";
   Component: ComponentType;
   metadata: RouteMetadata;
 };
@@ -33,8 +32,6 @@ const homeMetadata: RouteMetadata = {
   imageAlt: "Lu | Software Engineer",
 };
 
-const pipDescription = "A little help, one message away. Pip is your warm, easygoing Telegram agent for questions, web searches, reminders, and everyday life. Built on Keiki.";
-
 const notFoundRoute: SiteRoute = {
   path: "/404",
   output: "404.html",
@@ -44,20 +41,6 @@ const notFoundRoute: SiteRoute = {
 
 export const siteRoutes: readonly SiteRoute[] = [
   { path: "/", output: "index.html", Component: Home, metadata: homeMetadata },
-  {
-    path: "/pip",
-    output: "pip.html",
-    Component: PipPage,
-    metadata: {
-      title: "Pip - Your Telegram mate | Lu",
-      socialTitle: "Pip - Your Telegram mate",
-      description: pipDescription,
-      socialDescription: pipDescription,
-      canonical: `${siteConfig.siteUrl}/pip`,
-      image: `${siteConfig.siteUrl}/share-cards/luinbytes-dev-pip.png`,
-      imageAlt: "Pip - Your Telegram mate",
-    },
-  },
   {
     path: "/privacy",
     output: "privacy.html",
