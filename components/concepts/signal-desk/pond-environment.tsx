@@ -55,10 +55,10 @@ export function PondEnvironment({ reduced }: { reduced: boolean }) {
   return (
     <>
       <noscript><style>{`.${styles.pondImage} { visibility: visible !important; } .${styles.pondSkeleton} { display: none !important; }`}</style></noscript>
-      <div ref={pondRef} className={styles.pond} data-renderer="loading" aria-hidden="true">
+      <div ref={pondRef} className={styles.pond} data-renderer="fallback" aria-hidden="true">
         <div className={styles.pondImage} />
         <div ref={hostRef} className={styles.pondHost} data-pond-state="idle" />
-        {hydrated && <Skeleton loading label="Loading pond" className={styles.pondSkeleton}>
+        {hydrated && <Skeleton key={reduced ? "reduced" : "full"} loading label="Loading pond" className={styles.pondSkeleton}>
           <span {...{ "skullet-block": "" }} className={styles.pondSkeletonBlock} />
         </Skeleton>}
         <div className={styles.pondGrade} />
