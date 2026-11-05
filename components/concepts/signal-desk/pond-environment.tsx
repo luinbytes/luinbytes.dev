@@ -1,8 +1,15 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
+import { Skeleton } from "skullet/react";
+import "skullet/styles.css";
 
 import styles from "./pond-environment.module.css";
 
+const subscribe = () => () => {};
+const clientSnapshot = () => true;
+const serverSnapshot = () => false;
+
 export function PondEnvironment({ reduced }: { reduced: boolean }) {
+  const hydrated = useSyncExternalStore(subscribe, clientSnapshot, serverSnapshot);
   const pondRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const interactionRef = useRef<HTMLDivElement>(null);
@@ -13,7 +20,8 @@ export function PondEnvironment({ reduced }: { reduced: boolean }) {
     const interaction = interactionRef.current;
     if (!pond || !host || !interaction) return;
 
-    pond.dataset.renderer = "fallback";
+    pond.dataset.renderer = "loading";
+    delete document.documentElement.dataset.pondBoot;
     const controller = new AbortController();
     let disposed = false;
     let cleanup = () => {};
@@ -47,9 +55,13 @@ export function PondEnvironment({ reduced }: { reduced: boolean }) {
 
   return (
     <>
+      <noscript><style>{`.${styles.pondImage} { visibility: visible !important; } .${styles.pondSkeleton} { display: none !important; }`}</style></noscript>
       <div ref={pondRef} className={styles.pond} data-renderer="fallback" aria-hidden="true">
         <div className={styles.pondImage} />
         <div ref={hostRef} className={styles.pondHost} data-pond-state="idle" />
+        {hydrated && <Skeleton key={reduced ? "reduced" : "full"} loading label="Loading pond" className={styles.pondSkeleton}>
+          <span {...{ "skullet-block": "" }} className={styles.pondSkeletonBlock} />
+        </Skeleton>}
         <div className={styles.pondGrade} />
         <div className={styles.surfaceLight} />
       </div>

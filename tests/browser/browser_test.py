@@ -1536,7 +1536,57 @@ class PortfolioTests(BrowserTestCase):
         self.assertEqual(page_errors, [])
         browser.close()
 
-    def test_loading_shows_only_the_pond_then_fades_in_the_live_ecosystem(self) -> None:
+    def test_entry_script_failure_keeps_the_static_pond(self) -> None:
+        browser = self.playwright.chromium.launch()
+        page = browser.new_page()
+        page.route(re.compile(r".*/assets/index-[^/]+\.js$"), lambda route: route.abort())
+        page.goto(self.base_url, wait_until="load")
+        pond = page.locator("[data-renderer]")
+        self.assertEqual(pond.get_attribute("data-renderer"), "fallback")
+        self.assertEqual(pond.locator(":scope > div").first.evaluate("element => getComputedStyle(element).visibility"), "visible")
+        browser.close()
+
+    def test_pending_entry_script_does_not_flash_the_static_pond(self) -> None:
+        browser = self.playwright.chromium.launch()
+        page = browser.new_page()
+        held = []
+        page.route(re.compile(r".*/assets/index-[^/]+\.js$"), lambda route: held.append(route))
+        page.goto(self.base_url, wait_until="commit")
+        pond = page.locator("[data-renderer]")
+        pond.wait_for()
+        self.assertEqual(pond.locator(":scope > div").first.evaluate("element => getComputedStyle(element).visibility"), "hidden")
+        for route in held:
+            route.abort()
+        browser.close()
+
+    def test_reduced_motion_stops_the_loading_skeleton_animation(self) -> None:
+        browser = self.playwright.chromium.launch()
+        running = """() => {
+          const rect = document.querySelector('[data-renderer] [skullet-layer]')
+            ?.shadowRoot?.querySelector('[skullet-rect]');
+          return rect?.getAnimations().some(animation => animation.playState === 'running');
+        }"""
+        for path in ("/", "/missing"):
+            with self.subTest(path=path):
+                page = self.pond_page(browser, viewport={"width": 1280, "height": 800})
+                held = []
+                page.route("**/pixel-koi-atlas.webp", lambda route: held.append(route))
+                page.goto(f"{self.base_url}{path}?pond-seed=e2e-motion-loading", wait_until="domcontentloaded")
+                wait_for_condition(page, running)
+                page.wait_for_timeout(500)
+                page.emulate_media(reduced_motion="reduce")
+                wait_for_condition(page, "document.querySelector('[data-pond-state]')?.dataset.motion === 'reduced'")
+                wait_for_condition(page, """() => {
+                  const rect = document.querySelector('[data-renderer] [skullet-layer]')
+                    ?.shadowRoot?.querySelector('[skullet-rect]');
+                  return rect && !rect.getAnimations().some(animation => animation.playState === 'running');
+                }""")
+                for route in held:
+                    route.abort()
+                page.close()
+        browser.close()
+
+    def test_loading_shows_skeleton_then_fades_in_the_live_ecosystem(self) -> None:
         browser = self.playwright.chromium.launch()
         page = self.pond_page(browser, viewport={"width": 1280, "height": 800})
 
@@ -1548,7 +1598,7 @@ class PortfolioTests(BrowserTestCase):
         page.goto(f"{self.base_url}/?pond-seed=e2e-loading", wait_until="domcontentloaded")
         pond = page.locator("[data-renderer]")
         host = page.locator("[data-pond-state]")
-        self.assertEqual(pond.get_attribute("data-renderer"), "fallback")
+        self.assertEqual(pond.get_attribute("data-renderer"), "loading")
         self.assertEqual(host.locator("canvas").count(), 0)
         self.assertIn(
             "pixel-pond-world.webp",
@@ -1556,6 +1606,8 @@ class PortfolioTests(BrowserTestCase):
                 "element => getComputedStyle(element).backgroundImage"
             ),
         )
+        self.assertEqual(pond.locator(":scope > div").first.evaluate("element => getComputedStyle(element).visibility"), "hidden")
+        self.assertTrue(pond.locator("[skullet-loading]").is_visible())
         self.assertFalse(
             page.locator("div").evaluate_all(
                 "elements => elements.some(element => /pixel-(koi|tabby)-atlas/.test(getComputedStyle(element).backgroundImage))"
