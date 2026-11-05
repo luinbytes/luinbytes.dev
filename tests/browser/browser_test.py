@@ -2002,10 +2002,15 @@ class PortfolioTests(BrowserTestCase):
 
 class SkulletImageTests(BrowserTestCase):
     HERO_ALT = "Lu's illustrated avatar wearing a pink cap"
+    AVATAR_SKELETON = 'span:has(> img[alt="' + HERO_ALT + '"]) [skullet-loading]'
+    AVATAR_STATUS = 'span:has(> img[alt="' + HERO_ALT + '"]) [skullet-status]'
     SKULLET_WATCH = """
 window.__skulletShown = false;
 const markSkullet = () => {
-  if (document.querySelector("[skullet-loading]")) window.__skulletShown = true;
+  const image = document.querySelector('img[alt="' + __HERO_ALT__ + '"]');
+  if (image && image.parentElement.querySelector("[skullet-loading]")) {
+    window.__skulletShown = true;
+  }
 };
 const armSkulletWatch = () => {
   if (window.__skulletArmed || !document.documentElement) return;
@@ -2027,7 +2032,8 @@ const armBoneWatch = () => {
   if (window.__boneArmed || !document.documentElement) return;
   window.__boneArmed = true;
   new MutationObserver(() => {
-    const host = document.querySelector("[skullet-loading]");
+    const image = document.querySelector('img[alt="' + __HERO_ALT__ + '"]');
+    const host = image && image.parentElement.querySelector("[skullet-loading]");
     if (!host) return;
     if (!window.__boneHost) window.__boneHost = host;
     else if (host !== window.__boneHost) window.__boneReplaced = true;
@@ -2056,14 +2062,18 @@ document.addEventListener("readystatechange", armBoneWatch);
     def test_delayed_image_shows_a_skeleton_then_clears_it(self) -> None:
         browser = self.playwright.chromium.launch()
         page = browser.new_page(viewport={"width": 1440, "height": 900})
-        page.add_init_script(self.SKULLET_WATCH)
-        page.add_init_script(self.BONE_STAYS)
+        page.add_init_script(
+            self.SKULLET_WATCH.replace("__HERO_ALT__", json.dumps(self.HERO_ALT))
+        )
+        page.add_init_script(
+            self.BONE_STAYS.replace("__HERO_ALT__", json.dumps(self.HERO_ALT))
+        )
         license_text = page.request.get(f"{self.base_url}/third-party-licenses.txt").text()
         self.assertIn("Copyright (c) 2025 Lochie Axon", license_text)
         self.assertIn("Permission is hereby granted, free of charge", license_text)
         held = self.hold_matching(page, "lu-avatar.jpg")
         page.goto(f"{self.base_url}/", wait_until="domcontentloaded")
-        page.wait_for_selector("[skullet-loading]")
+        page.wait_for_selector(self.AVATAR_SKELETON)
         self.assertIs(page.evaluate("window.__skulletShown"), True)
         image = page.get_by_alt_text(self.HERO_ALT)
         self.assertEqual(image.get_attribute("aria-hidden"), "true")
@@ -2076,9 +2086,9 @@ document.addEventListener("readystatechange", armBoneWatch);
           const box = bar ? bar.getBoundingClientRect() : null;
           return !!(host && host.isConnected && box && box.width > 8 && box.height > 8);
         }"""))
-        self.assertIn("Loading portrait", page.locator("[skullet-status]").inner_text())
+        self.assertIn("Loading portrait", page.locator(self.AVATAR_STATUS).inner_text())
         self.release(held)
-        page.wait_for_selector("[skullet-loading]", state="detached")
+        page.wait_for_selector(self.AVATAR_SKELETON, state="detached")
         self.assertIsNone(image.get_attribute("aria-hidden"))
         self.assertGreater(image.evaluate("node => node.naturalWidth"), 0)
         browser.close()
@@ -2090,19 +2100,21 @@ document.addEventListener("readystatechange", armBoneWatch);
         page = browser.new_page(viewport={"width": 1440, "height": 900})
         held = self.hold_matching(page, "lu-avatar.jpg")
         page.goto(f"{self.base_url}/", wait_until="domcontentloaded")
-        page.wait_for_selector("[skullet-loading]")
+        page.wait_for_selector(self.AVATAR_SKELETON)
         image = page.get_by_alt_text(self.HERO_ALT)
         self.assertEqual(image.get_attribute("aria-hidden"), "true")
         for route in held:
             route.abort()
-        page.wait_for_selector("[skullet-loading]", state="detached")
+        page.wait_for_selector(self.AVATAR_SKELETON, state="detached")
         self.assertIsNone(image.get_attribute("aria-hidden"))
         self.assertEqual(image.evaluate("node => node.naturalWidth"), 0)
 
     def test_complete_image_never_shows_a_skeleton(self) -> None:
         browser = self.playwright.chromium.launch()
         page = browser.new_page(viewport={"width": 1440, "height": 900})
-        page.add_init_script(self.SKULLET_WATCH)
+        page.add_init_script(
+            self.SKULLET_WATCH.replace("__HERO_ALT__", json.dumps(self.HERO_ALT))
+        )
         held_scripts = []
 
         def hold_scripts(route):
@@ -2129,7 +2141,7 @@ document.addEventListener("readystatechange", armBoneWatch);
         self.assertGreater(image.evaluate("node => node.naturalWidth"), 0)
         self.assertIsNone(image.get_attribute("aria-hidden"))
         self.assertIs(page.evaluate("window.__skulletShown"), False)
-        self.assertEqual(page.locator("[skullet-loading]").count(), 0)
+        self.assertEqual(page.locator(self.AVATAR_SKELETON).count(), 0)
         browser.close()
 
     def test_failed_skullet_chunk_still_shows_the_image(self) -> None:
