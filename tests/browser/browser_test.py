@@ -2032,6 +2032,21 @@ document.addEventListener("readystatechange", armBoneWatch);
         browser.close()
 
 
+    def test_image_error_clears_the_skeleton(self) -> None:
+        browser = self.playwright.chromium.launch()
+        self.addCleanup(browser.close)
+        page = browser.new_page(viewport={"width": 1440, "height": 900})
+        held = self.hold_matching(page, "lu-avatar.jpg")
+        page.goto(f"{self.base_url}/", wait_until="domcontentloaded")
+        page.wait_for_selector("[skullet-loading]")
+        image = page.get_by_alt_text(self.HERO_ALT)
+        self.assertEqual(image.get_attribute("aria-hidden"), "true")
+        for route in held:
+            route.abort()
+        page.wait_for_selector("[skullet-loading]", state="detached")
+        self.assertIsNone(image.get_attribute("aria-hidden"))
+        self.assertEqual(image.evaluate("node => node.naturalWidth"), 0)
+
     def test_complete_image_never_shows_a_skeleton(self) -> None:
         browser = self.playwright.chromium.launch()
         page = browser.new_page(viewport={"width": 1440, "height": 900})
