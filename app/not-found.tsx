@@ -1,16 +1,24 @@
 import { ArrowLeft, Waves } from "lucide-react";
-import { useReducedMotion } from "framer-motion";
+import { useSyncExternalStore } from "react";
 
 import { PondEnvironment } from "@/components/concepts/signal-desk/pond-environment";
 import { Button } from "@/components/ui/button";
 import styles from "./not-found.module.css";
 
+const subscribe = (notify: () => void) => {
+  const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+  media.addEventListener("change", notify);
+  return () => media.removeEventListener("change", notify);
+};
+const snapshot = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const serverSnapshot = () => true;
+
 export default function NotFound() {
-  const reducedMotion = useReducedMotion();
+  const reducedMotion = useSyncExternalStore(subscribe, snapshot, serverSnapshot);
 
   return (
     <section className={styles.page} aria-labelledby="not-found-title">
-      <PondEnvironment reduced={Boolean(reducedMotion)} />
+      <PondEnvironment reduced={reducedMotion} />
       <div className={styles.wash} aria-hidden="true" />
 
       <a className={styles.brand} href="/" aria-label="Lu, return to the portfolio">
