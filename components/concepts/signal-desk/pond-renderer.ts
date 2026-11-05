@@ -1,5 +1,13 @@
 import * as THREE from "three";
 
+import {
+  POND_ASCII_DPR_CAP,
+  POND_ASCII_FPS_CAP,
+  PondAscii,
+  pondAsciiGrid,
+  pondFrameBudget,
+  pondKoiQuadPixels,
+} from "./pond-ascii.ts";
 import { installPondInput } from "./pond-input.ts";
 import {
   ROCK_ANCHORS,
@@ -15,6 +23,12 @@ import {
 } from "./pond-simulation.ts";
 
 import {
+  attachFishBend,
+  createBentFishGeometry,
+  createFishIdMaterial,
+  createFlatIdMaterial,
+  createSilhouetteIdMaterial,
+  createWakeIdMaterial,
   createYDownPondQuad,
   createPondSprite,
   createPondWater,
@@ -22,6 +36,7 @@ import {
   PondPixels,
   POND_RIPPLE_CAPACITY,
   setAtlasFrame,
+  type FishBendUniforms,
   type PondAsset,
   type PondSprite,
 } from "./pond-three.ts";
@@ -54,6 +69,8 @@ type FishVisual = {
   status: THREE.Group;
   bonk: PondPixels;
   stars: PondPixels;
+  bend: FishBendUniforms | null;
+  bendHeading: number;
 };
 type FlyVisual = { container: THREE.Group; wings: PondPixels };
 type FoodVisual = { container: THREE.Group; group: THREE.Group; pellets: PondPixels[]; shadow: PondPixels };
@@ -80,6 +97,7 @@ export async function startPondRenderer(options: StartOptions) {
     __POND_TEST_DIAGNOSTICS__?: boolean;
   };
   const testPose = testWindow.__POND_TEST_KOI__;
+  const liveAscii = !testPose;
   const diagnostics = testWindow.__POND_TEST_DIAGNOSTICS__ === true;
   if (options.signal.aborted) return () => {};
   host.dataset.pondState = "loading";
@@ -115,7 +133,6 @@ export async function startPondRenderer(options: StartOptions) {
   const loads = new AbortController();
   let disposed = false;
   let animationFrame: number | null = null;
-  let revealFrame = 0;
   let disposeInput = () => {};
   let destroySimulation = () => {};
   let releaseRenderer = () => {};
@@ -126,7 +143,6 @@ export async function startPondRenderer(options: StartOptions) {
     loads.abort();
     options.signal.removeEventListener("abort", dispose);
     if (animationFrame !== null) window.cancelAnimationFrame(animationFrame);
-    window.cancelAnimationFrame(revealFrame);
     disposeInput();
     removeListeners();
     destroySimulation();
@@ -148,8 +164,9 @@ export async function startPondRenderer(options: StartOptions) {
 
   try {
     const canvas = document.createElement("canvas");
+    if (liveAscii) canvas.dataset.presented = "pending";
     const context = canvas.getContext("webgl2", {
-      alpha: true,
+      alpha: !liveAscii,
       antialias: false,
       powerPreference: "high-performance",
       preserveDrawingBuffer: Boolean(testPose),
@@ -160,14 +177,20 @@ export async function startPondRenderer(options: StartOptions) {
     }
     let renderer: THREE.WebGLRenderer;
     try {
-      renderer = new THREE.WebGLRenderer({ canvas, context, alpha: true, antialias: false });
+      renderer = new THREE.WebGLRenderer({ canvas, context, alpha: !liveAscii, antialias: false });
     } catch (error) {
       context.getExtension("WEBGL_lose_context")?.loseContext();
       throw error;
     }
     renderer.outputColorSpace = THREE.SRGBColorSpace;
-    renderer.setClearColor(0x000000, 0);
-    renderer.debug.onShaderError = () => { throw new Error("Unable to compile the pond shader"); };
+    renderer.setClearColor(liveAscii ? 0x252031 : 0x000000, liveAscii ? 1 : 0);
+    if (liveAscii && window.matchMedia("(prefers-color-scheme: light)").matches) renderer.setClearColor(0xeee8f3, 1);
+    renderer.debug.onShaderError = (gl, program, vertexShader, fragmentShader) => {
+      const programLog = gl.getProgramInfoLog(program) ?? "";
+      const vertexLog = gl.getShaderInfoLog(vertexShader) ?? "";
+      const fragmentLog = gl.getShaderInfoLog(fragmentShader) ?? "";
+      throw new Error(`Unable to compile the pond shader\n${programLog}\n${vertexLog}\n${fragmentLog}`);
+    };
     const stage = new THREE.Scene();
     const camera = new THREE.OrthographicCamera(0, window.innerWidth, 0, window.innerHeight, 0.1, 100);
     camera.position.z = 10;
@@ -192,23 +215,41 @@ export async function startPondRenderer(options: StartOptions) {
       own(asset.texture);
       return asset;
     };
-    const [pondTexture, waterTexture, koiAtlas, foregroundTexture, pondWaterTexture, catAtlas, catTurnAtlas] = await Promise.all([
-      load("pixel-pond-world.webp"),
-      load("water-displacement.jpg"),
+    const [koiAtlas, catAtlas, catTurnAtlas] = await Promise.all([
       load("pixel-koi-atlas.webp"),
-      load("pixel-pond-foreground.webp"),
-      load("pixel-pond-water-layer.webp"),
       load("pixel-tabby-atlas.webp"),
       load("pixel-tabby-turn-atlas.webp"),
     ]);
+    const colorAssets = liveAscii ? null : await Promise.all([
+      load("pixel-pond-world.webp"),
+      load("water-displacement.jpg"),
+      load("pixel-pond-foreground.webp"),
+      load("pixel-pond-water-layer.webp"),
+    ]);
     loads.signal.throwIfAborted();
+    const blankAsset = (width: number, height: number): PondAsset => {
+      const surface = document.createElement("canvas");
+      surface.width = 1;
+      surface.height = 1;
+      const texture = new THREE.Texture(surface);
+      texture.needsUpdate = true;
+      own(texture);
+      return { texture, image: surface as unknown as HTMLImageElement, width, height };
+    };
+    const pondTexture = colorAssets ? colorAssets[0] : blankAsset(1586, 992);
+    const waterTexture = colorAssets ? colorAssets[1] : blankAsset(1024, 1024);
+    const foregroundTexture = colorAssets ? colorAssets[2] : blankAsset(1586, 992);
+    const pondWaterTexture = colorAssets ? colorAssets[3] : blankAsset(1586, 992);
     const hitCanvas = document.createElement("canvas");
-    hitCanvas.width = pondWaterTexture.width;
-    hitCanvas.height = pondWaterTexture.height;
-    const hitContext = hitCanvas.getContext("2d", { willReadFrequently: true });
-    if (!hitContext) throw new Error("Unable to create the pond hit map");
-    hitContext.drawImage(pondWaterTexture.image, 0, 0);
-    const hitPixels = hitContext.getImageData(0, 0, hitCanvas.width, hitCanvas.height).data;
+    let hitPixels = new Uint8ClampedArray(0);
+    if (colorAssets) {
+      hitCanvas.width = pondWaterTexture.width;
+      hitCanvas.height = pondWaterTexture.height;
+      const hitContext = hitCanvas.getContext("2d", { willReadFrequently: true });
+      if (!hitContext) throw new Error("Unable to create the pond hit map");
+      hitContext.drawImage(pondWaterTexture.image, 0, 0);
+      hitPixels = hitContext.getImageData(0, 0, hitCanvas.width, hitCanvas.height).data;
+    }
 
     host.replaceChildren(canvas);
     canvas.className = options.canvasClassName;
@@ -258,11 +299,53 @@ export async function startPondRenderer(options: StartOptions) {
       x: worldCenterX() + (x - window.innerWidth / 2) / viewScale,
       y: pondTexture.height / 2 + (y - window.innerHeight / 2) / viewScale,
     });
+    const pondFrame = {
+      cell: 12,
+      cx: window.innerWidth * 0.72,
+      cy: window.innerHeight * 0.42,
+      rx: 23,
+      ry: 18,
+      card: new THREE.Vector4(-1, -1, -1, -1),
+    };
+    const ellipseUniform = new THREE.Vector4();
+    const measureFrame = () => {
+      const width = window.innerWidth;
+      const { cell } = pondAsciiGrid(width, window.innerHeight);
+      const cx = width / 2;
+      const cy = window.innerHeight / 2;
+      const rx = width / cell;
+      const ry = window.innerHeight / cell;
+      pondFrame.cell = cell;
+      pondFrame.cx = cx;
+      pondFrame.cy = cy;
+      pondFrame.rx = rx;
+      pondFrame.ry = ry;
+      measureCard();
+    };
+    const measureCard = () => {
+      const cardEl = document.querySelector("[data-hero-card]");
+      const cell = pondFrame.cell;
+      if (cardEl instanceof HTMLElement) {
+        const rect = cardEl.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          pondFrame.card.set(rect.left - cell, rect.top - cell, rect.right + cell, rect.bottom + cell);
+          if (diagnostics) {
+            host.dataset.pondCard = `${pondFrame.card.x.toFixed(1)},${pondFrame.card.y.toFixed(1)},${pondFrame.card.z.toFixed(1)},${pondFrame.card.w.toFixed(1)}`;
+          }
+          return;
+        }
+      }
+      pondFrame.card.set(-1, -1, -1, -1);
+      if (diagnostics) host.dataset.pondCard = "none";
+    };
     const isWaterWorld = (x: number, y: number) => {
-      const pixelX = Math.round(x);
-      const pixelY = Math.round(y);
-      return pixelX >= 0 && pixelY >= 0 && pixelX < hitCanvas.width && pixelY < hitCanvas.height &&
-        hitPixels[(pixelY * hitCanvas.width + pixelX) * 4 + 3] > 96;
+      if (!liveAscii) {
+        const pixelX = Math.round(x);
+        const pixelY = Math.round(y);
+        return pixelX >= 0 && pixelY >= 0 && pixelX < hitCanvas.width && pixelY < hitCanvas.height &&
+          hitPixels[(pixelY * hitCanvas.width + pixelX) * 4 + 3] > 96;
+      }
+      return x >= 0 && y >= 0 && x <= pondTexture.width && y <= pondTexture.height;
     };
     const isWaterScreen = (x: number, y: number) => {
       const world = screenToWorld(x, y);
@@ -298,40 +381,73 @@ export async function startPondRenderer(options: StartOptions) {
       camera.right = window.innerWidth;
       camera.bottom = window.innerHeight;
       camera.updateProjectionMatrix();
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, Math.max(0.65, Math.min(1, 1040 / window.innerWidth))));
+      const pixelRatio = liveAscii
+        ? Math.min(window.devicePixelRatio || 1, POND_ASCII_DPR_CAP)
+        : Math.min(window.devicePixelRatio || 1, Math.max(0.65, Math.min(1, 1040 / window.innerWidth)));
+      renderer.setPixelRatio(pixelRatio);
       renderer.setSize(window.innerWidth, window.innerHeight, false);
+      measureFrame();
+      ascii?.resize(window.innerWidth, window.innerHeight, pixelRatio);
+      if (diagnostics && ascii) {
+        host.dataset.glyphInk = `${ascii.ink.cssWidth.toFixed(2)},${ascii.ink.cssHeight.toFixed(2)}`;
+      }
     };
+    let ascii: PondAscii | null = null;
     layout();
+    if (liveAscii) {
+      await Promise.race([
+        document.fonts.load(`700 ${pondFrame.cell}px "Space Mono"`),
+        new Promise((resolve) => { window.setTimeout(resolve, 1200); }),
+      ]);
+      if (disposed) throw new DOMException("Pond initialization cancelled", "AbortError");
+      ascii = own(new PondAscii(renderer));
+      layout();
+    }
 
-    const fishSource = [
-      [0, 82, 0.78, 0.18, 2.2, 17, 0.94], [1, 66, 0.22, 0.74, -0.7, 13, 0.86],
-      [2, 52, 0.58, 0.28, 2.7, 11, 0.68], [3, 74, 0.83, 0.68, -2.4, 15, 0.87],
-      [0, 48, 0.36, 0.12, 1.1, 10, 0.67], [1, 58, 0.12, 0.47, 0.2, 12, 0.76],
-      [2, 70, 0.64, 0.82, -1.4, 14, 0.82], [3, 46, 0.42, 0.63, 2.9, 9, 0.64],
-      [0, 44, 0.72, 0.48, -2.1, 10, 0.62], [1, 62, 0.48, 0.9, -0.9, 12, 0.78],
-      [2, 40, 0.31, 0.34, 1.7, 9, 0.58], [3, 56, 0.9, 0.8, -2.7, 11, 0.74],
-      [0, 50, 0.68, 0.58, 0.8, 11, 0.7], [1, 46, 0.86, 0.42, -1.9, 10, 0.66],
-      [2, 60, 0.76, 0.34, -0.2, 14, 0.76], [3, 54, 0.92, 0.57, 2.4, 12, 0.7],
-      [0, 68, 0.56, 0.72, -1.1, 15, 0.82], [1, 50, 0.25, 0.2, 0.6, 11, 0.68],
-      [2, 58, 0.8, 0.86, -2.2, 13, 0.74], [3, 42, 0.18, 0.62, 1.9, 10, 0.62],
-    ] as const;
-    const mobileScale = window.innerWidth < 720 ? 0.8 : 1;
-    const fishDefinitions: FishDefinition[] = (testPose
-      ? [[testPose.row, 160, 0.74, 0.45, testPose.heading, 0, 1] as const]
-      : fishSource.slice(0, window.innerWidth < 720 ? 14 : 20))
-      .map(([row, displayWidth, x, y, heading, cruise, alpha], index) => ({
-        id: `fish-${index}`,
-        row,
-        displayWidth: displayWidth * mobileScale,
+    const fishCells = new Map<string, number>();
+    const bodyScales = new Map<string, number>();
+    const tanchoIds = new Set<string>();
+    const fishDefinitions: FishDefinition[] = testPose
+      ? [{
+        id: "fish-0",
+        row: testPose.row,
+        displayWidth: 160 * (window.innerWidth < 720 ? 0.8 : 1),
         position: nearestWater({
-          x: worldCenterX() + (x - 0.5) * (window.innerWidth / viewScale) * 0.88,
-          y: pondTexture.height / 2 + (y - 0.5) * (window.innerHeight / viewScale) * 0.88,
+          x: worldCenterX() + (0.74 - 0.5) * (window.innerWidth / viewScale) * 0.88,
+          y: pondTexture.height / 2 + (0.45 - 0.5) * (window.innerHeight / viewScale) * 0.88,
         }),
-        heading,
-        cruise: Math.round(cruise * 1.8 + 5),
-        alpha,
-        species: ["kohaku", "ogon", "showa", "utsuri"][row],
-      }));
+        heading: testPose.heading,
+        cruise: Math.round(0 * 1.8 + 5),
+        alpha: 1,
+        species: ["kohaku", "ogon", "showa", "utsuri"][testPose.row] ?? "showa",
+      }]
+      : Array.from({ length: window.innerWidth < 640 ? 14 : 20 }, (_, index) => {
+        const entry = {
+          cells: (window.innerWidth < 640 ? 12 : 16) + index % 4,
+          cruise: 24 + index % 5 * 3,
+          heading: index * 2.4,
+          tancho: index % 5 === 0,
+          nx: ((index * 7) % 20 + 0.5) / 20,
+          ny: ((index * 11) % 20 + 0.5) / 20,
+        };
+        const id = `fish-${index}`;
+        fishCells.set(id, entry.cells);
+        if (entry.tancho) tanchoIds.add(id);
+        const bodyScale = window.innerWidth < 640 ? 0.48 : 0.26;
+        bodyScales.set(id, bodyScale);
+        const visualLength = entry.cells * pondFrame.cell / viewScale;
+        return {
+          id,
+          row: 2,
+          displayWidth: visualLength * bodyScale,
+          visualLength,
+          position: nearestWater({ x: pondTexture.width * (0.28 + entry.nx * 0.44), y: pondTexture.height * (0.2 + entry.ny * 0.6) }),
+          heading: entry.heading,
+          cruise: entry.cruise,
+          alpha: 0.94,
+          species: "showa",
+        };
+      });
     if (testPose) {
       const point = worldToScreen(fishDefinitions[0].position);
       if (diagnostics) host.dataset.koiTest = JSON.stringify({
@@ -349,6 +465,9 @@ export async function startPondRenderer(options: StartOptions) {
       width: pondTexture.width,
       height: pondTexture.height,
       fish: fishDefinitions,
+      headSeparation: 0,
+      recoverOutside: liveAscii,
+      waterBounds: liveAscii ? () => ({ minX: 0, maxX: pondTexture.width, minY: 0, maxY: pondTexture.height }) : undefined,
       flies: [
         { id: "fly-0", position: screenToWorld(window.innerWidth * 0.72, window.innerHeight * 0.25), orbitX: 240, orbitY: 90, phase: 0.4, speed: 0.021, color: 0x56d7c8 },
         { id: "fly-1", position: screenToWorld(window.innerWidth * 0.33, window.innerHeight * 0.36), orbitX: 190, orbitY: 115, phase: 2.7, speed: 0.019, color: 0xe8a64f },
@@ -359,14 +478,46 @@ export async function startPondRenderer(options: StartOptions) {
     const visualRandom = createPondRandom(`${pondSeed}:render`);
 
     const sourceCellHeight = koiAtlas.height / 4;
+    const fishGeometry = liveAscii ? own(createBentFishGeometry()) : quad;
+    type MaterialSwap = {
+      mesh: THREE.Mesh;
+      colorMaterial: THREE.Material;
+      idMaterial: THREE.Material;
+      sync?: () => void;
+    };
+    const swaps: MaterialSwap[] = [];
+    const bindSwap = (mesh: THREE.Mesh, idMaterial: THREE.Material, sync?: () => void) => {
+      swaps.push({ mesh, colorMaterial: mesh.material as THREE.Material, idMaterial, sync });
+    };
+    const foodIdMaterial = own(createFlatIdMaterial(12));
+    const flyIdMaterial = own(createFlatIdMaterial(14));
+    const bonkIdMaterial = own(createFlatIdMaterial(15));
     const fishVisuals = new Map<string, FishVisual>();
     for (const fish of fishDefinitions) {
-      const fishSprite = sprite(koiAtlas, 2, true);
+      const fishSprite = liveAscii
+        ? createPondSprite(fishGeometry, own(koiAtlas.texture.clone()), 2)
+        : sprite(koiAtlas, 2, true);
+      if (liveAscii) own(fishSprite.material);
+      const bend: FishBendUniforms | null = liveAscii ? {
+        time: { value: 0 },
+        curve: { value: 0 },
+        amount: { value: 1 },
+      } : null;
+      if (bend) attachFishBend(fishSprite.material, bend);
+      if (bend && fishSprite.material.map) {
+        const identified = createFishIdMaterial(fishSprite.material.map, bend, tanchoIds.has(fish.id));
+        own(identified.material);
+        bindSwap(fishSprite, identified.material, identified.sync);
+      }
       fishSprite.scale.set(fish.displayWidth, fish.displayWidth, 1);
       const animation: AtlasAnimation = {
-        texture: fishSprite.material.map!, frames: testPose ? [testPose.column] : [1, 0, 1, 2, 3, 2], row: fish.row,
+        texture: fishSprite.material.map!,
+        frames: testPose ? [testPose.column] : liveAscii ? [1] : [1, 0, 1, 2, 3, 2],
+        row: fish.row,
         bounds: KOI_FRAME_BOUNDS_PX[fish.row],
-        speed: 0.038 + fish.row * 0.003, progress: fish.row % 6, frame: 0,
+        speed: liveAscii ? 0 : 0.038 + fish.row * 0.003,
+        progress: liveAscii ? 0 : fish.row % 6,
+        frame: 0,
       };
       animate(animation, 0);
       const shadow = pixels(2);
@@ -397,12 +548,19 @@ export async function startPondRenderer(options: StartOptions) {
       const status = new THREE.Group();
       status.add(bonk, stars);
       status.visible = false;
+      if (liveAscii) status.scale.setScalar(Math.max(1, pondFrame.cell / 4));
       stage.add(status);
       fishVisuals.set(fish.id, {
         container, sprite: fishSprite, shadow, animation, alpha: fish.alpha,
-        baseScaleX: fish.displayWidth,
+        baseScaleX: (fishCells.get(fish.id) ?? fish.displayWidth) * (fishCells.has(fish.id) ? pondFrame.cell / viewScale : 1),
         lastWake: 0, surfaced: false, status, bonk, stars,
+        bend, bendHeading: fish.heading,
       });
+      if (liveAscii) {
+        shadow.visible = false;
+        bindSwap(bonk, bonkIdMaterial);
+        bindSwap(stars, bonkIdMaterial);
+      }
     }
 
     const insectLayer = layer();
@@ -431,6 +589,10 @@ export async function startPondRenderer(options: StartOptions) {
       container.add(wings, body);
       insectLayer.add(container);
       flyVisuals.set(fly.id, { container, wings });
+      if (liveAscii) {
+        bindSwap(wings, flyIdMaterial);
+        bindSwap(body, flyIdMaterial);
+      }
     }
     const midgeLayer = pixels(6);
     insectLayer.add(midgeLayer);
@@ -469,8 +631,11 @@ export async function startPondRenderer(options: StartOptions) {
       if (diagnostics) host.dataset.ringCount = String(rings.length);
     };
     const addRipple = (x: number, y: number, size = 132, strength = 1) => {
+      if (liveAscii && reduced) return;
       const speed = 145 + strength * 45;
-      ripples.push({ x, y, size, strength, speed, born: performance.now(), life: size / speed * 1000 + 180 });
+      const rippleSize = liveAscii ? 14 * pondFrame.cell : size;
+      const life = liveAscii ? 1200 : size / speed * 1000 + 180;
+      ripples.push({ x, y, size: rippleSize, strength, speed, born: performance.now(), life });
       if (ripples.length > POND_RIPPLE_CAPACITY) ripples.shift();
       if (diagnostics) host.dataset.rippleCount = String(ripples.length);
     };
@@ -482,6 +647,7 @@ export async function startPondRenderer(options: StartOptions) {
       shadow.ellipse(0, 3, 7, 3, 0x062d2c, 0.24);
       shadow.material.blending = THREE.MultiplyBlending;
       shadow.material.premultipliedAlpha = true;
+      if (liveAscii) shadow.visible = false;
       const group = new THREE.Group();
       const pellets = Array.from({ length: 9 }, (_, index) => {
         const pellet = pixels(3.4, 1);
@@ -491,6 +657,7 @@ export async function startPondRenderer(options: StartOptions) {
           index % 3 === 0 ? 0xe4bb68 : index % 3 === 1 ? 0xb97a43 : 0xf0d184, 0.96);
         pellet.position.set(Math.cos(angle) * radius, Math.sin(angle) * radius * 0.72, 0);
         group.add(pellet);
+        if (liveAscii) bindSwap(pellet, foodIdMaterial);
         return pellet;
       });
       const container = new THREE.Group();
@@ -521,6 +688,14 @@ export async function startPondRenderer(options: StartOptions) {
     const catTurnSprite = sprite(catTurnAtlas, 5.02, true);
     catTurnSprite.scale.copy(catSprite.scale);
     catTurnSprite.visible = false;
+    if (liveAscii && catSprite.material.map && catTurnSprite.material.map) {
+      const catId = createSilhouetteIdMaterial(catSprite.material.map, 13);
+      const catTurnId = createSilhouetteIdMaterial(catTurnSprite.material.map, 13);
+      own(catId.material);
+      own(catTurnId.material);
+      bindSwap(catSprite, catId.material, catId.sync);
+      bindSwap(catTurnSprite, catTurnId.material, catTurnId.sync);
+    }
     const catShadow = pixels(5);
     catShadow.ellipse(0, 2, catSize * 0.28, catSize * 0.1, 0x071c1a, 0.28);
     catShadow.material.blending = THREE.MultiplyBlending;
@@ -547,6 +722,17 @@ export async function startPondRenderer(options: StartOptions) {
       velocity: { x: 0, y: 0 }, time: 0, energy: 0,
     };
     let lastTrailRing = 0;
+    let lastPointerWake = 0;
+    let glyphWakes: { x: number; y: number; born: number; life: number }[] = [];
+    const addGlyphWake = (x: number, y: number, life: number) => {
+      if (!liveAscii || reduced) return;
+      glyphWakes.push({ x, y, born: performance.now(), life });
+      if (glyphWakes.length > 120) glyphWakes = glyphWakes.slice(-120);
+    };
+    const wakeLayer = pixels(1.2, 760);
+    wakeLayer.material = own(createWakeIdMaterial()) as unknown as THREE.MeshBasicMaterial;
+    wakeLayer.visible = false;
+    stage.add(wakeLayer);
     let primaryImpactCount = 0;
     let lastFoodRequested: PondPoint | null = null;
     let lastFoodDropped: PondPoint | null = null;
@@ -575,6 +761,10 @@ export async function startPondRenderer(options: StartOptions) {
           if (now - lastTrailRing > 82) {
             addRing(screen.x, screen.y);
             lastTrailRing = now;
+          }
+          if (liveAscii && now - lastPointerWake > 40) {
+            addGlyphWake(screen.x, screen.y, 1000);
+            lastPointerWake = now;
           }
         }
         pointer = { screen, world, velocity, time: energy > 0 ? now : 0, energy };
@@ -752,7 +942,8 @@ export async function startPondRenderer(options: StartOptions) {
         const fall = Math.pow(1 - food.dropProgress, 2) * (reduced ? 5 : 22);
         visual.container.position.set(point.x, point.y, 0);
         visual.group.position.y = -fall;
-        visual.group.scale.setScalar((0.76 + food.pelletSize / 13) * (food.state === "depleted" ? 0.72 : 1));
+        const foodScale = (0.76 + food.pelletSize / 13) * (food.state === "depleted" ? 0.72 : 1);
+        visual.group.scale.setScalar(liveAscii ? foodScale * Math.max(1, pondFrame.cell / 2.4) : foodScale);
         visual.shadow.material.opacity = food.state === "dropping" ? 0.12 + food.dropProgress * 0.5 : 0.7;
         visual.pellets.forEach((pellet, index) => { pellet.visible = index < Math.ceil(food.remainingAmount); });
       }
@@ -760,6 +951,8 @@ export async function startPondRenderer(options: StartOptions) {
         if (!liveFood.has(id)) {
           visual.container.removeFromParent();
           for (const mesh of [visual.shadow, ...visual.pellets]) {
+            const index = swaps.findIndex((swap) => swap.mesh === mesh);
+            if (index >= 0) swaps.splice(index, 1);
             mesh.geometry.dispose();
             mesh.material.dispose();
             resources.delete(mesh.geometry);
@@ -800,8 +993,16 @@ export async function startPondRenderer(options: StartOptions) {
         const visual = flyVisuals.get(fly.id);
         if (!visual) continue;
         const point = worldToScreen(fly.position);
-        visual.container.position.set(point.x, point.y, 0);
-        visual.container.scale.setScalar(1 + fly.lift * 0.008);
+        if (liveAscii) {
+          const angle = fly.id === "fly-0" ? -2.35 : 0.55;
+          const band = 1.15 + Math.sin(simulationNow * 0.001 + (fly.id === "fly-0" ? 0.4 : 2.1)) * 0.35;
+          visual.container.position.set(
+            pondFrame.cx + Math.cos(angle) * (pondFrame.rx + band) * pondFrame.cell,
+            pondFrame.cy + Math.sin(angle) * (pondFrame.ry + band) * pondFrame.cell,
+            0,
+          );
+        } else visual.container.position.set(point.x, point.y, 0);
+        visual.container.scale.setScalar((1 + fly.lift * 0.008) * (liveAscii ? 1.7 : 1));
         const speed = Math.hypot(fly.velocity.x, fly.velocity.y);
         if (speed > 2) visual.container.rotation.z += pondAngleDelta(visual.container.rotation.z, fly.heading) * (1 - Math.exp(-delta * 8));
         visual.wings.scale.y = 0.35 + Math.abs(Math.sin(fly.wingPhase)) * fly.wingActivity * (fly.reacting ? 1.1 : 0.75);
@@ -818,6 +1019,12 @@ export async function startPondRenderer(options: StartOptions) {
         const speed = Math.hypot(fish.velocity.x, fish.velocity.y);
         visual.container.rotation.z = (testPose?.heading ?? fish.heading) + Math.PI / 2;
         const effort = Math.min(2.5, fish.speedScale);
+        if (visual.bend) {
+          const turn = pondAngleDelta(visual.bendHeading, fish.heading);
+          visual.bendHeading = fish.heading;
+          visual.bend.curve.value = Math.max(-0.28, Math.min(0.28, turn * 1.5));
+          visual.bend.time.value += delta * (3 + effort * 4);
+        }
         visual.animation.speed = (0.012 + effort * 0.025) * motionScale;
         const depthAlpha = testPose ? 1 : Math.min(0.98, fish.alpha + (0.5 - fish.depth) * 0.55);
         visual.alpha = testPose ? 1 : visual.alpha + (depthAlpha - visual.alpha) * Math.min(1, delta * 4);
@@ -834,11 +1041,18 @@ export async function startPondRenderer(options: StartOptions) {
         const sourceCellCenter = (fish.row + 0.5) * sourceCellHeight;
         const pixelScale = visual.baseScaleX * viewScale * depthScale / sourceCellHeight;
         visual.sprite.position.y = (frameCenter - sourceCellCenter) * pixelScale * (2 - peck);
-        visual.sprite.scale.set(visual.baseScaleX * viewScale * peck * depthScale, frameBounds.height * pixelScale * (2 - peck), 1);
+        if (liveAscii && !testPose) {
+          const span = pondKoiQuadPixels(fishCells.get(fish.id) ?? 14, pondFrame.cell);
+          visual.baseScaleX = span.scaleY / viewScale;
+          visual.sprite.position.y = 0;
+          visual.sprite.scale.set(span.scaleX * peck, span.scaleY * (2 - peck), 1);
+        } else {
+          visual.sprite.scale.set(visual.baseScaleX * viewScale * peck * depthScale, frameBounds.height * pixelScale * (2 - peck), 1);
+        }
         visual.shadow.scale.setScalar((0.86 + fish.depth * 0.24) * viewScale);
         visual.status.visible = fish.stun !== null;
         if (fish.stun) {
-          const headOffset = fish.displayWidth * viewScale * depthScale * 0.43;
+          const headOffset = visual.baseScaleX * viewScale * depthScale * 0.43;
           visual.status.position.set(point.x + Math.cos(fish.heading) * headOffset,
             point.y + Math.sin(fish.heading) * headOffset - 14, 0);
           visual.bonk.position.y = -22 - Math.min(1, fish.stun.elapsed / 1.3) * (reduced ? 0 : 10);
@@ -863,7 +1077,18 @@ export async function startPondRenderer(options: StartOptions) {
           addRipple(point.x, point.y, fish.displayWidth * 1.3, 0.45);
         }
         visual.surfaced = surfaced;
-        if (!reduced && speed > 9 && (fish.depth < 0.4 || fish.reacting) && now - visual.lastWake > 240 / Math.max(0.65, effort)) {
+        if (liveAscii && !reduced && speed > 6 && now - visual.lastWake > Math.max(90, 90 * 28 / Math.max(speed, 6))) {
+          const tail = worldToScreen({
+            x: fish.position.x - Math.cos(fish.heading) * visual.baseScaleX * 0.42,
+            y: fish.position.y - Math.sin(fish.heading) * visual.baseScaleX * 0.42,
+          });
+          const lateral = (visualRandom() - 0.5) * 3 * pondFrame.cell;
+          const wakeX = tail.x + Math.cos(fish.heading + Math.PI / 2) * lateral;
+          const wakeY = tail.y + Math.sin(fish.heading + Math.PI / 2) * lateral;
+          if (isWaterScreen(wakeX, wakeY)) addGlyphWake(wakeX, wakeY, 1200);
+          visual.lastWake = now;
+        }
+        if (!liveAscii && !reduced && speed > 9 && (fish.depth < 0.4 || fish.reacting) && now - visual.lastWake > 240 / Math.max(0.65, effort)) {
           const tail = worldToScreen({
             x: fish.position.x - Math.cos(fish.heading) * fish.displayWidth * 0.22,
             y: fish.position.y - Math.sin(fish.heading) * fish.displayWidth * 0.22,
@@ -909,6 +1134,15 @@ export async function startPondRenderer(options: StartOptions) {
         return true;
       });
       ripples = ripples.filter((ripple) => now - ripple.born < ripple.life);
+      wakeLayer.clear();
+      glyphWakes = glyphWakes.filter((wake) => {
+        const age = now - wake.born;
+        if (age >= wake.life) return false;
+        const life = 1 - age / wake.life;
+        const size = pondFrame.cell * 0.9;
+        wakeLayer.rectangle(wake.x - size / 2, wake.y - size / 2, size, size, 0xffffff, life);
+        return true;
+      });
       for (let index = 0; index < POND_RIPPLE_CAPACITY; index += 1) {
         const ripple = ripples[index];
         if (ripple) {
@@ -921,7 +1155,7 @@ export async function startPondRenderer(options: StartOptions) {
       }
 
       frameCount += 1;
-      if (diagnostics && frameCount % 12 === 0) {
+      if (diagnostics && (frameCount === 1 || frameCount % 12 === 0)) {
         host.dataset.fishPositions = frame.fish.map((fish) => {
           const point = worldToScreen(fish.position);
           return `${point.x.toFixed(1)},${point.y.toFixed(1)}`;
@@ -989,45 +1223,159 @@ export async function startPondRenderer(options: StartOptions) {
       for (const child of stage.children) child.visible = child === fishLayer;
       for (const visual of fishVisuals.values()) visual.shadow.visible = false;
     }
+    if (liveAscii) {
+      background.visible = false;
+      water.mesh.visible = false;
+      foreground.visible = false;
+      ambientLayer.visible = false;
+      particleLayer.visible = false;
+      midgeLayer.visible = false;
+      catShadow.visible = false;
+      feedAffordance.visible = false;
+    }
+
+    const idClear = new THREE.Color();
+    const present = () => {
+      if (!liveAscii || !ascii) {
+        renderer.render(stage, camera);
+        return;
+      }
+      const previousTarget = renderer.getRenderTarget();
+      renderer.getClearColor(idClear);
+      const clearAlpha = renderer.getClearAlpha();
+      renderer.setClearColor(0x000000, 0);
+      wakeLayer.visible = true;
+      for (const swap of swaps) {
+        swap.sync?.();
+        swap.mesh.material = swap.idMaterial;
+      }
+      try {
+        renderer.setRenderTarget(ascii.materialBuffer);
+        renderer.clear();
+        renderer.render(stage, camera);
+      } finally {
+        for (const swap of swaps) swap.mesh.material = swap.colorMaterial;
+        wakeLayer.visible = false;
+        renderer.setRenderTarget(previousTarget);
+        renderer.setClearColor(idClear, clearAlpha);
+      }
+      const stamp = performance.now();
+      ellipseUniform.set(pondFrame.cx / pondFrame.cell, pondFrame.cy / pondFrame.cell, pondFrame.rx, pondFrame.ry);
+      ascii.setFrame(ellipseUniform, pondFrame.card, ripples.slice(0, POND_RIPPLE_CAPACITY).map((ripple) => {
+        const elapsed = Math.min(1, (stamp - ripple.born) / Math.max(1, ripple.life));
+        const eased = 1 - (1 - elapsed) * (1 - elapsed);
+        return {
+          x: ripple.x,
+          y: ripple.y,
+          radius: eased * 14 * pondFrame.cell,
+          strength: (1 - elapsed) * ripple.strength,
+        };
+      }));
+      ascii.compose(renderer);
+    };
 
     let previousTime: number | null = null;
+    let frameBudget = 0;
+    let heroOnScreen = true;
     const draw = (now: number) => {
       animationFrame = null;
-      if (disposed || document.hidden) return;
-      const delta = previousTime === null ? 1 / 60 : Math.min(Math.max((now - previousTime) / 1000, 0), 0.08);
+      if (disposed || document.hidden || (liveAscii && !heroOnScreen)) {
+        if (!disposed) host.dataset.pondState = "paused";
+        return;
+      }
+      const deltaMs = previousTime === null ? 1000 / POND_ASCII_FPS_CAP : Math.min(Math.max(now - previousTime, 0), 80);
       previousTime = now;
+      const frameInterval = 1000 / POND_ASCII_FPS_CAP;
+      let stepMs = deltaMs;
+      if (liveAscii && !reduced) {
+        const paced = pondFrameBudget(frameBudget, deltaMs, frameInterval);
+        frameBudget = paced.budget;
+        if (paced.stepMs === 0) {
+          animationFrame = window.requestAnimationFrame(draw);
+          return;
+        }
+        stepMs = paced.stepMs;
+      }
+      const delta = Math.min(0.08, Math.max(1 / 120, stepMs / 1000));
       try {
         step(now, delta);
-        renderer.render(stage, camera);
+        present();
       } catch (error) {
         fallback(error instanceof Error ? error.message : "renderer-frame-failed");
         return;
       }
       if (!revealed) {
         revealed = true;
-        revealFrame = window.requestAnimationFrame(() => {
-          if (!disposed) pond.dataset.renderer = "three";
-        });
+        if (liveAscii) {
+          host.style.transition = "none";
+          canvas.dataset.presented = "ascii";
+          pond.dataset.asciiFrame = "1";
+        }
+        pond.dataset.renderer = "three";
       }
       animationFrame = window.requestAnimationFrame(draw);
     };
     const visibility = () => {
       if (disposed) return;
       previousTime = null;
-      if (document.hidden) {
+      frameBudget = 0;
+      if (document.hidden || (liveAscii && !heroOnScreen)) {
         if (animationFrame !== null) window.cancelAnimationFrame(animationFrame);
         animationFrame = null;
         host.dataset.pondState = "paused";
       } else {
-        if (animationFrame === null) animationFrame = window.requestAnimationFrame(draw);
         host.dataset.pondState = "running";
+        if (animationFrame === null) animationFrame = window.requestAnimationFrame(draw);
       }
     };
-    window.addEventListener("resize", layout);
+    const onResize = () => {
+      layout();
+      if (!liveAscii) return;
+      const updates: { id: string; displayWidth: number; visualLength: number }[] = [];
+      for (const fish of fishDefinitions) {
+        const visual = fishVisuals.get(fish.id);
+        const cells = fishCells.get(fish.id);
+        const bodyScale = bodyScales.get(fish.id);
+        if (!visual || !cells || bodyScale === undefined) continue;
+        const visualLength = cells * pondFrame.cell / viewScale;
+        visual.baseScaleX = visualLength;
+        fish.displayWidth = visualLength * bodyScale;
+        fish.visualLength = visualLength;
+        updates.push({ id: fish.id, displayWidth: fish.displayWidth, visualLength });
+      }
+      simulation.resizeFish(updates);
+      if (reduced && frameCount > 0) {
+        step(performance.now(), 1 / 60);
+        present();
+      }
+    };
+    const onScroll = () => {
+      if (!liveAscii || disposed) return;
+      measureCard();
+      if (reduced && frameCount > 0) present();
+    };
+    const heroCard = liveAscii ? document.querySelector("[data-hero-card]") : null;
+    const heroObserver = heroCard ? new IntersectionObserver((entries) => {
+      heroOnScreen = entries.some((entry) => entry.isIntersecting);
+      visibility();
+    }) : null;
+    if (heroCard && heroObserver) heroObserver.observe(heroCard);
+    const themeMedia = window.matchMedia("(prefers-color-scheme: light)");
+    const onTheme = () => {
+      ascii?.setTheme(!themeMedia.matches);
+      if (liveAscii) renderer.setClearColor(themeMedia.matches ? 0xeee8f3 : 0x252031, 1);
+      if (liveAscii && reduced && frameCount > 0) present();
+    };
+    if (liveAscii) themeMedia.addEventListener("change", onTheme);
+    window.addEventListener("resize", onResize);
+    window.addEventListener("scroll", onScroll, { capture: true, passive: true });
     document.addEventListener("visibilitychange", visibility);
     removeListeners = () => {
-      window.removeEventListener("resize", layout);
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("scroll", onScroll, { capture: true });
       document.removeEventListener("visibilitychange", visibility);
+      heroObserver?.disconnect();
+      if (liveAscii) themeMedia.removeEventListener("change", onTheme);
     };
     if (diagnostics) {
       host.dataset.fishCount = String(fishDefinitions.length);
