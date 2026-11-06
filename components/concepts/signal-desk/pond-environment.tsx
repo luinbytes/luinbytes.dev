@@ -13,14 +13,9 @@ export function PondEnvironment({ reduced, mode = "ascii" }: { reduced: boolean;
   const pondRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const interactionRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const host = hostRef.current;
-    const pond = pondRef.current;
-    if (!host || !pond) return;
-    pond.dataset.view = mode;
-    host.dispatchEvent(new Event("pond-view-change"));
-  }, [mode]);
+  const transitionRef = useRef<HTMLImageElement | null>(null);
+  const reducedRef = useRef(reduced);
+  reducedRef.current = reduced;
 
   useEffect(() => {
     const pond = pondRef.current;
@@ -28,21 +23,51 @@ export function PondEnvironment({ reduced, mode = "ascii" }: { reduced: boolean;
     const interaction = interactionRef.current;
     if (!pond || !host || !interaction) return;
 
+    pond.querySelectorAll('[data-pond-transition][data-fade]').forEach((image) => image.remove());
+    if (reduced) {
+      transitionRef.current?.remove();
+      transitionRef.current = null;
+    }
+    pond.dataset.motion = reduced ? "reduced" : "full";
+    pond.toggleAttribute("data-switching", Boolean(transitionRef.current));
+    pond.dataset.view = mode;
     pond.dataset.renderer = "loading";
+    for (const key of Object.keys(host.dataset)) delete host.dataset[key];
+    host.dataset.pondState = "loading";
     delete document.documentElement.dataset.pondBoot;
     const controller = new AbortController();
     let disposed = false;
     let cleanup = () => {};
-    void import("./pond-renderer")
-      .then(({ startPondRenderer }) => startPondRenderer({
+    let capture: (() => string) | undefined;
+    const observer = new MutationObserver(() => {
+      if (pond.dataset.renderer !== "three" && pond.dataset.renderer !== "fallback") return;
+      const image = transitionRef.current;
+      if (!image || reduced) {
+        image?.remove();
+        pond.removeAttribute("data-switching");
+      } else {
+        image.dataset.fade = "";
+        image.addEventListener("animationend", () => {
+          if (image.parentElement !== pond) return;
+          image.remove();
+          if (!pond.querySelector("[data-pond-transition]")) pond.removeAttribute("data-switching");
+        }, { once: true });
+      }
+      transitionRef.current = null;
+    });
+    observer.observe(pond, { attributes: true, attributeFilter: ["data-renderer"] });
+    void (mode === "pixel" ? import("./pond-pixel-renderer") : import("./pond-renderer"))
+      .then(({ startPondRenderer }) => disposed ? undefined : startPondRenderer({
         pond,
         host,
         interaction,
         reduced,
         canvasClassName: styles.pondCanvas,
         signal: controller.signal,
+        onCaptureReady: (snapshot) => { capture = snapshot; },
       }))
       .then((stop) => {
+        if (!stop) return;
         if (disposed) stop();
         else cleanup = stop;
       })
@@ -56,10 +81,25 @@ export function PondEnvironment({ reduced, mode = "ascii" }: { reduced: boolean;
 
     return () => {
       disposed = true;
+      observer.disconnect();
+      if (!reduced && !reducedRef.current && capture && pond.dataset.renderer === "three") {
+        try {
+          const image = document.createElement("img");
+          image.alt = "";
+          image.dataset.pondTransition = "";
+          image.src = capture();
+          transitionRef.current?.remove();
+          transitionRef.current = image;
+          pond.append(image);
+        } catch {
+          transitionRef.current?.remove();
+          transitionRef.current = null;
+        }
+      }
       controller.abort();
       cleanup();
     };
-  }, [reduced]);
+  }, [mode, reduced]);
 
   return (
     <>

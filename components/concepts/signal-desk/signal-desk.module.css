@@ -156,10 +156,6 @@
   pointer-events: auto;
 }
 
-.page:has([data-renderer="fallback"]) .pondSwitcher {
-  display: none;
-}
-
 .pondSwitcher legend {
   float: left;
   width: 100%;
