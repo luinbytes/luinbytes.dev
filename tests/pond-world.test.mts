@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { inflateSync } from "node:zlib";
+import * as THREE from "three";
 
 import {
   createPondWorld,
@@ -15,9 +16,18 @@ import {
   type FishSimulationFrame,
   type PondPointerInput,
 } from "../components/concepts/signal-desk/pond-simulation.ts";
+import {
+  POND_ASCII_RAMP,
+  POND_BODY_MIN_COLUMN,
+  pondBodyGlyphColumn,
+  pondFrameBudget,
+  pondKoiQuadPixels,
+} from "../components/concepts/signal-desk/pond-ascii.ts";
+import { createFishIdMaterial, pondFishCellInside, type FishBendUniforms } from "../components/concepts/signal-desk/pond-three.ts";
 
 const FRAME_MS = 1000 / 30;
 const ALL_ANCHORS = ROCK_ANCHORS.map((anchor) => anchor.id);
+
 const QUIET_POINTER: PondPointerInput = {
   position: { x: -1000, y: -1000 },
   velocity: { x: 0, y: 0 },
@@ -89,79 +99,14 @@ function noseContactFish(degrees: number): FishDefinition[] {
   ];
 }
 
-function nearbyTargets(now: number): PondTarget[] {
-  return ROCK_ANCHORS.map((anchor, index) => ({
-    id: `fish-${index}`,
-    type: index % 3 === 0 ? "fly" : "fish",
-    position: {
-      x: anchor.position.x + (index % 2 === 0 ? 72 : -72) + Math.sin(now * 0.0007 + index) * 9,
-      y: anchor.position.y - 24 + Math.cos(now * 0.0009 + index * 0.7) * 7,
-    },
-    velocity: {
-      x: Math.cos(now * 0.0007 + index) * 6.3,
-      y: -Math.sin(now * 0.0009 + index * 0.7) * 6.3,
-    },
-    visible: true,
-    attackable: true,
-    interactionRange: index % 3 === 0 ? 12 : 34,
-  }));
-}
-
-function runWorld(seed: string, seconds: number, withTargets = true, manualHops = true) {
+function runWorld(seed: string, seconds: number) {
   const world = createPondWorld(seed);
-  const events: PondWorldEvent[] = [];
   const trace: string[] = [];
-  let now = 0;
-
-  for (let frameIndex = 0; frameIndex < seconds * 30; frameIndex += 1) {
-    now += FRAME_MS;
-    if (manualHops && frameIndex > 0 && frameIndex % 330 === 0) world.requestHop();
-    const targets = withTargets ? nearbyTargets(now) : [];
-    const frame = world.step({ now, delta: 1 / 30, targets, visibleAnchorIds: ALL_ANCHORS });
-    events.push(...frame.events);
-
-    const anchor = ROCK_ANCHORS.find((candidate) => candidate.id === frame.cat.anchorId);
-    assert.ok(anchor, `unknown current anchor ${frame.cat.anchorId}`);
-    if (frame.cat.grounded) {
-      assert.ok(Math.hypot(frame.cat.contact.x - anchor.position.x, frame.cat.contact.y - anchor.position.y) < 0.001);
-    }
-
-    for (const event of frame.events) {
-      if (event.type === "land") {
-        const landed = ROCK_ANCHORS.find((candidate) => candidate.id === event.anchorId);
-        assert.ok(landed, `unknown landing anchor ${event.anchorId}`);
-        assert.equal(frame.cat.grounded, true);
-        assert.ok(Math.hypot(event.position.x - landed.position.x, event.position.y - landed.position.y) < 0.001);
-      }
-      if (event.type === "bat") {
-        const target = targets.find((candidate) => candidate.id === event.targetId);
-        assert.ok(target, "bat target must exist in the current world frame");
-        assert.equal(target.visible && target.attackable, true);
-        assert.ok(event.distance <= event.reach, `bat distance ${event.distance} exceeded reach ${event.reach}`);
-        assert.equal(frame.cat.selectedTargetId, event.targetId);
-        assert.ok(Math.hypot(frame.cat.aim.x - event.aim.x, frame.cat.aim.y - event.aim.y) < 0.001);
-        assert.equal(frame.cat.facing, event.aim.x < frame.cat.contact.x ? -1 : 1);
-      }
-    }
-
-    if (frame.events.length) {
-      trace.push(
-        frame.events
-          .map((event) =>
-            event.type === "transition"
-              ? `${event.type}:${event.to}:${event.reason}`
-              : event.type === "land"
-                ? `${event.type}:${event.anchorId}`
-                : event.type === "bat"
-                  ? `${event.type}:${event.targetType}:${event.hit}`
-                  : event.type,
-          )
-          .join("|"),
-      );
-    }
+  for (let index = 0; index < seconds * 30; index += 1) {
+    const frame = world.step({ now: (index + 1) * FRAME_MS, delta: 1 / 30, targets: [], visibleAnchorIds: ALL_ANCHORS });
+    if (frame.events.length) trace.push(JSON.stringify(frame.events));
   }
-
-  return { events, trace };
+  return { trace };
 }
 
 test("authored anchors lie inside their rock-local sitting regions", () => {
@@ -176,135 +121,6 @@ test("authored anchors lie inside their rock-local sitting regions", () => {
       assert.ok(Math.abs(dx * rock.tangent.x + dy * rock.tangent.y) <= rock.sittingRegion.radiusX);
       assert.ok(Math.abs(dx * rock.normal.x + dy * rock.normal.y) <= rock.sittingRegion.radiusY);
     }
-  }
-});
-
-test("five virtual minutes without targets never produces an empty-space bat", () => {
-  const { events } = runWorld("empty-target-soak", 300, false, false);
-  assert.equal(events.some((event) => event.type === "bat"), false);
-});
-
-test("passive patrols remember recent rocks instead of ping-ponging", () => {
-  const { events } = runWorld("routine-memory", 300, false, false);
-  const hops = events.filter((event): event is Extract<PondWorldEvent, { type: "takeoff" }> => event.type === "takeoff");
-  assert.ok(hops.length >= 4, "the cat should still patrol occasionally");
-  for (let index = 1; index < hops.length; index += 1) {
-    assert.notDeepEqual(
-      [hops[index].fromAnchor, hops[index].toAnchor],
-      [hops[index - 1].toAnchor, hops[index - 1].fromAnchor],
-      "the cat immediately reversed its previous hop",
-    );
-  }
-});
-
-test("the cat routes across rocks to hunt an actual fish", () => {
-  const world = createPondWorld("purposeful-hunt");
-  const south = ROCK_ANCHORS.find((anchor) => anchor.id === "south-stone-top")!;
-  const events: PondWorldEvent[] = [];
-  for (let frameIndex = 1; frameIndex <= 30 * 30; frameIndex += 1) {
-    const now = frameIndex * FRAME_MS;
-    const fish: PondTarget = {
-      id: "hunt-fish",
-      type: "fish",
-      position: { x: south.position.x + 68, y: south.position.y - 28 },
-      velocity: { x: 0, y: 0 },
-      visible: true,
-      attackable: true,
-      interactionRange: 34,
-    };
-    events.push(...world.step({ now, delta: 1 / 30, targets: [fish], visibleAnchorIds: ALL_ANCHORS }).events);
-  }
-  assert.ok(events.some((event) => event.type === "transition" && event.reason === "moving-to-better-rock"));
-  assert.ok(events.some((event) => event.type === "bat" && event.targetId === "hunt-fish"));
-});
-
-test("the cat chooses a fish beside a reachable perch instead of an open-water decoy", () => {
-  const world = createPondWorld("perch-aware-hunt");
-  const upperPerch = ROCK_ANCHORS.find((anchor) => anchor.id === "east-island-top")!;
-  const targets: PondTarget[] = [
-    {
-      id: "open-water-decoy",
-      type: "fish",
-      position: { x: 900, y: 800 },
-      velocity: { x: 0, y: 0 },
-      visible: true,
-      attackable: true,
-      interactionRange: 30,
-    },
-    {
-      id: "upper-perch-fish",
-      type: "fish",
-      position: { x: upperPerch.position.x + 72, y: upperPerch.position.y - 22 },
-      velocity: { x: 0, y: 0 },
-      visible: true,
-      attackable: true,
-      interactionRange: 34,
-    },
-  ];
-  let firstTarget: string | null = null;
-  const events: PondWorldEvent[] = [];
-
-  for (let frameIndex = 1; frameIndex <= 40 * 30; frameIndex += 1) {
-    const frame = world.step({
-      now: frameIndex * FRAME_MS,
-      delta: 1 / 30,
-      targets,
-      visibleAnchorIds: ALL_ANCHORS,
-    });
-    firstTarget ??= frame.cat.selectedTargetId;
-    events.push(...frame.events);
-  }
-
-  assert.equal(firstTarget, "upper-perch-fish");
-  assert.ok(events.some((event) => event.type === "land" && event.anchorId === "fern-stone-top"));
-  assert.ok(events.some((event) => event.type === "land" && event.anchorId === "east-island-top"));
-  assert.ok(events.some((event) => event.type === "bat" && event.targetId === "upper-perch-fish"));
-  assert.equal(events.some((event) => event.type === "bat" && event.targetId === "open-water-decoy"), false);
-});
-
-test("the integrated cat hunts moving koi from the eastern rock route", () => {
-  const simulation = createPondSimulation({
-    seed: "6c75",
-    width: 1586,
-    height: 1024,
-    isWater: () => true,
-    fish: Array.from({ length: 14 }, (_, index) => ({
-      id: `fish-${index}`,
-      row: index % 4,
-      displayWidth: 54 + index % 4 * 8,
-      position: { x: 220 + index % 7 * 180, y: 180 + Math.floor(index / 7) * 400 },
-      heading: index * 0.8,
-      cruise: 12 + index % 4,
-      alpha: 0.8,
-      species: "koi",
-    })),
-    flies: [],
-  });
-  const events: PondWorldEvent[] = [];
-  const landedAnchors = new Set<string>();
-
-  for (let frameIndex = 1; frameIndex <= 300 * 30; frameIndex += 1) {
-    const frame = simulation.step({
-      now: frameIndex * FRAME_MS,
-      delta: 1 / 30,
-      pointer: { position: { x: -1000, y: -1000 }, velocity: { x: 0, y: 0 }, influence: 0, energy: 0 },
-      visibleAnchorIds: ALL_ANCHORS,
-    });
-    events.push(...frame.events);
-    for (const event of frame.events) if (event.type === "land") landedAnchors.add(event.anchorId);
-  }
-
-  assert.ok(landedAnchors.has("east-island-top"), "cat never reached the eastern island");
-  assert.ok(landedAnchors.has("east-bank-step-top"), "cat never used the eastern bank step");
-  assert.ok(events.some((event) => event.type === "bat" && event.targetType === "fish"), "cat never completed a moving-koi hunt");
-  simulation.destroy();
-});
-
-test("long seeded sessions only land on anchors and only bat valid targets", () => {
-  for (let seed = 0; seed < 12; seed += 1) {
-    const { events } = runWorld(`quality-${seed}`, 180);
-    assert.ok(events.some((event) => event.type === "land"), `seed ${seed} never landed`);
-    assert.ok(events.some((event) => event.type === "bat"), `seed ${seed} never batted`);
   }
 });
 
@@ -331,6 +147,26 @@ test("food drops are exact, bounded, and evict the oldest entity at capacity", (
   const lastDrop = frame.events.filter((event) => event.type === "food-dropped").at(-1);
   assert.equal(lastDrop?.type, "food-dropped");
   if (lastDrop?.type === "food-dropped") assert.deepEqual(lastDrop.position, requested.at(-1));
+});
+
+test("large fish can feed on food near a bank without leaving water", () => {
+  const simulation = createPondSimulation({
+    seed: "bank-feeding", width: 1000, height: 1000,
+    isWater: (x, y) => x >= 100 && x <= 900 && y >= 100 && y <= 900,
+    fish: [{ ...MOTION_FISH, id: "large", displayWidth: 210, visualLength: 200, position: { x: 360, y: 500 }, heading: Math.PI, cruise: 35 }], flies: [],
+  });
+  simulation.dropFood({ x: 110, y: 500 });
+  const events: PondWorldEvent[] = [];
+  for (let index = 1; index <= 1800; index += 1) {
+    const frame = tickFish(simulation, index);
+    events.push(...frame.events);
+    assert.ok(frame.fish[0].position.x >= 100);
+    if (events.some((event) => event.type === "fish-fed")) break;
+  }
+  assert.ok(events.some((event) => event.type === "fish-reserved-food"));
+  assert.ok(events.some((event) => event.type === "fish-arrived"));
+  assert.ok(events.some((event) => event.type === "fish-fed"));
+  simulation.destroy();
 });
 
 test("fish discover, reserve, curve toward, eat, and release seeded food", () => {
@@ -416,6 +252,58 @@ test("nearby fish commit to fresh food promptly despite the drop disturbance", (
 
   assert.ok(noticedAt <= 200, `fish noticed food too slowly: ${noticedAt}ms`);
   assert.ok(reservedAt <= 400, `fish reserved food too slowly: ${reservedAt}ms`);
+});
+
+test("stalled food reservations are released for a nearby fish", () => {
+  const world = createPondWorld("food-reservation-progress");
+  world.dropFood({ x: 500, y: 500 });
+  const target = (id: string, x: number): PondTarget => ({
+    id, type: "fish", position: { x, y: 500 }, velocity: { x: 0, y: 0 },
+    visible: true, attackable: true, interactionRange: 18,
+  });
+  const distant = [target("a", 200), target("b", 250), target("c", 300)];
+  const events: PondWorldEvent[] = [];
+  let initiallyReserved = 0;
+  for (let index = 0; index <= 100; index += 1) {
+    const frame = world.step({
+      now: index * 100, delta: 0.1,
+      targets: index < 20 ? distant : [...distant, target("near", 500)],
+      visibleAnchorIds: [], foodApproach: (_fish, food) => food,
+    });
+    if (index === 19) initiallyReserved = frame.fish.filter((fish) => fish.reserved).length;
+    events.push(...frame.events);
+  }
+  assert.equal(initiallyReserved, 3);
+  assert.ok(events.some((event) => event.type === "fish-state" && event.reason === "approach-stalled"));
+  assert.ok(events.some((event) => event.type === "fish-fed" && event.fishId === "near"));
+});
+
+test("food reservations require a reachable approach and bites require actual proximity", () => {
+  const world = createPondWorld("food-reachability");
+  world.dropFood({ x: 100, y: 500 });
+  const fish: PondTarget = {
+    id: "near", type: "fish", position: { x: 130, y: 500 }, velocity: { x: 0, y: 0 },
+    visible: true, attackable: true, interactionRange: 18,
+  };
+  const events: PondWorldEvent[] = [];
+  let allowApproach = false;
+  let movedAway = false;
+  for (let index = 0; index < 150; index += 1) {
+    if (index === 45) allowApproach = true;
+    const frame = world.step({
+      now: index * 100, delta: 0.1, targets: [fish], visibleAnchorIds: [],
+      foodApproach: (_fish, _food, radius) => allowApproach ? { x: 100 + radius * 0.5, y: 500 } : null,
+    });
+    events.push(...frame.events);
+    if (frame.fish[0].state === "feeding" && !movedAway) {
+      fish.position = { x: 400, y: 500 };
+      movedAway = true;
+    }
+  }
+  assert.ok(events.some((event) => event.type === "fish-state" && event.reason === "food-unreachable"));
+  assert.ok(movedAway, "reachable food was never approached");
+  assert.ok(events.some((event) => event.type === "fish-state" && event.reason === "left-feeding-radius"));
+  assert.equal(events.some((event) => event.type === "fish-fed"), false);
 });
 
 test("idle koi stagger swimming, gliding, darts and surface rises without food or danger", () => {
@@ -594,45 +482,6 @@ test("flies damp arrival into a small hover and settle with still wings at rest"
   simulation.destroy();
 });
 
-test("a batted fly flees the cat origin independently of an inactive pointer", () => {
-  const options = {
-    seed: "bat-0",
-    width: 1586,
-    height: 1024,
-    isWater: () => true,
-    fish: [],
-    flies: [{ ...MOTION_FLY, position: { x: 850, y: 880 } }],
-  };
-  const leftPointer = createPondSimulation(options);
-  const rightPointer = createPondSimulation(options);
-  let batOrigin;
-  let batDistance = 0;
-  let batAt = 0;
-  let escaped = false;
-  for (let index = 1; index <= 40 * 30; index += 1) {
-    const input = { now: index * FRAME_MS, delta: 1 / 30, pointer: QUIET_POINTER, visibleAnchorIds: ["south-stone-top"] };
-    const left = leftPointer.step(input);
-    const right = rightPointer.step({ ...input, pointer: { ...QUIET_POINTER, position: { x: 3000, y: 3000 } } });
-    assert.deepEqual(left.flies, right.flies, "bat escape used the inactive pointer as its origin");
-    const fly = left.flies[0];
-    if (!batOrigin && left.events.some((event) => event.type === "bat" && event.targetType === "fly")) {
-      batOrigin = left.cat.contact;
-      batDistance = Math.hypot(fly.position.x - batOrigin.x, fly.position.y - batOrigin.y);
-      batAt = index;
-      assert.equal(fly.reacting, true);
-    }
-    if (batOrigin && index === batAt + 20) {
-      assert.ok(Math.hypot(fly.position.x - batOrigin.x, fly.position.y - batOrigin.y) > batDistance + 30, "fly failed to flee the bat origin");
-      assert.ok((fly.position.x - batOrigin.x) * fly.velocity.x + (fly.position.y - batOrigin.y) * fly.velocity.y > 0);
-      escaped = true;
-      break;
-    }
-  }
-  assert.equal(escaped, true, "fixture never produced a bat followed by an escape");
-  leftPointer.destroy();
-  rightPointer.destroy();
-});
-
 test("seeded locomotion is reproducible and paused or invalid deltas cannot advance it", () => {
   const options = { seed: "motion-repeatable", width: 1586, height: 1024, isWater: () => true, fish: [MOTION_FISH], flies: [MOTION_FLY] };
   const first = createPondSimulation(options);
@@ -740,6 +589,29 @@ test("crossing, flank and overtaking fish swim around occupied bodies without bo
     assert.ok(traveled[0] > 100 && traveled[1] > 35, `contact froze fish, travel ${traveled}`);
     simulation.destroy();
   }
+});
+
+test("ASCII fish avoid a head-on course without passing through or bonking", () => {
+  const fish = [
+    { ...MOTION_FISH, id: "a", position: { x: 400, y: 500 }, heading: 0, cruise: 35 },
+    { ...MOTION_FISH, id: "b", position: { x: 600, y: 500 }, heading: Math.PI, cruise: 35 },
+  ];
+  const simulation = createPondSimulation({ seed: "avoid-head-on", width: 1586, height: 1024, isWater: () => true, fish, flies: [], avoidHeadOn: true });
+  let previous = tickFish(simulation, 0, 0).fish;
+  let turned = false;
+  for (let index = 1; index <= 300; index += 1) {
+    const frame = tickFish(simulation, index).fish;
+    assertFishBodiesClear(frame);
+    frame.forEach((agent, i) => {
+      assert.equal(agent.stun, null);
+      const turn = Math.abs(Math.atan2(Math.sin(agent.heading - previous[i].heading), Math.cos(agent.heading - previous[i].heading)));
+      assert.ok(turn < 0.3, `abrupt turn ${turn}`);
+      if (Math.abs(Math.sin(agent.heading)) > 0.2) turned = true;
+    });
+    previous = frame;
+  }
+  assert.ok(turned, "fish did not turn away");
+  simulation.destroy();
 });
 
 test("a natural converging head-on approach reaches nose contact before bonking", () => {
@@ -1158,3 +1030,377 @@ for (const [viewportWidth, viewportHeight, fishCount] of [[1280, 800, 20], [390,
     simulation.destroy();
   });
 }
+
+test("a koi cell inside the silhouette stays a colon or denser", () => {
+  const crack = [0.04, 1, 1, 1, 1, 0.9, 0.8, 1, 1, 1, 1, 1, 0.95, 1, 1, 1];
+  assert.equal(pondFishCellInside(crack), true);
+  assert.equal(pondFishCellInside([0.2, 0.1, 0.34, 0.0]), false);
+  assert.equal(pondFishCellInside([0.35, 0.35, 0, 0, 0, 0, 0, 0, 0, 0]), false);
+  assert.equal(pondFishCellInside([0.35, 0.35, 0.35, 0.35, 0, 0, 0, 0, 0, 0]), true);
+  for (let step = 0; step <= 20; step += 1) {
+    const column = pondBodyGlyphColumn(step / 20);
+    assert.ok(column >= POND_BODY_MIN_COLUMN);
+    assert.ok(!".',".includes(POND_ASCII_RAMP[column]), POND_ASCII_RAMP[column]);
+  }
+  const bend: FishBendUniforms = { time: { value: 0 }, curve: { value: 0 }, amount: { value: 0 } };
+  const identified = createFishIdMaterial(new THREE.Texture(), bend, false);
+  const source = identified.material.fragmentShader;
+  assert.match(source, /dFdx\(vUv\)/);
+  assert.match(source, /0\.35/);
+  assert.equal(source.includes("tex.a)"), false);
+  identified.material.dispose();
+});
+
+test("frame budget keeps a scheduling remainder out of the next step", () => {
+  const interval = 1000 / 60;
+  let budget = 0;
+  let stepped = 0;
+  let wall = 0;
+  for (let frame = 0; frame < 8; frame += 1) {
+    const paced = pondFrameBudget(budget, 16, interval);
+    budget = paced.budget;
+    stepped += paced.stepMs;
+    wall += 16;
+    assert.ok(paced.stepMs > 0);
+    assert.ok(paced.stepMs < interval + 2, `stepped ${paced.stepMs}`);
+  }
+  assert.ok(Math.abs(stepped + budget - wall) < 1e-6);
+  assert.ok(stepped < wall * 1.05);
+
+  budget = 0;
+  let renders = 0;
+  for (let frame = 0; frame < 30; frame += 1) {
+    const paced = pondFrameBudget(budget, 1000 / 120, interval);
+    budget = paced.budget;
+    if (paced.stepMs > 0) renders += 1;
+  }
+  assert.equal(renders, 15);
+});
+
+test("koi span meets the desktop and mobile cell floors", () => {
+  for (const length of [14, 15, 16, 17, 18]) {
+    const span = pondKoiQuadPixels(length, 12);
+    assert.ok(span.widthCells >= 5, `${length} is ${span.widthCells} wide`);
+    assert.ok(span.lengthCells >= 14 && span.lengthCells <= 18);
+  }
+  for (const length of [11, 12, 13]) {
+    const span = pondKoiQuadPixels(length, 10);
+    assert.ok(span.widthCells >= 4, `${length} is ${span.widthCells} wide`);
+    assert.equal(span.lengthCells, length);
+  }
+});
+
+test("resizeFish replaces the body used by later steps", () => {
+  const simulation = contactSimulation([
+    { ...MOTION_FISH, id: "a", displayWidth: 40, position: { x: 400, y: 500 } },
+    { ...MOTION_FISH, id: "b", displayWidth: 40, position: { x: 900, y: 500 } },
+  ]);
+  assert.equal(tickFish(simulation, 1).fish.find((fish) => fish.id === "a")?.displayWidth, 40);
+  simulation.resizeFish([{ id: "a", displayWidth: 80, visualLength: 160 }]);
+  assert.equal(tickFish(simulation, 2).fish.find((fish) => fish.id === "a")?.displayWidth, 80);
+  simulation.destroy();
+});
+
+test("resize admission hides overlapping fish and restores them when they fit", () => {
+  const simulation = createPondSimulation({
+    seed: "resize-admission", width: 1000, height: 1000, isWater: () => true, resizeAdmission: true, flies: [],
+    fish: [
+      { ...MOTION_FISH, id: "a", displayWidth: 40, position: { x: 400, y: 500 } },
+      { ...MOTION_FISH, id: "b", displayWidth: 40, position: { x: 460, y: 500 } },
+    ],
+  });
+  const before = tickFish(simulation, 0, 0).fish;
+  assert.deepEqual(simulation.resizeFish([{ id: "a", displayWidth: 100 }, { id: "b", displayWidth: 100 }]), ["a"]);
+  const reduced = tickFish(simulation, 0, 0).fish;
+  assert.equal(reduced.length, 1);
+  assert.deepEqual(reduced[0].position, before[0].position);
+  assert.deepEqual(simulation.resizeFish([{ id: "a", displayWidth: 40 }, { id: "b", displayWidth: 40 }]), ["a", "b"]);
+  const restored = tickFish(simulation, 0, 0).fish;
+  assert.deepEqual(restored.map((fish) => fish.position), before.map((fish) => fish.position));
+  assertFishBodiesClear(restored);
+  simulation.destroy();
+});
+
+test("growing a fish near a bank recovers without a position jump", () => {
+  const simulation = createPondSimulation({
+    seed: "resize-bank", width: 1000, height: 1000,
+    isWater: (x, y) => x >= 100 && x <= 900 && y >= 100 && y <= 900,
+    waterBounds: () => ({ minX: 100, minY: 100, maxX: 900, maxY: 900 }),
+    recoverOutside: true,
+    fish: [{ ...MOTION_FISH, position: { x: 130, y: 500 }, displayWidth: 40, cruise: 20 }], flies: [],
+  });
+  let previous = tickFish(simulation, 0, 0).fish[0];
+  simulation.resizeFish([{ id: previous.id, displayWidth: 200 }]);
+  for (let index = 1; index <= 40; index += 1) {
+    const fish = tickFish(simulation, index).fish[0];
+    assert.ok(Math.hypot(fish.position.x - previous.position.x, fish.position.y - previous.position.y) <= 20 * 3.5 / 30 + 0.001);
+    previous = fish;
+  }
+  simulation.destroy();
+});
+
+test("a fish just outside the water is brought back without a long teleport", () => {
+  let strict = false;
+  const inside = (x: number, y: number) => {
+    if (!strict) return true;
+    const dx = (x - 800) / 200;
+    const dy = (y - 500) / 120;
+    return dx * dx + dy * dy <= 1;
+  };
+  const simulation = createPondSimulation({
+    seed: "recover-near",
+    width: 1586,
+    height: 1024,
+    isWater: inside,
+    recoverOutside: true,
+    fish: [{ ...MOTION_FISH, position: { x: 1030, y: 500 }, heading: Math.PI, cruise: 0.1 }],
+    flies: [],
+  });
+  strict = true;
+  const fish = tickFish(simulation, 1).fish[0];
+  assert.equal(inside(fish.position.x, fish.position.y), true);
+  assert.ok(Math.hypot(fish.position.x - 1030, fish.position.y - 500) <= 64);
+  simulation.destroy();
+});
+
+test("a fish far from water is returned without a velocity spike", () => {
+  let strict = false;
+  const inside = (x: number, y: number) => !strict || (x > 200 && x < 280 && y > 200 && y < 280);
+  const simulation = createPondSimulation({
+    seed: "recover-far",
+    width: 1586,
+    height: 1024,
+    isWater: inside,
+    recoverOutside: true,
+    fish: [{ ...MOTION_FISH, position: { x: 900, y: 500 }, heading: Math.PI, cruise: 0.1 }],
+    flies: [],
+  });
+  strict = true;
+  const fish = tickFish(simulation, 1).fish[0];
+  assert.equal(inside(fish.position.x, fish.position.y), true);
+  assert.ok(Math.hypot(fish.position.x - 900, fish.position.y - 500) > 100);
+  assert.ok(Math.hypot(fish.velocity.x, fish.velocity.y) < 1, `${fish.velocity.x},${fish.velocity.y}`);
+  simulation.destroy();
+});
+
+test("head separation keeps noses at least the requested distance apart", () => {
+  const simulation = createPondSimulation({
+    seed: "heads",
+    width: 1586,
+    height: 1024,
+    isWater: () => true,
+    headSeparation: 80,
+    fish: [
+      { ...MOTION_FISH, id: "a", displayWidth: 20, visualLength: 100, position: { x: 500, y: 500 }, heading: 0, cruise: 0.1 },
+      { ...MOTION_FISH, id: "b", displayWidth: 20, visualLength: 100, position: { x: 540, y: 500 }, heading: 0, cruise: 0.1 },
+    ],
+    flies: [],
+  });
+  let frame = tickFish(simulation, 1);
+  for (let index = 2; index <= 30; index += 1) frame = tickFish(simulation, index);
+  const [first, second] = frame.fish;
+  const nose = (fish: FishSimulationFrame) => ({
+    x: fish.position.x + Math.cos(fish.heading) * 46,
+    y: fish.position.y + Math.sin(fish.heading) * 46,
+  });
+  const left = nose(first);
+  const right = nose(second);
+  assert.ok(Math.hypot(left.x - right.x, left.y - right.y) >= 79, `${left.x},${left.y} vs ${right.x},${right.y}`);
+  simulation.destroy();
+});
+
+test("a shifted pond keeps remapped koi moving", () => {
+  const ponds = {
+    wide: { cx: 1234.6, cy: 430.9, rx: 273.4, ry: 208.3 },
+    narrow: { cx: 793, cy: 326.6, rx: 143.3, ry: 104.2 },
+  };
+  let pond: keyof typeof ponds = "wide";
+  const ellipse = () => ponds[pond];
+  const inside = (x: number, y: number) => {
+    const shape = ellipse();
+    const dx = (x - shape.cx) / shape.rx;
+    const dy = (y - shape.cy) / shape.ry;
+    return dx * dx + dy * dy <= 1;
+  };
+  const placed = [
+    { nx: -0.62, ny: -0.38, cruise: 34, heading: 0.15, cells: 18 },
+    { nx: 0.5, ny: -0.36, cruise: 30, heading: 0.55, cells: 17 },
+    { nx: 0.28, ny: 0.62, cruise: 27, heading: -1.15, cells: 16 },
+    { nx: 0.36, ny: -0.18, cruise: 32, heading: 0.68, cells: 15 },
+    { nx: -0.55, ny: 0.42, cruise: 24, heading: 2.45, cells: 14 },
+  ];
+  const fish = placed.map((entry, index) => {
+    const visualLength = entry.cells * 12 / 0.9216;
+    return {
+      id: `fish-${index}`,
+      row: 2,
+      displayWidth: visualLength * 0.26,
+      visualLength,
+      position: {
+        x: ponds.wide.cx + entry.nx * ponds.wide.rx * 0.7,
+        y: ponds.wide.cy + entry.ny * ponds.wide.ry * 0.7,
+      },
+      heading: entry.heading,
+      cruise: entry.cruise,
+      alpha: 0.94,
+      species: "showa",
+    };
+  });
+  const simulation = createPondSimulation({
+    seed: "shift-pond",
+    width: 1586,
+    height: 992,
+    fish,
+    flies: [],
+    isWater: inside,
+    waterBounds: () => {
+      const shape = ellipse();
+      return { minX: shape.cx - shape.rx, maxX: shape.cx + shape.rx, minY: shape.cy - shape.ry, maxY: shape.cy + shape.ry };
+    },
+    recoverOutside: true,
+    headSeparation: 6 * 12 / 0.9216,
+  });
+  const step = (index: number) => simulation.step({
+    now: index * (1000 / 60),
+    delta: 1 / 60,
+    pointer: QUIET_POINTER,
+    visibleAnchorIds: [],
+  });
+  for (let index = 1; index <= 120; index += 1) step(index);
+  pond = "narrow";
+  simulation.resizeFish(fish.map((entry) => ({ id: entry.id, displayWidth: entry.displayWidth, visualLength: entry.visualLength })));
+  const means: number[] = [];
+  for (let index = 121; index <= 120 + 180; index += 1) {
+    const frame = step(index);
+    assert.equal(frame.fish.every((agent) => inside(agent.position.x, agent.position.y)), true);
+    if ((index - 121) % 30 === 29) {
+      means.push(frame.fish.reduce((sum, agent) => sum + Math.hypot(agent.velocity.x, agent.velocity.y), 0) / frame.fish.length);
+    }
+  }
+  assert.ok(means.length >= 6, `${means.length}`);
+  const listed = means.map((speed) => speed.toFixed(2)).join(",");
+  assert.ok(means.every((speed) => speed > 4), listed);
+  assert.ok(means.slice(0, 3).every((speed) => speed > 10), listed);
+  simulation.destroy();
+});
+
+test("resizeFish keeps a wet route when the pond does not move", () => {
+  const shape = { cx: 800, cy: 500, rx: 320, ry: 220 };
+  const inside = (x: number, y: number) => {
+    const dx = (x - shape.cx) / shape.rx;
+    const dy = (y - shape.cy) / shape.ry;
+    return dx * dx + dy * dy <= 1;
+  };
+  const fish = { ...MOTION_FISH, position: { x: shape.cx + 140, y: shape.cy }, heading: 0, cruise: 28, displayWidth: 40 };
+  const options = {
+    seed: "still-pond",
+    width: 1586,
+    height: 1024,
+    isWater: inside,
+    waterBounds: () => ({ minX: shape.cx - shape.rx, maxX: shape.cx + shape.rx, minY: shape.cy - shape.ry, maxY: shape.cy + shape.ry }),
+    recoverOutside: true,
+    fish: [fish],
+    flies: [],
+  };
+  const step = (simulation: ReturnType<typeof createPondSimulation>, index: number) => simulation.step({
+    now: index * (1000 / 60),
+    delta: 1 / 60,
+    pointer: QUIET_POINTER,
+    visibleAnchorIds: [],
+  });
+  const settled = createPondSimulation(options);
+  const resized = createPondSimulation(options);
+  resized.resizeFish([{ id: fish.id, displayWidth: fish.displayWidth }]);
+  const before = step(settled, 1).fish[0];
+  const after = step(resized, 1).fish[0];
+  const turn = Math.abs(Math.atan2(Math.sin(after.heading - before.heading), Math.cos(after.heading - before.heading)));
+  assert.ok(turn < 0.05, `heading ${before.heading} became ${after.heading}`);
+  assert.ok(Math.hypot(after.position.x - before.position.x, after.position.y - before.position.y) < 1, `${after.position.x},${after.position.y}`);
+  settled.destroy();
+  resized.destroy();
+});
+
+test("resizeFish retargets a route that the pond no longer covers", () => {
+  const wide = { cx: 800, cy: 500, rx: 340, ry: 240 };
+  const pocket = { cx: 800, cy: 500, rx: 90, ry: 70 };
+  let covered = wide;
+  const inside = (x: number, y: number) => {
+    const dx = (x - covered.cx) / covered.rx;
+    const dy = (y - covered.cy) / covered.ry;
+    return dx * dx + dy * dy <= 1;
+  };
+  const fish = { ...MOTION_FISH, position: { x: wide.cx, y: wide.cy - 40 }, heading: 0, cruise: 30, displayWidth: 36 };
+  const options = {
+    seed: "dry-goal",
+    width: 1586,
+    height: 1024,
+    isWater: inside,
+    waterBounds: () => ({ minX: wide.cx - wide.rx, maxX: wide.cx + wide.rx, minY: wide.cy - wide.ry, maxY: wide.cy + wide.ry }),
+    recoverOutside: true,
+    fish: [fish],
+    flies: [],
+  };
+  const control = createPondSimulation(options);
+  const retargeted = createPondSimulation(options);
+  covered = pocket;
+  retargeted.resizeFish([{ id: fish.id, displayWidth: fish.displayWidth }]);
+  const step = (simulation: ReturnType<typeof createPondSimulation>, index: number) => simulation.step({
+    now: index * (1000 / 60),
+    delta: 1 / 60,
+    pointer: QUIET_POINTER,
+    visibleAnchorIds: [],
+  });
+  const left = step(control, 1).fish[0];
+  const right = step(retargeted, 1).fish[0];
+  const turn = Math.abs(Math.atan2(Math.sin(right.heading - left.heading), Math.cos(right.heading - left.heading)));
+  assert.ok(turn > 0.4, `heading stayed ${left.heading} vs ${right.heading}`);
+  for (let index = 2; index <= 120; index += 1) {
+    const agent = step(retargeted, index).fish[0];
+    assert.equal(inside(agent.position.x, agent.position.y), true);
+  }
+  control.destroy();
+  retargeted.destroy();
+});
+
+test("a shore nudge slides along the rim instead of stopping the koi", () => {
+  const shape = { cx: 800, cy: 500, rx: 260, ry: 170 };
+  const inside = (x: number, y: number) => {
+    const dx = (x - shape.cx) / shape.rx;
+    const dy = (y - shape.cy) / shape.ry;
+    return dx * dx + dy * dy <= 1;
+  };
+  const shore = { ...MOTION_FISH, id: "shore", displayWidth: 54, visualLength: 120, position: { x: 1024, y: 500 }, heading: Math.PI / 2, cruise: 32 };
+  const inland = { ...MOTION_FISH, id: "inland", displayWidth: 54, visualLength: 120, position: { x: 974, y: 500 }, heading: Math.PI / 2, cruise: 32 };
+  const simulation = createPondSimulation({
+    seed: "shore-nudge",
+    width: 1586,
+    height: 1024,
+    isWater: inside,
+    waterBounds: () => ({ minX: shape.cx - shape.rx, maxX: shape.cx + shape.rx, minY: shape.cy - shape.ry, maxY: shape.cy + shape.ry }),
+    recoverOutside: true,
+    headSeparation: 90,
+    fish: [shore, inland],
+    flies: [],
+  });
+  let previous = { x: shore.position.x, y: shore.position.y };
+  let maxStep = 0;
+  const speeds: number[] = [];
+  for (let index = 1; index <= 180; index += 1) {
+    const frame = simulation.step({
+      now: index * (1000 / 60),
+      delta: 1 / 60,
+      pointer: QUIET_POINTER,
+      visibleAnchorIds: [],
+    });
+    const agent = frame.fish.find((entry) => entry.id === "shore");
+    assert.ok(agent);
+    assert.equal(inside(agent.position.x, agent.position.y), true);
+    maxStep = Math.max(maxStep, Math.hypot(agent.position.x - previous.x, agent.position.y - previous.y));
+    previous = { ...agent.position };
+    if (index % 30 === 0) speeds.push(Math.hypot(agent.velocity.x, agent.velocity.y));
+  }
+  const listed = speeds.map((speed) => speed.toFixed(2)).join(",");
+  assert.ok(maxStep < 24, `step ${maxStep.toFixed(2)}`);
+  assert.ok(speeds.every((speed) => speed > 5), listed);
+  simulation.destroy();
+});

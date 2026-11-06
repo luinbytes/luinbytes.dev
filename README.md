@@ -8,7 +8,7 @@ The site has two public routes: `/`, the interactive portfolio, and `/privacy`, 
 
 The portfolio features [HomeBot](https://github.com/luinbytes/HomeBot), [rakazo-android](https://github.com/luinbytes/rakazo-android), [Linux Sonar](https://github.com/luinbytes/linux-sonar), [bongocat](https://github.com/luinbytes/bongocat), and [cursor-barrier](https://github.com/luinbytes/cursor-barrier).
 
-The interface follows the system light/dark preference. The pond, fish, cat,
+The interface follows the system light/dark preference. The pond, fish,
 feeding controls, and portrait foil retain their existing behavior in both modes.
 Navigation is available at every screen size, including without JavaScript.
 

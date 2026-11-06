@@ -236,11 +236,12 @@ function ProjectExplorer({ reduced, entrance, ready }: { reduced: boolean; entra
 
 export function SignalDesk() {
   const { ready, reduced } = useReducedMotionPreference();
+  const [pondView, setPondView] = useState<"ascii" | "pixel">("ascii");
   const entrance = ready && !reduced;
 
   return (
     <div className={styles.page} id="top">
-      <PondEnvironment reduced={reduced} />
+      <PondEnvironment reduced={reduced} mode={pondView} />
       <p className={styles.srOnly}>The decorative pond responds to pointer movement. Right-click open water, or double-tap it on touch devices, to feed the fish.</p>
 
       <header className={styles.header}>
@@ -257,6 +258,19 @@ export function SignalDesk() {
 
       <div className={styles.content}>
         <section className={styles.hero} aria-labelledby="hero-title">
+          <noscript><style>{`.${styles.pondSwitcher} { display: none; }`}</style></noscript>
+          <fieldset className={styles.pondSwitcher}>
+            <legend>Pond view</legend>
+            <div className={styles.pondChoices}>
+              {(["ascii", "pixel"] as const).map((view) => (
+                <label key={view} className={styles.pondChoice}>
+                  <input type="radio" name="pond-view" value={view} checked={pondView === view} onChange={() => setPondView(view)} />
+                  <span><i aria-hidden="true" className={view === "ascii" ? styles.asciiStone : styles.pixelStone} />{view === "ascii" ? "ASCII" : "Pixel"}</span>
+                </label>
+              ))}
+            </div>
+            <div className={styles.pondCurrent}>Current view: {pondView === "ascii" ? "ASCII" : "Pixel"}</div>
+          </fieldset>
           <div className={styles.heroCopy}>
             <span className={styles.eyebrow}>Software engineer</span>
             <h1 id="hero-title">I make stubborn software <em>behave.</em></h1>

@@ -35,6 +35,219 @@ export function createYDownPondQuad() {
   return geometry;
 }
 
+export function createBentFishGeometry() {
+  const geometry = new THREE.PlaneGeometry(1, 1, 1, 12);
+  const uv = geometry.getAttribute("uv");
+  for (let index = 0; index < uv.count; index += 1) uv.setY(index, 1 - uv.getY(index));
+  return geometry;
+}
+
+export type FishBendUniforms = {
+  time: { value: number };
+  curve: { value: number };
+  amount: { value: number };
+};
+
+const FISH_BEND_SNIPPET = `
+float pondS = clamp(position.y + 0.5, 0.0, 1.0);
+float pondWave = sin(7.539822 * pondS - uBendTime);
+transformed.x += (0.08 * (0.25 + 0.75 * pondS) * pondWave + uBendCurve * pondS * pondS) * uBendAmount;
+`;
+
+export function attachFishBend(material: THREE.Material, bend: FishBendUniforms) {
+  material.customProgramCacheKey = () => "pond-fish-bend";
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.uBendTime = bend.time;
+    shader.uniforms.uBendCurve = bend.curve;
+    shader.uniforms.uBendAmount = bend.amount;
+    shader.vertexShader = `uniform float uBendTime;\nuniform float uBendCurve;\nuniform float uBendAmount;\n${shader.vertexShader}`;
+    shader.vertexShader = shader.vertexShader.replace("#include <begin_vertex>", `vec3 transformed = vec3(position);\n${FISH_BEND_SNIPPET}`);
+  };
+}
+
+export type PondWaterMaskUniforms = {
+  texture: { value: THREE.Texture };
+  origin: { value: THREE.Vector2 };
+  size: { value: THREE.Vector2 };
+  enabled: { value: number };
+};
+
+export function attachPondWaterMask(material: THREE.Material, mask: PondWaterMaskUniforms) {
+  const compile = material.onBeforeCompile;
+  const cacheKey = material.customProgramCacheKey();
+  material.customProgramCacheKey = () => `${cacheKey}:pond-water-mask`;
+  material.onBeforeCompile = function (shader, renderer) {
+    compile.call(this, shader, renderer);
+    shader.uniforms.uPondWaterMask = mask.texture;
+    shader.uniforms.uPondWaterOrigin = mask.origin;
+    shader.uniforms.uPondWaterSize = mask.size;
+    shader.uniforms.uPondWaterMaskEnabled = mask.enabled;
+    shader.vertexShader = `varying vec2 vPondWaterPosition;\n${shader.vertexShader}`;
+    shader.vertexShader = shader.vertexShader.replace(
+      "#include <project_vertex>",
+      "vPondWaterPosition = (modelMatrix * vec4(transformed, 1.0)).xy;\n#include <project_vertex>",
+    );
+    shader.fragmentShader = `uniform sampler2D uPondWaterMask;\nuniform vec2 uPondWaterOrigin;\nuniform vec2 uPondWaterSize;\nuniform float uPondWaterMaskEnabled;\nvarying vec2 vPondWaterPosition;\n${shader.fragmentShader}`;
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "#include <clipping_planes_fragment>",
+      `#include <clipping_planes_fragment>
+      if (uPondWaterMaskEnabled > 0.5) {
+        vec2 pondMaskPoint = (vPondWaterPosition - uPondWaterOrigin) / uPondWaterSize;
+        if (any(lessThan(pondMaskPoint, vec2(0.0))) || any(greaterThanEqual(pondMaskPoint, vec2(1.0)))) discard;
+        if (texture2D(uPondWaterMask, vec2(pondMaskPoint.x, 1.0 - pondMaskPoint.y)).a < 0.01) discard;
+      }`,
+    );
+  };
+  material.needsUpdate = true;
+}
+
+export const POND_FISH_COVERAGE_CUT = 0.35;
+
+export function pondFishCellInside(alphas: readonly number[], cut = POND_FISH_COVERAGE_CUT) {
+  if (alphas.length === 0) return false;
+  let hits = 0;
+  for (const alpha of alphas) if (alpha >= cut) hits += 1;
+  return hits / alphas.length >= cut;
+}
+
+export function createFishIdMaterial(map: THREE.Texture, bend: FishBendUniforms, tancho: boolean) {
+  const uniforms = {
+    map: { value: map },
+    uOffset: { value: new THREE.Vector2() },
+    uRepeat: { value: new THREE.Vector2(1, 1) },
+    uTancho: { value: tancho ? 1 : 0 },
+    uBendTime: bend.time,
+    uBendCurve: bend.curve,
+    uBendAmount: bend.amount,
+  };
+  const material = new THREE.ShaderMaterial({
+    uniforms,
+    depthTest: false,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    forceSinglePass: true,
+    toneMapped: false,
+    vertexShader: `
+      uniform float uBendTime;
+      uniform float uBendCurve;
+      uniform float uBendAmount;
+      varying vec2 vUv;
+      varying float vS;
+      varying float vAcross;
+      void main() {
+        vUv = uv;
+        vec3 transformed = vec3(position);
+        ${FISH_BEND_SNIPPET}
+        vS = clamp(position.y + 0.5, 0.0, 1.0);
+        vAcross = position.x + 0.5;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(transformed, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform sampler2D map;
+      uniform vec2 uOffset;
+      uniform vec2 uRepeat;
+      uniform float uTancho;
+      varying vec2 vUv;
+      varying float vS;
+      varying float vAcross;
+      void main() {
+        vec2 footprint = vUv * uRepeat + uOffset;
+        vec2 dx = dFdx(vUv) * uRepeat;
+        vec2 dy = dFdy(vUv) * uRepeat;
+        float hits = 0.0;
+        if (dot(dx, dx) + dot(dy, dy) < 1e-10) {
+          hits = texture2D(map, footprint).a >= ${POND_FISH_COVERAGE_CUT} ? 1.0 : 0.0;
+        } else {
+          for (int y = 0; y < 4; y++) {
+            for (int x = 0; x < 4; x++) {
+              vec2 sampleUv = footprint
+                + dx * ((float(x) + 0.5) / 4.0 - 0.5)
+                + dy * ((float(y) + 0.5) / 4.0 - 0.5);
+              if (texture2D(map, sampleUv).a >= ${POND_FISH_COVERAGE_CUT}) hits += 1.0;
+            }
+          }
+          hits /= 16.0;
+        }
+        if (hits < ${POND_FISH_COVERAGE_CUT}) discard;
+        vec4 tex = texture2D(map, footprint);
+        float across = clamp(abs(vAcross - 0.5) * 2.0, 0.0, 1.0);
+        if (tex.a < ${POND_FISH_COVERAGE_CUT}) {
+          gl_FragColor = vec4(5.0 / 255.0, vS, across, 1.0);
+          return;
+        }
+        float luma = dot(tex.rgb, vec3(0.2126, 0.7152, 0.0722));
+        float id = 5.0;
+        bool eye = luma < 0.14 && vS > 0.05 && vS < 0.22 && abs(vAcross - 0.5) > 0.07 && abs(vAcross - 0.5) < 0.24;
+        bool crown = abs(vAcross - 0.5) < 0.09 && vS > 0.035 && vS < 0.20;
+        if (uTancho > 0.5) {
+          if (eye) id = 9.0;
+          if (crown) id = 7.0;
+        } else {
+          id = luma < 0.4 ? 6.0 : 5.0;
+          if (tex.r > tex.g * 1.18 && tex.r > tex.b * 1.25 && tex.r > 0.3) id = 7.0;
+          if (eye) id = 9.0;
+        }
+        gl_FragColor = vec4(id / 255.0, vS, across, 1.0);
+      }
+    `,
+  });
+  return {
+    material,
+    sync() {
+      uniforms.uOffset.value.copy(map.offset);
+      uniforms.uRepeat.value.copy(map.repeat);
+    },
+  };
+}
+
+export function createFlatIdMaterial(id: number) {
+  return new THREE.ShaderMaterial({
+    uniforms: { uId: { value: id } },
+    depthTest: false,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    forceSinglePass: true,
+    toneMapped: false,
+    vertexShader: `
+      void main() {
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform float uId;
+      void main() {
+        gl_FragColor = vec4(uId / 255.0, 0.0, 0.0, 1.0);
+      }
+    `,
+  });
+}
+
+export function createWakeIdMaterial() {
+  return new THREE.ShaderMaterial({
+    uniforms: {},
+    depthTest: false,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    forceSinglePass: true,
+    toneMapped: false,
+    vertexShader: `
+      attribute vec4 color;
+      varying float vLife;
+      void main() {
+        vLife = color.a;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      varying float vLife;
+      void main() {
+        gl_FragColor = vec4(11.0 / 255.0, vLife, 0.0, 1.0);
+      }
+    `,
+  });
+}
+
 export function createPondSprite(geometry: THREE.BufferGeometry, texture: THREE.Texture, order: number) {
   const material = new THREE.MeshBasicMaterial({
     map: texture,
