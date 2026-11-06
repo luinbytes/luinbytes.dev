@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowDown, ArrowUpRight, AudioLines, Github, Globe2, Mail, MapPin } from "lucide-react";
 
@@ -237,10 +237,22 @@ function ProjectExplorer({ reduced, entrance, ready }: { reduced: boolean; entra
 export function SignalDesk() {
   const { ready, reduced } = useReducedMotionPreference();
   const [pondView, setPondView] = useState<"ascii" | "pixel">("ascii");
+  const pageRef = useRef<HTMLDivElement>(null);
+  const [pondStatus, setPondStatus] = useState<{ mode: string; renderer: string }>({ mode: "ascii", renderer: "loading" });
   const entrance = ready && !reduced;
 
+  useEffect(() => {
+    const pond = pageRef.current?.querySelector<HTMLElement>("[data-renderer]");
+    if (!pond) return;
+    const sync = () => setPondStatus({ mode: pond.dataset.view ?? "ascii", renderer: pond.dataset.renderer ?? "loading" });
+    const observer = new MutationObserver(sync);
+    observer.observe(pond, { attributes: true, attributeFilter: ["data-renderer", "data-view"] });
+    sync();
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <div className={styles.page} id="top">
+    <div ref={pageRef} className={styles.page} id="top">
       <PondEnvironment reduced={reduced} mode={pondView} />
       <p className={styles.srOnly}>The decorative pond responds to pointer movement. Right-click open water, or double-tap it on touch devices, to feed the fish.</p>
 
@@ -269,7 +281,13 @@ export function SignalDesk() {
                 </label>
               ))}
             </div>
-            <div className={styles.pondCurrent}>Current view: {pondView === "ascii" ? "ASCII" : "Pixel"}</div>
+            <div className={styles.pondCurrent} aria-live="polite">
+              {pondStatus.mode !== pondView || pondStatus.renderer === "loading"
+                ? `Loading ${pondView === "ascii" ? "ASCII" : "Pixel"} view…`
+                : pondStatus.renderer === "fallback"
+                  ? "Pond unavailable. Try the other view."
+                  : `Current view: ${pondView === "ascii" ? "ASCII" : "Pixel"}`}
+            </div>
           </fieldset>
           <div className={styles.heroCopy}>
             <span className={styles.eyebrow}>Software engineer</span>

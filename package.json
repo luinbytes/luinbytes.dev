@@ -13,7 +13,7 @@
     "lint": "eslint",
     "test:e2e:setup": "python3 -m pip install -r requirements-test.txt && python3 -m playwright install chromium",
     "test:e2e": "npm run build && python3 -m unittest discover -s tests/browser -p '*_test.py' -v",
-    "test:pond": "node --test tests/pond-world.test.mts tests/pond-food-priority.test.mts tests/pond-water-mask.test.mts"
+    "test:pond": "node --test tests/pond-world.test.mts tests/pond-food-priority.test.mts tests/pond-water-mask.test.mts tests/pond-pixel.test.mts"
   },
   "dependencies": {
     "@fontsource-variable/pixelify-sans": "5.3.0",

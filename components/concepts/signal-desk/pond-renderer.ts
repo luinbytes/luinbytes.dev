@@ -47,6 +47,7 @@ type StartOptions = {
   reduced: boolean;
   canvasClassName: string;
   signal: AbortSignal;
+  onCaptureReady: (capture: () => string) => void;
 };
 
 type KoiTestPose = { row: number; column: number; heading: number; feedingPulse?: number };
@@ -1168,6 +1169,10 @@ export async function startPondRenderer(options: StartOptions) {
     };
 
     let previousTime: number | null = null;
+    options.onCaptureReady(() => {
+      present();
+      return canvas.toDataURL();
+    });
     let frameBudget = 0;
     let heroOnScreen = true;
     const draw = (now: number) => {
@@ -1276,29 +1281,6 @@ export async function startPondRenderer(options: StartOptions) {
       if (liveAscii) renderer.setClearColor(themeMedia.matches ? 0xeee8f3 : 0x252031, 1);
       if (liveAscii && reduced && frameCount > 0) present();
     };
-    let presentedView = pond.dataset.view;
-    let transitionImage: HTMLImageElement | null = null;
-    const onViewChange = () => {
-      const nextView = pond.dataset.view;
-      if (nextView === presentedView) return;
-      if (frameCount > 0 && liveAscii && !reduced) {
-        present(presentedView);
-        const image = document.createElement("img");
-        image.dataset.pondTransition = "";
-        image.alt = "";
-        image.src = canvas.toDataURL();
-        transitionImage?.remove();
-        transitionImage = image;
-        image.addEventListener("animationend", () => {
-          image.remove();
-          if (transitionImage === image) transitionImage = null;
-        }, { once: true });
-        host.append(image);
-      }
-      presentedView = nextView;
-      if (frameCount > 0) present();
-    };
-    host.addEventListener("pond-view-change", onViewChange);
     if (liveAscii) themeMedia.addEventListener("change", onTheme);
     window.addEventListener("resize", onResize);
     window.addEventListener("scroll", onScroll, { capture: true, passive: true });
@@ -1307,8 +1289,6 @@ export async function startPondRenderer(options: StartOptions) {
       window.removeEventListener("resize", onResize);
       window.removeEventListener("scroll", onScroll, { capture: true });
       document.removeEventListener("visibilitychange", visibility);
-      host.removeEventListener("pond-view-change", onViewChange);
-      transitionImage?.remove();
       heroObserver?.disconnect();
       if (liveAscii) themeMedia.removeEventListener("change", onTheme);
     };

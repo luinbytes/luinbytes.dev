@@ -751,7 +751,114 @@ class KoiAtlasBrowserTests(BrowserTestCase):
 
 
 class PondProductionTests(BrowserTestCase):
-    def test_pond_view_switch_keeps_the_live_scene(self) -> None:
+    def test_pixel_food_pause_and_reduced_motion(self) -> None:
+        browser = self.playwright.chromium.launch()
+        self.addCleanup(browser.close)
+        page = self.pond_page(browser, viewport={"width": 1440, "height": 900}, reduced_motion="reduce")
+        self.addCleanup(page.close)
+        page.goto(f"{self.base_url}/?pond-seed=pixel-lifecycle", wait_until="networkidle")
+        page.get_by_role("radio", name="Pixel").check()
+        pond = page.locator("[data-pond-state]")
+        expect(page.locator("[data-view]")).to_have_attribute("data-view", "pixel")
+        expect(pond).to_have_attribute("data-pond-state", "running")
+        expect(pond).to_have_attribute("data-motion", "reduced")
+        wait_for_condition(page, "document.querySelector('[data-pond-state]')?.dataset.fishPositions")
+        positions = pond.get_attribute("data-fish-positions")
+        wait_for_condition(page, "before => document.querySelector('[data-pond-state]')?.dataset.fishPositions !== before", arg=positions)
+        x, y = find_open_water(page, pond)
+        before = int(pond.get_attribute("data-food-dropped-count"))
+        page.mouse.click(x, y, button="right")
+        wait_for_condition(page, "before => Number(document.querySelector('[data-pond-state]')?.dataset.foodDroppedCount) > before", arg=before)
+        self.assertGreater(int(pond.get_attribute("data-food-count")), 0)
+        page.evaluate("""() => {
+            Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+            document.dispatchEvent(new Event('visibilitychange'));
+        }""")
+        expect(pond).to_have_attribute("data-pond-state", "paused")
+        frame = pond.get_attribute("data-frame")
+        page.wait_for_timeout(300)
+        self.assertEqual(pond.get_attribute("data-frame"), frame)
+        page.evaluate("""() => {
+            Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
+            document.dispatchEvent(new Event('visibilitychange'));
+        }""")
+        expect(pond).to_have_attribute("data-pond-state", "running")
+        wait_for_condition(page, "before => document.querySelector('[data-pond-state]')?.dataset.frame !== before", arg=frame)
+
+    def test_renderer_failure_and_context_loss_recover_by_switching_modes(self) -> None:
+        browser = self.playwright.chromium.launch()
+        self.addCleanup(browser.close)
+        for failure in ("load", "context-loss"):
+            for mode, other in (("ASCII", "Pixel"), ("Pixel", "ASCII")):
+                with self.subTest(failure=failure, mode=mode):
+                    page = self.pond_page(browser, viewport={"width": 1280, "height": 800})
+                    try:
+                        failed = []
+                        if failure == "load":
+                            token = "pond-renderer-" if mode == "ASCII" else "pond-pixel-renderer-"
+                            def abort_renderer(route):
+                                failed.append(route.request.url)
+                                route.abort()
+                            page.route(f"**/{token}*.js", abort_renderer)
+                        page.goto(f"{self.base_url}/?pond-seed=recovery", wait_until="networkidle")
+                        pond = page.locator("[data-pond-state]")
+                        if mode == "Pixel":
+                            expect(pond).to_have_attribute("data-pond-state", "running")
+                            page.get_by_role("radio", name=mode).check()
+                        if failure == "context-loss":
+                            expect(page.locator("[data-view]")).to_have_attribute("data-view", mode.lower())
+                            expect(pond).to_have_attribute("data-pond-state", "running")
+                            pond.locator("canvas").evaluate("canvas => canvas.dispatchEvent(new Event('webglcontextlost', {cancelable: true}))")
+                        expect(pond).to_have_attribute("data-pond-state", "fallback")
+                        expect(page.locator("[data-pond-transition]")).to_have_count(0, timeout=10_000)
+                        self.assertIsNone(page.locator("[data-renderer]").get_attribute("data-switching"))
+                        if failure == "load":
+                            self.assertTrue(failed)
+                        self.assertTrue(page.get_by_role("group", name="Pond view").is_visible())
+                        page.get_by_role("radio", name=other).check()
+                        expect(page.locator("[data-view]")).to_have_attribute("data-view", other.lower())
+                        expect(pond).to_have_attribute("data-pond-state", "running")
+                        expect(page.locator("[data-renderer]")).to_have_attribute("data-renderer", "three")
+                        expect(pond.locator("canvas")).to_have_count(1)
+                    finally:
+                        page.close()
+
+    def test_rapid_switch_during_delayed_pixel_load_keeps_latest_mode(self) -> None:
+        browser = self.playwright.chromium.launch()
+        self.addCleanup(browser.close)
+        page = self.pond_page(browser, viewport={"width": 1280, "height": 800})
+        self.addCleanup(page.close)
+        held = []
+        page.route("**/pond-pixel-renderer-*.js", lambda route: held.append(route))
+        page.goto(f"{self.base_url}/?pond-seed=delayed-switch", wait_until="networkidle")
+        pond = page.locator("[data-pond-state]")
+        expect(pond).to_have_attribute("data-pond-state", "running")
+        page.get_by_role("radio", name="Pixel").check()
+        wait_for_condition(page, "document.querySelector('[data-view]')?.dataset.view === 'pixel'")
+        expect(pond).to_have_attribute("data-pond-state", "loading")
+        expect(page.locator("[data-renderer]")).to_have_attribute("data-switching", "")
+        for _ in range(100):
+            if held:
+                break
+            page.wait_for_timeout(20)
+        self.assertTrue(held)
+        page.get_by_role("radio", name="ASCII").check()
+        expect(pond).to_have_attribute("data-pond-state", "running")
+        for route in held:
+            route.continue_()
+        page.unroute("**/pond-pixel-renderer-*.js")
+        page.wait_for_load_state("networkidle")
+        expect(page.locator("[data-view]")).to_have_attribute("data-view", "ascii")
+        expect(pond).to_have_attribute("data-pond-state", "running")
+        expect(pond.locator("canvas")).to_have_count(1)
+        expect(page.locator("[data-pond-transition]")).to_have_count(0, timeout=10_000)
+        self.assertIsNone(page.locator("[data-renderer]").get_attribute("data-switching"))
+        page.get_by_role("radio", name="Pixel").check()
+        expect(page.locator("[data-view]")).to_have_attribute("data-view", "pixel")
+        expect(pond).to_have_attribute("data-pond-state", "running")
+        expect(pond.locator("canvas")).to_have_count(1)
+
+    def test_pond_view_switch_restarts_each_interactive_scene(self) -> None:
         browser = self.playwright.chromium.launch()
         self.addCleanup(browser.close)
         for motion in ("reduce", "no-preference"):
@@ -763,44 +870,58 @@ class PondProductionTests(BrowserTestCase):
                     page.goto(f"{self.base_url}/?pond-seed=view-switch", wait_until="networkidle")
                     pond = page.locator("[data-pond-state]")
                     expect(pond).to_have_attribute("data-pond-state", "running")
-                    wait_for_condition(page, "document.querySelector('[data-pond-state]')?.dataset.fishWorldPositions")
-                    canvas = pond.locator("canvas")
-                    canvas.evaluate("canvas => window.pondTestCanvas = canvas")
-                    before = canvas.screenshot()
-                    fish_ids = pond.get_attribute("data-fish-ids")
+                    expect(pond).to_have_attribute("data-motion", "reduced" if motion == "reduce" else "full")
                     ascii_option = page.get_by_role("radio", name="ASCII")
                     pixel_option = page.get_by_role("radio", name="Pixel")
-                    ascii_option.focus()
-                    pond.evaluate("""element => {
+                    page.locator("[data-renderer]").evaluate("""element => {
                         window.pondTransitionCount = 0;
-                        window.pondTransitionObserver = new MutationObserver(records => {
-                            for (const record of records) {
-                                for (const node of record.addedNodes) {
-                                    if (node.nodeType === Node.ELEMENT_NODE && (node.matches('[data-pond-transition]') || node.querySelector('[data-pond-transition]'))) window.pondTransitionCount++;
-                                }
+                        new MutationObserver(records => {
+                            for (const record of records) for (const node of record.addedNodes) {
+                                if (node.nodeType === Node.ELEMENT_NODE && node.matches('[data-pond-transition]')) window.pondTransitionCount++;
                             }
-                        });
-                        window.pondTransitionObserver.observe(element, {childList: true, subtree: true});
+                        }).observe(element, {childList: true});
                     }""")
-                    for key, option, view in (("ArrowRight", pixel_option, "pixel"), ("ArrowLeft", ascii_option, "ascii"), ("ArrowRight", pixel_option, "pixel")):
+                    ascii_option.focus()
+                    for key, option, view in (("ArrowRight", pixel_option, "pixel"), ("ArrowLeft", ascii_option, "ascii"), ("ArrowRight", pixel_option, "pixel"), ("ArrowLeft", ascii_option, "ascii")):
+                        transitions = page.evaluate("window.pondTransitionCount")
                         page.keyboard.press(key)
                         expect(option).to_be_checked()
                         expect(page.locator("[data-view]")).to_have_attribute("data-view", view)
-                        self.assertTrue(canvas.evaluate("canvas => canvas === window.pondTestCanvas"))
-                        self.assertEqual(fish_ids, pond.get_attribute("data-fish-ids"))
-                    if motion == "no-preference":
-                        self.assertGreater(page.evaluate("window.pondTransitionCount"), 0)
-                        expect(pond.locator("[data-pond-transition]")).to_have_count(0)
-                    else:
-                        self.assertEqual(page.evaluate("window.pondTransitionCount"), 0)
-                    page.evaluate("window.pondTransitionObserver.disconnect()")
-                    self.assertNotEqual(before, canvas.screenshot())
-                    page.keyboard.press("ArrowLeft")
-                    expect(ascii_option).to_be_checked()
-                    expect(page.locator("[data-view]")).to_have_attribute("data-view", "ascii")
-                    self.assertTrue(canvas.evaluate("canvas => canvas === window.pondTestCanvas"))
-                    self.assertEqual(fish_ids, pond.get_attribute("data-fish-ids"))
+                        expect(pond).to_have_attribute("data-pond-state", "running")
+                        expect(pond.locator("canvas")).to_have_count(1)
+                        if motion == "no-preference":
+                            wait_for_condition(page, "before => window.pondTransitionCount > before", arg=transitions)
+                        else:
+                            self.assertEqual(page.evaluate("window.pondTransitionCount"), transitions)
+                        expect(page.locator("[data-pond-transition]")).to_have_count(0, timeout=10_000)
+                        self.assertIsNone(page.locator("[data-renderer]").get_attribute("data-switching"))
+                        self.assertGreater(int(pond.get_attribute("data-fish-count")), 0)
+                        x, y = find_open_water(page, pond)
+                        before = int(pond.get_attribute("data-primary-impact-count"))
+                        page.mouse.click(x, y)
+                        wait_for_condition(page, "before => Number(document.querySelector('[data-pond-state]')?.dataset.primaryImpactCount) > before", arg=before)
+                        option.focus()
                     self.assertEqual(errors, [])
+                finally:
+                    page.close()
+
+    def test_pixel_view_restores_original_fish_population(self) -> None:
+        browser = self.playwright.chromium.launch()
+        self.addCleanup(browser.close)
+        for viewport, count in (({"width": 1440, "height": 900}, 20), ({"width": 390, "height": 844}, 14)):
+            with self.subTest(viewport=viewport):
+                page = self.pond_page(browser, viewport=viewport)
+                try:
+                    page.goto(f"{self.base_url}/?pond-seed=pixel-population", wait_until="networkidle")
+                    page.get_by_role("radio", name="Pixel").check()
+                    pond = page.locator("[data-pond-state]")
+                    expect(pond).to_have_attribute("data-pond-state", "running")
+                    expect(pond).to_have_attribute("data-fish-count", str(count))
+                    wait_for_condition(page, "document.querySelector('[data-pond-state]')?.dataset.fishWorldPositions")
+                    positions = pond.get_attribute("data-fish-world-positions")
+                    self.assertEqual(len(positions.split(";")), count)
+                    wait_for_condition(page, "before => document.querySelector('[data-pond-state]')?.dataset.fishWorldPositions !== before", arg=positions)
+                    self.assertGreaterEqual(int(pond.get_attribute("data-insect-count")), 2)
                 finally:
                     page.close()
 
@@ -2004,7 +2125,7 @@ class PortfolioTests(BrowserTestCase):
             "fallback",
         )
         self.assertEqual(page.locator("[data-pond-state] canvas").count(), 0)
-        self.assertTrue(page.locator("fieldset").filter(has_text="Pond view").is_hidden())
+        self.assertTrue(page.get_by_role("group", name="Pond view").is_visible())
         self.assertTrue(
             page.get_by_role(
                 "heading", name="I make stubborn software behave."
@@ -2013,7 +2134,7 @@ class PortfolioTests(BrowserTestCase):
         context.close()
         browser.close()
 
-    def test_context_loss_hides_pond_view_control(self) -> None:
+    def test_context_loss_preserves_pond_view_control(self) -> None:
         browser = self.playwright.chromium.launch()
         self.addCleanup(browser.close)
         page = self.pond_page(browser, viewport={"width": 1440, "height": 900})
@@ -2023,7 +2144,7 @@ class PortfolioTests(BrowserTestCase):
         self.assertTrue(page.get_by_role("group", name="Pond view").is_visible())
         pond.locator("canvas").evaluate("canvas => canvas.dispatchEvent(new Event('webglcontextlost', {cancelable: true}))")
         expect(pond).to_have_attribute("data-pond-state", "fallback")
-        self.assertTrue(page.locator("fieldset").filter(has_text="Pond view").is_hidden())
+        self.assertTrue(page.get_by_role("group", name="Pond view").is_visible())
         page.close()
 
     def test_pause_resize_and_remount_keep_world_state_bounded(self) -> None:
