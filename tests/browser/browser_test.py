@@ -1100,9 +1100,23 @@ class PortfolioTests(BrowserTestCase):
                     button.click()
                     page.wait_for_timeout(400)
                     self.assertEqual(button.get_attribute("aria-pressed"), "true")
-                    bounds = button.bounding_box()
-                    marker = button.locator("i").bounding_box()
-                    self.assertAlmostEqual(bounds["y"] + bounds["height"] / 2, marker["y"] + marker["height"] / 2, delta=0.75)
+                    centers = button.evaluate("""async button => {
+                        const marker = button.querySelector('i');
+                        let previous = null;
+                        let stable = 0;
+                        const deadline = performance.now() + 5000;
+                        while (performance.now() < deadline) {
+                            await new Promise(requestAnimationFrame);
+                            const bounds = button.getBoundingClientRect();
+                            const dot = marker.getBoundingClientRect();
+                            const centers = [bounds.y + bounds.height / 2, dot.y + dot.height / 2];
+                            stable = previous && centers.every((value, index) => Math.abs(value - previous[index]) < 0.05) ? stable + 1 : 0;
+                            if (stable >= 3) return centers;
+                            previous = centers;
+                        }
+                        throw new Error('Project marker did not settle');
+                    }""")
+                    self.assertAlmostEqual(centers[0], centers[1], delta=0.75)
                 page.close()
 
     def test_mobile_navigation_hero_viewport_and_system_color_modes(self) -> None:
