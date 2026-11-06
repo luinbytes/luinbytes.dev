@@ -288,7 +288,7 @@ class ShareCardStaticExportTests(unittest.TestCase):
         "/": "/share-cards/luinbytes-dev-pond.png",
     }
     expected_sha256 = {
-        "/share-cards/luinbytes-dev-pond.png": "60bddd42c8ecc43ac42f94933f15af50cb71c7039574b4d203be4fb2dc46b811",
+        "/share-cards/luinbytes-dev-pond.png": "f2f09d3711b27c857c74eb34d8420354dfec2635e30153fe884d3095d24b3583",
     }
     route_alts = {
         "/": "Lu | Software Engineer",
@@ -751,6 +751,115 @@ class KoiAtlasBrowserTests(BrowserTestCase):
 
 
 class PondProductionTests(BrowserTestCase):
+    def test_pond_view_switch_keeps_the_live_scene(self) -> None:
+        browser = self.playwright.chromium.launch()
+        self.addCleanup(browser.close)
+        for motion in ("reduce", "no-preference"):
+            with self.subTest(motion=motion):
+                page = self.pond_page(browser, viewport={"width": 390, "height": 844}, reduced_motion=motion)
+                try:
+                    errors = []
+                    page.on("pageerror", lambda error: errors.append(str(error)))
+                    page.goto(f"{self.base_url}/?pond-seed=view-switch", wait_until="networkidle")
+                    pond = page.locator("[data-pond-state]")
+                    expect(pond).to_have_attribute("data-pond-state", "running")
+                    wait_for_condition(page, "document.querySelector('[data-pond-state]')?.dataset.fishWorldPositions")
+                    canvas = pond.locator("canvas")
+                    canvas.evaluate("canvas => window.pondTestCanvas = canvas")
+                    before = canvas.screenshot()
+                    fish_ids = pond.get_attribute("data-fish-ids")
+                    ascii_option = page.get_by_role("radio", name="ASCII")
+                    pixel_option = page.get_by_role("radio", name="Pixel")
+                    ascii_option.focus()
+                    pond.evaluate("""element => {
+                        window.pondTransitionCount = 0;
+                        window.pondTransitionObserver = new MutationObserver(records => {
+                            for (const record of records) {
+                                for (const node of record.addedNodes) {
+                                    if (node.nodeType === Node.ELEMENT_NODE && (node.matches('[data-pond-transition]') || node.querySelector('[data-pond-transition]'))) window.pondTransitionCount++;
+                                }
+                            }
+                        });
+                        window.pondTransitionObserver.observe(element, {childList: true, subtree: true});
+                    }""")
+                    for key, option, view in (("ArrowRight", pixel_option, "pixel"), ("ArrowLeft", ascii_option, "ascii"), ("ArrowRight", pixel_option, "pixel")):
+                        page.keyboard.press(key)
+                        expect(option).to_be_checked()
+                        expect(page.locator("[data-view]")).to_have_attribute("data-view", view)
+                        self.assertTrue(canvas.evaluate("canvas => canvas === window.pondTestCanvas"))
+                        self.assertEqual(fish_ids, pond.get_attribute("data-fish-ids"))
+                    if motion == "no-preference":
+                        self.assertGreater(page.evaluate("window.pondTransitionCount"), 0)
+                        expect(pond.locator("[data-pond-transition]")).to_have_count(0)
+                    else:
+                        self.assertEqual(page.evaluate("window.pondTransitionCount"), 0)
+                    page.evaluate("window.pondTransitionObserver.disconnect()")
+                    self.assertNotEqual(before, canvas.screenshot())
+                    page.keyboard.press("ArrowLeft")
+                    expect(ascii_option).to_be_checked()
+                    expect(page.locator("[data-view]")).to_have_attribute("data-view", "ascii")
+                    self.assertTrue(canvas.evaluate("canvas => canvas === window.pondTestCanvas"))
+                    self.assertEqual(fish_ids, pond.get_attribute("data-fish-ids"))
+                    self.assertEqual(errors, [])
+                finally:
+                    page.close()
+
+    def test_pixel_view_accepts_input_only_on_masked_water(self) -> None:
+        browser = self.playwright.chromium.launch()
+        self.addCleanup(browser.close)
+        page = self.pond_page(browser, viewport={"width": 1440, "height": 900})
+        self.addCleanup(page.close)
+        page.goto(f"{self.base_url}/?pond-seed=pixel-water-input", wait_until="networkidle")
+        pond = page.locator("[data-pond-state]")
+        expect(pond).to_have_attribute("data-pond-state", "running")
+        page.get_by_role("radio", name="Pixel").check()
+        expect(page.locator("[data-view]")).to_have_attribute("data-view", "pixel")
+        points = page.evaluate("""async () => {
+            const image = new Image();
+            image.src = '/images/portfolio/pixel-pond-water-layer.webp';
+            await image.decode();
+            const canvas = document.createElement('canvas');
+            canvas.width = image.width; canvas.height = image.height;
+            const context = canvas.getContext('2d');
+            context.drawImage(image, 0, 0);
+            const pixels = context.getImageData(0, 0, image.width, image.height).data;
+            const scale = Math.max(innerWidth / image.width, innerHeight / image.height) * 1.015;
+            const centerX = image.width / 2 + (innerWidth < 720 ? 170 : 0);
+            const found = {};
+            for (let y = 30; y < innerHeight - 30; y += 17) {
+                for (let x = 30; x < innerWidth - 30; x += 17) {
+                    if (!document.elementFromPoint(x, y)?.matches('[class*="pondInput"]')) continue;
+                    const wx = Math.round(centerX + (x - innerWidth / 2) / scale);
+                    const wy = Math.round(image.height / 2 + (y - innerHeight / 2) / scale);
+                    if (wx < 2 || wy < 2 || wx >= image.width - 2 || wy >= image.height - 2) continue;
+                    const alpha = (dx, dy) => pixels[((wy + dy) * image.width + wx + dx) * 4 + 3];
+                    const samples = [[0, 0], [-2, 0], [2, 0], [0, -2], [0, 2]].map(([dx, dy]) => alpha(dx, dy));
+                    if (samples.every(value => value === 0)) found.land ??= {x, y};
+                    if (samples.every(value => value > 200)) found.water ??= {x, y};
+                    if (found.land && found.water) return found;
+                }
+            }
+            return found;
+        }""")
+        self.assertIn("land", points)
+        self.assertIn("water", points)
+        for kind, expected in (("land", "false"), ("water", "true")):
+            with self.subTest(surface=kind):
+                point = points[kind]
+                page.mouse.move(point["x"], point["y"])
+                expect(pond).to_have_attribute("data-food-affordance", expected)
+                before_impact = int(pond.get_attribute("data-primary-impact-count"))
+                before_food = pond.get_attribute("data-food-requested-at")
+                page.mouse.click(point["x"], point["y"])
+                page.mouse.click(point["x"], point["y"], button="right")
+                if kind == "water":
+                    wait_for_condition(page, "before => Number(document.querySelector('[data-pond-state]').dataset.primaryImpactCount) > before", arg=before_impact)
+                    wait_for_condition(page, "before => document.querySelector('[data-pond-state]').dataset.foodRequestedAt !== before", arg=before_food)
+                else:
+                    page.wait_for_timeout(150)
+                    self.assertEqual(int(pond.get_attribute("data-primary-impact-count")), before_impact)
+                    self.assertEqual(pond.get_attribute("data-food-requested-at"), before_food)
+
     def test_pond_animates_without_test_diagnostics(self) -> None:
         browser = self.playwright.chromium.launch()
         self.addCleanup(browser.close)
@@ -856,6 +965,24 @@ class PortfolioTests(BrowserTestCase):
                     full_page=True,
                 )
                 browser.close()
+
+    def test_project_marker_is_centered_for_every_selection(self) -> None:
+        browser = self.playwright.chromium.launch()
+        self.addCleanup(browser.close)
+        for width, height in ((1440, 900), (390, 844), (320, 800)):
+            with self.subTest(width=width):
+                page = browser.new_page(viewport={"width": width, "height": height})
+                page.goto(self.base_url, wait_until="networkidle")
+                buttons = page.get_by_role("group", name="Featured projects").get_by_role("button")
+                for index in range(4):
+                    button = buttons.nth(index)
+                    button.click()
+                    page.wait_for_timeout(400)
+                    self.assertEqual(button.get_attribute("aria-pressed"), "true")
+                    bounds = button.bounding_box()
+                    marker = button.locator("i").bounding_box()
+                    self.assertAlmostEqual(bounds["y"] + bounds["height"] / 2, marker["y"] + marker["height"] / 2, delta=0.75)
+                page.close()
 
     def test_mobile_navigation_hero_viewport_and_system_color_modes(self) -> None:
         browser = self.playwright.chromium.launch()
@@ -969,14 +1096,20 @@ class PortfolioTests(BrowserTestCase):
             "document.querySelector('[data-pond-state]')?.dataset.fishWorldPositions"
         )
 
+        last_known = {}
         for name, viewport in viewports:
             with self.subTest(viewport=name):
                 previous_frame = pond.get_attribute("data-frame")
-                previous_world = [
-                    tuple(float(value) for value in point.split(","))
-                    for point in pond.get_attribute("data-fish-world-positions").split(";")
-                ]
+                sampled_at = time.monotonic()
+                before_snapshot = pond.evaluate("element => ({ids: element.dataset.fishIds, positions: element.dataset.fishWorldPositions})")
+                previous_world = dict(zip(
+                    before_snapshot["ids"].split(";"),
+                    [tuple(float(value) for value in point.split(",")) for point in before_snapshot["positions"].split(";")],
+                ))
+                last_known.update({fish_id: (position, sampled_at) for fish_id, position in previous_world.items()})
                 page.set_viewport_size(viewport)
+                wait_for_condition(page, "viewport => document.querySelector('[data-pond-state]')?.dataset.resizeViewport === viewport", arg=f"{viewport['width']}x{viewport['height']}")
+                self.assertEqual(float(pond.get_attribute("data-resize-fish-displacement")), 0, "resize moved fish")
                 wait_for_condition(
                     page,
                     "frame => document.querySelector('[data-pond-state]')?.dataset.frame !== frame",
@@ -1001,6 +1134,7 @@ class PortfolioTests(BrowserTestCase):
                             headerInside: header.left >= -1 && header.right <= width + 1,
                             pondFits: Math.abs(pond.width - width) < 1 && Math.abs(pond.height - height) < 1,
                             projectTargets: buttons.length === 4 && buttons.every(button => button.width >= 44 && button.height >= 44),
+                            projectDistribution: width <= 430 || (buttons.length === 4 && Math.abs(buttons[3].right - (document.querySelector('[aria-label="Featured projects"]').getBoundingClientRect().right - 6)) < 2),
                             projectNamesFit: width > 430 || projectNames.every(element => {
                                 const range = document.createRange();
                                 range.selectNodeContents(element);
@@ -1020,21 +1154,38 @@ class PortfolioTests(BrowserTestCase):
                 self.assertTrue(state["headerInside"])
                 self.assertTrue(state["pondFits"])
                 self.assertTrue(state["projectTargets"])
+                self.assertTrue(state["projectDistribution"])
                 self.assertTrue(state["projectNamesFit"])
                 self.assertTrue(state["aboutCardsCentered"])
-                self.assertGreaterEqual(state["visibleFish"], 5)
+                self.assertGreaterEqual(state["visibleFish"], 1)
                 self.assertEqual(pond.get_attribute("data-fish-water-violation"), "false")
-                self.assertEqual(pond.get_attribute("data-cat-water-violation"), "false")
-                current_world = [
-                    tuple(float(value) for value in point.split(","))
-                    for point in pond.get_attribute("data-fish-world-positions").split(";")
-                ]
-                self.assertTrue(
-                    all(
-                        ((after[0] - before[0]) ** 2 + (after[1] - before[1]) ** 2) ** 0.5 < 80
-                        for before, after in zip(previous_world, current_world)
-                    )
-                )
+                current_sampled_at = time.monotonic()
+                snapshot = pond.evaluate("element => ({ids: element.dataset.fishIds, positions: element.dataset.fishWorldPositions, headings: element.dataset.fishHeadings, widths: element.dataset.fishWidths})")
+                ids = snapshot["ids"].split(";")
+                positions = [tuple(float(value) for value in point.split(",")) for point in snapshot["positions"].split(";")]
+                headings = [float(value) for value in snapshot["headings"].split(";")]
+                widths = [float(value) for value in snapshot["widths"].split(";")]
+                self.assertEqual(len(ids), len(set(ids)))
+                self.assertEqual(len(ids), len(positions))
+                self.assertEqual(len(ids), len(headings))
+                self.assertEqual(len(ids), len(widths))
+                current_world = dict(zip(ids, positions))
+                self.assertTrue(previous_world.keys() & current_world.keys(), "resize discarded every fish")
+                for fish_id, after in current_world.items():
+                    if fish_id in last_known:
+                        before, seen_at = last_known[fish_id]
+                        limit = 0.03 + (time.monotonic() - seen_at) * 126
+                        self.assertLess(math.dist(before, after), limit, f"{fish_id} jumped on resize or readmission")
+                for first in range(len(ids)):
+                    for second in range(first):
+                        for a in (-0.2, 0, 0.2):
+                            for b in (-0.2, 0, 0.2):
+                                distance = math.hypot(
+                                    positions[first][0] + math.cos(headings[first]) * widths[first] * a - positions[second][0] - math.cos(headings[second]) * widths[second] * b,
+                                    positions[first][1] + math.sin(headings[first]) * widths[first] * a - positions[second][1] - math.sin(headings[second]) * widths[second] * b,
+                                )
+                                self.assertGreaterEqual(distance + 0.5, (widths[first] + widths[second]) * 0.36, f"{ids[first]} overlapped {ids[second]}")
+                last_known.update({fish_id: (position, current_sampled_at) for fish_id, position in current_world.items()})
 
         self.assertEqual(page_errors, [])
         browser.close()
@@ -1093,11 +1244,8 @@ class PortfolioTests(BrowserTestCase):
         browser = self.playwright.chromium.launch()
         page = self.pond_page(browser, viewport={"width": 1280, "height": 800})
 
-        def delay_koi_atlas(route) -> None:
-            time.sleep(0.7)
-            route.continue_()
-
-        page.route("**/pixel-koi-atlas.webp", delay_koi_atlas)
+        held = []
+        page.route("**/pixel-koi-atlas.webp", lambda route: held.append(route))
         page.goto(f"{self.base_url}/?pond-seed=e2e-loading", wait_until="domcontentloaded")
         pond = page.locator("[data-renderer]")
         host = page.locator("[data-pond-state]")
@@ -1117,6 +1265,13 @@ class PortfolioTests(BrowserTestCase):
             )
         )
         self.assertEqual(host.evaluate("element => getComputedStyle(element).opacity"), "0")
+        for _ in range(100):
+            if held:
+                break
+            page.wait_for_timeout(20)
+        self.assertTrue(held)
+        for route in held:
+            route.continue_()
         wait_for_condition(
             page,
             "document.querySelector('[data-renderer]')?.dataset.renderer === 'three'"
@@ -1313,6 +1468,8 @@ class PortfolioTests(BrowserTestCase):
         page = self.pond_page(browser, viewport={"width": 1440, "height": 900})
         page_errors = []
         console_issues = []
+        cat_requests = []
+        page.on("request", lambda request: cat_requests.append(request.url) if "pixel-tabby" in request.url else None)
         page.on("pageerror", lambda error: page_errors.append(str(error)))
         page.on(
             "console",
@@ -1338,19 +1495,21 @@ class PortfolioTests(BrowserTestCase):
         first_water_offset = pond.get_attribute("data-water-offset")
         self.assertGreaterEqual(int(pond.get_attribute("data-fish-count")), 18)
         self.assertGreater(float(pond.get_attribute("data-fish-average-speed")), 14)
-        visible_anchors = pond.get_attribute("data-visible-anchor-ids").split(",")
-        self.assertIn("fern-stone-top", visible_anchors)
-        self.assertIn("east-island-top", visible_anchors)
+        pad_anchors = pond.get_attribute("data-pad-anchor-ids").split(",")
+        self.assertIn("fern-stone-top", pad_anchors)
+        self.assertIn("east-island-top", pad_anchors)
         self.assertGreaterEqual(int(pond.get_attribute("data-pond-element-count")), 10)
         self.assertGreaterEqual(int(pond.get_attribute("data-insect-count")), 2)
-        self.assertEqual(int(pond.get_attribute("data-cat-count")), 1)
+        self.assertEqual(cat_requests, [])
+        self.assertEqual(pond.locator('[src*="pixel-tabby"]').count(), 0)
+        self.assertFalse(pond.evaluate("element => [...element.attributes].some(attribute => attribute.name.startsWith('data-cat-'))"))
         self.assertEqual(
             pond.get_attribute("data-fish-logic"),
             "authoritative-seeded-world-steering",
         )
         self.assertEqual(
             pond.get_attribute("data-world-model"),
-            "seeded-routine-rock-target-food-environment",
+            "seeded-fish-food-environment",
         )
         wait_for_condition(
             page,
@@ -1361,65 +1520,6 @@ class PortfolioTests(BrowserTestCase):
             arg=first_water_offset,
         )
         self.assertNotEqual(pond.get_attribute("data-water-offset"), first_water_offset)
-        cat_x, cat_y = (
-            float(value)
-            for value in pond.get_attribute("data-cat-position").split(",")
-        )
-        first_cat_position = pond.get_attribute("data-cat-position")
-        first_cat_rock = pond.get_attribute("data-cat-rock")
-        first_pounce_count = int(pond.get_attribute("data-cat-pounce-count"))
-        self.assertEqual(pond.get_attribute("data-cat-over-water"), "false")
-        self.assertEqual(pond.get_attribute("data-cat-water-violation"), "false")
-        self.assertLess(abs(float(pond.get_attribute("data-cat-rotation"))), 0.12)
-        aim_x = float(pond.get_attribute("data-cat-aim-screen").split(",")[0])
-        cat_x = float(pond.get_attribute("data-cat-position").split(",")[0])
-        self.assertEqual(
-            int(pond.get_attribute("data-cat-facing")),
-            -1 if aim_x < cat_x else 1,
-        )
-
-        def disturb_water_near_cat(x, y) -> None:
-            offsets = (
-                (70, 0), (-70, 0), (0, 70), (0, -70),
-                (105, 105), (-105, 105), (105, -105), (-105, -105),
-                (210, 0), (-210, 0), (0, 210), (0, -210),
-            )
-            impact_x, impact_y = find_open_water(
-                page,
-                pond,
-                ((x + offset_x, y + offset_y) for offset_x, offset_y in offsets),
-            )
-            self.assertLess(((impact_x - x) ** 2 + (impact_y - y) ** 2) ** 0.5, 280)
-            page.mouse.click(impact_x, impact_y)
-
-        disturb_water_near_cat(cat_x, cat_y)
-        wait_for_condition(
-            page,
-            """initial => {
-                const pond = document.querySelector('[data-pond-state]');
-                return Number(pond?.dataset.catPounceCount) > initial;
-            }""",
-            arg=first_pounce_count,
-        )
-        self.assertNotEqual(pond.get_attribute("data-cat-state"), "idle")
-        wait_for_condition(
-            page,
-            "initial => document.querySelector('[data-pond-state]')?.dataset.catPosition !== initial",
-            arg=first_cat_position,
-        )
-        self.assertNotEqual(pond.get_attribute("data-cat-position"), first_cat_position)
-        wait_for_condition(
-            page,
-            """() => {
-                const pond = document.querySelector('[data-pond-state]');
-                return pond?.dataset.catGrounded === 'true' && ['idle', 'observe'].includes(pond.dataset.catState);
-            }"""
-        )
-        self.assertNotEqual(pond.get_attribute("data-cat-rock"), first_cat_rock)
-        self.assertEqual(pond.get_attribute("data-cat-over-water"), "false")
-        self.assertEqual(pond.get_attribute("data-cat-water-violation"), "false")
-        self.assertEqual(pond.get_attribute("data-cat-empty-bap-count"), "0")
-        self.assertLess(abs(float(pond.get_attribute("data-cat-rotation"))), 0.12)
         self.assertLess(float(pond.get_attribute("data-fish-max-step")), 25)
         responsive_positions = [
             tuple(float(value) for value in pair.split(","))
@@ -1548,7 +1648,6 @@ class PortfolioTests(BrowserTestCase):
             browser.close()
             self.fail(f"Fish never completed the reserved feeding cycle: {detail}")
         self.assertLessEqual(int(pond.get_attribute("data-food-max-count")), 8)
-        self.assertEqual(pond.get_attribute("data-cat-empty-bap-count"), "0")
         self.assertEqual(pond.get_attribute("data-fish-water-violation"), "false")
         self.assertEqual(page_errors, [])
         browser.close()
@@ -1562,7 +1661,7 @@ class PortfolioTests(BrowserTestCase):
 
         card = page.locator('[class*="profileTilt"]')
         card_surface = card.locator('[class*="profileLine"]')
-        portrait = page.locator('[class*="profilePortrait"]')
+        portrait = page.locator('[class*=profilePortrait]')
         card.scroll_into_view_if_needed()
         wait_for_condition(
             page,
@@ -1637,19 +1736,19 @@ class PortfolioTests(BrowserTestCase):
         page.mouse.move(portrait_box["x"] + portrait_box["width"] / 2,
                         portrait_box["y"] + portrait_box["height"] / 2)
         wait_for_condition(page, """() => {
-            const target = document.querySelector('[class*="profilePortrait"] canvas').dataset.foilTarget;
+            const target = document.querySelector('[class*=profilePortrait] canvas').dataset.foilTarget;
             if (!target) return false;
             const [x, y] = target.split(',').map(Number);
             return Math.abs(x - 0.5) < 0.06 && Math.abs(y - 0.5) < 0.06;
         }""")
         card.dispatch_event("pointerleave")
-        wait_for_condition(page, """() => document.querySelector('[class*="profilePortrait"] canvas')
+        wait_for_condition(page, """() => document.querySelector('[class*=profilePortrait] canvas')
             .dataset.foilView === '0.380,0.560'""")
         wait_for_settle()
         page.mouse.move(card_box["x"] + card_box["width"] - 12, card_box["y"] + 12)
         wait_for_tilt()
         wait_for_condition(page, """() => {
-            const canvas = document.querySelector('[class*="profilePortrait"] canvas');
+            const canvas = document.querySelector('[class*=profilePortrait] canvas');
             return canvas.dataset.foilTarget === '0.380,0.560'
                 && canvas.dataset.foilView === '0.380,0.560';
         }""")
@@ -1725,6 +1824,12 @@ class PortfolioTests(BrowserTestCase):
             timeout=5_000,
         )
         self.assertNotEqual(pond.get_attribute("data-fish-positions"), first_positions)
+        wait_for_condition(
+            page,
+            "initial => document.querySelector('[data-pond-state]')?.dataset.waterOffset !== initial",
+            arg=first_offset,
+            timeout=5_000,
+        )
         self.assertNotEqual(pond.get_attribute("data-water-offset"), first_offset)
         fish_points = [
             tuple(float(value) for value in point.split(","))
@@ -1879,7 +1984,6 @@ class PortfolioTests(BrowserTestCase):
             impacts_before_food,
         )
         self.assertGreaterEqual(int(pond.get_attribute("data-fish-count")), 8)
-        self.assertEqual(pond.get_attribute("data-cat-empty-bap-count"), "0")
         context.close()
         browser.close()
 
@@ -1900,6 +2004,7 @@ class PortfolioTests(BrowserTestCase):
             "fallback",
         )
         self.assertEqual(page.locator("[data-pond-state] canvas").count(), 0)
+        self.assertTrue(page.locator("fieldset").filter(has_text="Pond view").is_hidden())
         self.assertTrue(
             page.get_by_role(
                 "heading", name="I make stubborn software behave."
@@ -1907,6 +2012,19 @@ class PortfolioTests(BrowserTestCase):
         )
         context.close()
         browser.close()
+
+    def test_context_loss_hides_pond_view_control(self) -> None:
+        browser = self.playwright.chromium.launch()
+        self.addCleanup(browser.close)
+        page = self.pond_page(browser, viewport={"width": 1440, "height": 900})
+        page.goto(self.base_url, wait_until="networkidle")
+        pond = page.locator("[data-pond-state]")
+        expect(pond).to_have_attribute("data-pond-state", "running")
+        self.assertTrue(page.get_by_role("group", name="Pond view").is_visible())
+        pond.locator("canvas").evaluate("canvas => canvas.dispatchEvent(new Event('webglcontextlost', {cancelable: true}))")
+        expect(pond).to_have_attribute("data-pond-state", "fallback")
+        self.assertTrue(page.locator("fieldset").filter(has_text="Pond view").is_hidden())
+        page.close()
 
     def test_pause_resize_and_remount_keep_world_state_bounded(self) -> None:
         browser = self.playwright.chromium.launch()
@@ -2002,15 +2120,10 @@ class PortfolioTests(BrowserTestCase):
 
 class SkulletImageTests(BrowserTestCase):
     HERO_ALT = "Lu's illustrated avatar wearing a pink cap"
-    AVATAR_SKELETON = 'span:has(> img[alt="' + HERO_ALT + '"]) [skullet-loading]'
-    AVATAR_STATUS = 'span:has(> img[alt="' + HERO_ALT + '"]) [skullet-status]'
     SKULLET_WATCH = """
 window.__skulletShown = false;
 const markSkullet = () => {
-  const image = document.querySelector('img[alt="' + __HERO_ALT__ + '"]');
-  if (image && image.parentElement.querySelector("[skullet-loading]")) {
-    window.__skulletShown = true;
-  }
+  if (document.querySelector("[class*=profilePortrait] [skullet-loading]")) window.__skulletShown = true;
 };
 const armSkulletWatch = () => {
   if (window.__skulletArmed || !document.documentElement) return;
@@ -2032,8 +2145,7 @@ const armBoneWatch = () => {
   if (window.__boneArmed || !document.documentElement) return;
   window.__boneArmed = true;
   new MutationObserver(() => {
-    const image = document.querySelector('img[alt="' + __HERO_ALT__ + '"]');
-    const host = image && image.parentElement.querySelector("[skullet-loading]");
+    const host = document.querySelector("[class*=profilePortrait] [skullet-loading]");
     if (!host) return;
     if (!window.__boneHost) window.__boneHost = host;
     else if (host !== window.__boneHost) window.__boneReplaced = true;
@@ -2062,18 +2174,14 @@ document.addEventListener("readystatechange", armBoneWatch);
     def test_delayed_image_shows_a_skeleton_then_clears_it(self) -> None:
         browser = self.playwright.chromium.launch()
         page = browser.new_page(viewport={"width": 1440, "height": 900})
-        page.add_init_script(
-            self.SKULLET_WATCH.replace("__HERO_ALT__", json.dumps(self.HERO_ALT))
-        )
-        page.add_init_script(
-            self.BONE_STAYS.replace("__HERO_ALT__", json.dumps(self.HERO_ALT))
-        )
+        page.add_init_script(self.SKULLET_WATCH)
+        page.add_init_script(self.BONE_STAYS)
         license_text = page.request.get(f"{self.base_url}/third-party-licenses.txt").text()
         self.assertIn("Copyright (c) 2025 Lochie Axon", license_text)
         self.assertIn("Permission is hereby granted, free of charge", license_text)
         held = self.hold_matching(page, "lu-avatar.jpg")
         page.goto(f"{self.base_url}/", wait_until="domcontentloaded")
-        page.wait_for_selector(self.AVATAR_SKELETON)
+        page.wait_for_selector("[class*=profilePortrait] [skullet-loading]")
         self.assertIs(page.evaluate("window.__skulletShown"), True)
         image = page.get_by_alt_text(self.HERO_ALT)
         self.assertEqual(image.get_attribute("aria-hidden"), "true")
@@ -2086,9 +2194,9 @@ document.addEventListener("readystatechange", armBoneWatch);
           const box = bar ? bar.getBoundingClientRect() : null;
           return !!(host && host.isConnected && box && box.width > 8 && box.height > 8);
         }"""))
-        self.assertIn("Loading portrait", page.locator(self.AVATAR_STATUS).inner_text())
+        self.assertIn("Loading portrait", page.locator("[class*=profilePortrait] [skullet-status]").inner_text())
         self.release(held)
-        page.wait_for_selector(self.AVATAR_SKELETON, state="detached")
+        page.wait_for_selector("[class*=profilePortrait] [skullet-loading]", state="detached")
         self.assertIsNone(image.get_attribute("aria-hidden"))
         self.assertGreater(image.evaluate("node => node.naturalWidth"), 0)
         browser.close()
@@ -2100,21 +2208,19 @@ document.addEventListener("readystatechange", armBoneWatch);
         page = browser.new_page(viewport={"width": 1440, "height": 900})
         held = self.hold_matching(page, "lu-avatar.jpg")
         page.goto(f"{self.base_url}/", wait_until="domcontentloaded")
-        page.wait_for_selector(self.AVATAR_SKELETON)
+        page.wait_for_selector("[class*=profilePortrait] [skullet-loading]")
         image = page.get_by_alt_text(self.HERO_ALT)
         self.assertEqual(image.get_attribute("aria-hidden"), "true")
         for route in held:
             route.abort()
-        page.wait_for_selector(self.AVATAR_SKELETON, state="detached")
+        page.wait_for_selector("[class*=profilePortrait] [skullet-loading]", state="detached")
         self.assertIsNone(image.get_attribute("aria-hidden"))
         self.assertEqual(image.evaluate("node => node.naturalWidth"), 0)
 
     def test_complete_image_never_shows_a_skeleton(self) -> None:
         browser = self.playwright.chromium.launch()
         page = browser.new_page(viewport={"width": 1440, "height": 900})
-        page.add_init_script(
-            self.SKULLET_WATCH.replace("__HERO_ALT__", json.dumps(self.HERO_ALT))
-        )
+        page.add_init_script(self.SKULLET_WATCH)
         held_scripts = []
 
         def hold_scripts(route):
@@ -2141,7 +2247,7 @@ document.addEventListener("readystatechange", armBoneWatch);
         self.assertGreater(image.evaluate("node => node.naturalWidth"), 0)
         self.assertIsNone(image.get_attribute("aria-hidden"))
         self.assertIs(page.evaluate("window.__skulletShown"), False)
-        self.assertEqual(page.locator(self.AVATAR_SKELETON).count(), 0)
+        self.assertEqual(page.locator("[class*=profilePortrait] [skullet-loading]").count(), 0)
         browser.close()
 
     def test_failed_skullet_chunk_still_shows_the_image(self) -> None:
@@ -2165,7 +2271,10 @@ document.addEventListener("readystatechange", armBoneWatch);
 
         page.route("**/*", handler)
         page.goto(f"{self.base_url}/", wait_until="domcontentloaded")
-        page.wait_for_timeout(500)
+        for _ in range(50):
+            if aborted_chunks:
+                break
+            page.wait_for_timeout(100)
         self.assertGreaterEqual(len(aborted_chunks), 1)
         self.assertTrue(page.get_by_role("heading", name="I make stubborn software behave.").is_visible())
         self.release(held)

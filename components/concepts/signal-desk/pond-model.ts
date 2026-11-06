@@ -8,6 +8,7 @@ export type PondTarget = {
   visible: boolean;
   attackable: boolean;
   interactionRange: number;
+  bodyRadius?: number;
   species?: string;
   danger?: number;
 };
@@ -80,35 +81,7 @@ export type RockAnchor = {
   surfaceArea: number;
 };
 
-export type CatWorldState =
-  | "idle"
-  | "observe"
-  | "notice-target"
-  | "approach"
-  | "anticipate-hop"
-  | "airborne"
-  | "land"
-  | "settle"
-  | "prepare-bat"
-  | "bat"
-  | "react"
-  | "recover";
-
-export type CatRoutine = "resting" | "watching" | "hunting" | "patrolling";
-
 export type PondWorldEvent =
-  | { type: "transition"; from: CatWorldState; to: CatWorldState; reason: string }
-  | { type: "takeoff"; fromAnchor: string; toAnchor: string }
-  | { type: "land"; anchorId: string; position: PondPoint; impact: number }
-  | {
-      type: "bat";
-      targetId: string;
-      targetType: PondTarget["type"];
-      aim: PondPoint;
-      distance: number;
-      reach: number;
-      hit: boolean;
-    }
   | { type: "ambient-ripple"; position: PondPoint; strength: number }
   | { type: "food-dropped"; foodId: string; position: PondPoint; rippleStrength: number; merged: boolean }
   | { type: "fish-state"; fishId: string; from: FishFoodStateName; to: FishFoodStateName; reason: string }
@@ -123,28 +96,11 @@ export type PondWorldInput = {
   now: number;
   delta: number;
   targets: readonly PondTarget[];
-  visibleAnchorIds: readonly string[];
+  visibleAnchorIds?: readonly string[];
+  foodApproach?: (fish: PondTarget, food: PondPoint, arrivalRadius: number, preferred: PondPoint) => PondPoint | null;
 };
 
 export type PondWorldFrame = {
-  cat: {
-    state: CatWorldState;
-    routine: CatRoutine;
-    contact: PondPoint;
-    lift: number;
-    squashX: number;
-    squashY: number;
-    surfaceAngle: number;
-    facing: 1 | -1;
-    aim: PondPoint;
-    grounded: boolean;
-    anchorId: string;
-    rockId: string;
-    destinationAnchorId: string | null;
-    selectedTargetId: string | null;
-    selectedTargetType: PondTarget["type"] | null;
-    batReach: number;
-  };
   environment: {
     wind: number;
     currentA: PondPoint;
@@ -157,14 +113,7 @@ export type PondWorldFrame = {
   fish: readonly FishWorldIntent[];
   flies: readonly FlyWorldIntent[];
   events: readonly PondWorldEvent[];
-  debug: {
-    seed: number;
-    reason: string;
-    grounded: boolean;
-    selectedTarget: string | null;
-    destinationAnchor: string | null;
-    routine: CatRoutine;
-  };
+
 };
 
 export const ROCK_SURFACES: readonly RockSurface[] = [
@@ -265,8 +214,6 @@ export const ROCK_ANCHORS: readonly RockAnchor[] = ROCK_SURFACES.flatMap((rock) 
     surfaceArea: Math.PI * rock.sittingRegion.radiusX * rock.sittingRegion.radiusY,
   })),
 );
-
-export const CAT_INTEREST_RADIUS = 380;
 
 export function pondDistance(a: PondPoint, b: PondPoint) {
   return Math.hypot(a.x - b.x, a.y - b.y);

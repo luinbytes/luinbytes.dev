@@ -8,11 +8,19 @@ const subscribe = () => () => {};
 const clientSnapshot = () => true;
 const serverSnapshot = () => false;
 
-export function PondEnvironment({ reduced }: { reduced: boolean }) {
+export function PondEnvironment({ reduced, mode = "ascii" }: { reduced: boolean; mode?: "ascii" | "pixel" }) {
   const hydrated = useSyncExternalStore(subscribe, clientSnapshot, serverSnapshot);
   const pondRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const interactionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    const pond = pondRef.current;
+    if (!host || !pond) return;
+    pond.dataset.view = mode;
+    host.dispatchEvent(new Event("pond-view-change"));
+  }, [mode]);
 
   useEffect(() => {
     const pond = pondRef.current;

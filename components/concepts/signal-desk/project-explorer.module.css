@@ -14,7 +14,7 @@
 
 .projectNav {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 5px;
   min-width: 0;
   padding: 5px;
@@ -51,14 +51,15 @@
 
 .projectMarker {
   position: absolute;
-  top: 50%;
+  top: 0;
+  bottom: 0;
   right: 12px;
+  margin-block: auto;
   width: 7px;
   height: 7px;
   border-radius: 50%;
   background: var(--site-accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--site-accent) 18%, transparent);
-  transform: translateY(-50%);
 }
 
 .projectNav strong {
