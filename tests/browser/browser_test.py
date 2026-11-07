@@ -1117,6 +1117,16 @@ class PortfolioTests(BrowserTestCase):
                         throw new Error('Project marker did not settle');
                     }""")
                     self.assertAlmostEqual(centers[0], centers[1], delta=0.75)
+                    if width <= 390:
+                        heading = page.locator("#work article h3")
+                        expect(heading).to_have_text(button.locator("strong").inner_text())
+                        heading.scroll_into_view_if_needed()
+                        self.assertTrue(heading.evaluate("""element => {
+                            const range = document.createRange();
+                            range.selectNodeContents(element);
+                            const lines = [...range.getClientRects()];
+                            return lines.length === 1 && lines[0].width <= element.clientWidth;
+                        }"""), f"Project heading wraps at {width}px")
                 page.close()
 
     def test_mobile_navigation_hero_viewport_and_system_color_modes(self) -> None:
@@ -1157,17 +1167,19 @@ class PortfolioTests(BrowserTestCase):
 
                 hero = page.locator("section[aria-labelledby='hero-title']")
                 hero_actions = (
-                    hero.get_by_role("link", name="See the work", exact=True),
-                    hero.get_by_role("link", name="Start a conversation", exact=True),
+                    hero.get_by_role("link", name="Things I’ve made", exact=True),
+                    hero.get_by_role("link", name="Say hello", exact=True),
                 )
                 for action in hero_actions:
                     self.assertTrue(action.is_visible())
                     action_bounds = action.bounding_box()
                     self.assertIsNotNone(action_bounds)
-                    self.assertGreaterEqual(action_bounds["y"], -1)
-                    self.assertLessEqual(
-                        action_bounds["y"] + action_bounds["height"], height + 1
-                    )
+                    self.assertGreaterEqual(action_bounds["width"], 44)
+                    self.assertGreaterEqual(action_bounds["height"], 44)
+                    action.scroll_into_view_if_needed()
+                    visible_bounds = action.bounding_box()
+                    self.assertGreaterEqual(visible_bounds["y"], -1)
+                    self.assertLessEqual(visible_bounds["y"] + visible_bounds["height"], height + 1)
 
                 for color_scheme in ("light", "dark"):
                     page.emulate_media(color_scheme=color_scheme)
@@ -1269,7 +1281,7 @@ class PortfolioTests(BrowserTestCase):
                             headerInside: header.left >= -1 && header.right <= width + 1,
                             pondFits: Math.abs(pond.width - width) < 1 && Math.abs(pond.height - height) < 1,
                             projectTargets: buttons.length === 4 && buttons.every(button => button.width >= 44 && button.height >= 44),
-                            projectDistribution: width <= 430 || (buttons.length === 4 && Math.abs(buttons[3].right - (document.querySelector('[aria-label="Featured projects"]').getBoundingClientRect().right - 6)) < 2),
+                            projectDistribution: width <= 430 || (buttons.length === 4 && Math.abs(buttons[3].right - document.querySelector('[aria-label="Featured projects"]').getBoundingClientRect().right) < 2),
                             projectNamesFit: width > 430 || projectNames.every(element => {
                                 const range = document.createRange();
                                 range.selectNodeContents(element);
@@ -1442,7 +1454,7 @@ class PortfolioTests(BrowserTestCase):
                 responsive |= pond.get_attribute("data-food-affordance") == "true"
         self.assertTrue(responsive)
 
-        action = page.get_by_role("link", name="See the work").bounding_box()
+        action = page.get_by_role("link", name="Things I’ve made").bounding_box()
         page.mouse.move(
             action["x"] + action["width"] / 2,
             action["y"] + action["height"] / 2,
@@ -1457,7 +1469,7 @@ class PortfolioTests(BrowserTestCase):
         page.wait_for_timeout(1_200)
 
         hero = page.locator("section[aria-labelledby='hero-title']")
-        hero_action = hero.get_by_role("link", name="Start a conversation", exact=True)
+        hero_action = hero.get_by_role("link", name="Say hello", exact=True)
         hero_action.hover()
         page.wait_for_timeout(180)
         clipping_ancestors = hero_action.evaluate(
@@ -1486,18 +1498,9 @@ class PortfolioTests(BrowserTestCase):
             ),
             [["Work", "#work"], ["About", "#about"], ["Contact", "#contact"]],
         )
-        self.assertEqual(page.locator("header [class*='profileTilt']").count(), 1)
-        self.assertEqual(page.locator("#about [class*='profileTilt']").count(), 0)
-        self.assertTrue(
-            page.locator("header [class*='profileTilt']").evaluate(
-                """element => {
-                    const card = element.getBoundingClientRect();
-                    const header = element.closest('header').getBoundingClientRect();
-                    return card.left >= header.left && card.right <= header.right
-                        && card.top >= header.top && card.bottom <= header.bottom;
-                }"""
-            )
-        )
+        expect(hero.get_by_role("img", name="Lu's illustrated avatar wearing a pink cap")).to_be_visible()
+        expect(hero.get_by_role("heading", level=1)).to_have_text("Hi, I’m Lu.")
+        expect(page.locator("header a[href='#top']")).to_be_visible()
         category_labels = page.locator("[aria-label='Featured projects'] button small")
         self.assertEqual(category_labels.count(), 4)
         self.assertTrue(
@@ -1568,10 +1571,10 @@ class PortfolioTests(BrowserTestCase):
             if project == "ConnectorMap":
                 expect(panel.get_by_text("Which AI agents can actually use which apps.", exact=True)).to_be_visible()
                 expect(panel.get_by_text(
-                    "A live directory of 60 apps across the major AI agents, with endpoints checked daily and a weekly what-changed newsletter.",
+                    "A directory comparing app connections across AI agents, with read and act capabilities, clearly marked inferences, and links to sources.",
                     exact=True,
                 )).to_be_visible()
-                for tag in ("Live directory", "Daily checks", "Newsletter"):
+                for tag in ("Read + act", "Marked inferences", "Source links"):
                     expect(panel.locator("[class*='proofRow']").get_by_text(tag, exact=True)).to_be_visible()
                 image = panel.get_by_role("img", name="ConnectorMap matrix of AI agents and apps", exact=True)
                 expect(image).to_be_visible()
@@ -1719,7 +1722,7 @@ class PortfolioTests(BrowserTestCase):
             "document.querySelector('[data-pond-state]')?.dataset.fishPositions"
         )
         food_before = int(pond.get_attribute("data-food-dropped-count"))
-        context_suppressed_on_link = page.get_by_role("link", name="See the work").evaluate(
+        context_suppressed_on_link = page.get_by_role("link", name="Things I’ve made").evaluate(
             """element => {
                 const event = new MouseEvent('contextmenu', {
                     bubbles: true, cancelable: true, button: 2,
@@ -1787,144 +1790,26 @@ class PortfolioTests(BrowserTestCase):
         self.assertEqual(page_errors, [])
         browser.close()
 
-    def test_profile_card_foil_is_square_pointer_driven_and_motion_safe(self) -> None:
+    def test_hero_portrait_is_visible_square_and_motion_safe(self) -> None:
         browser = self.playwright.chromium.launch()
+        self.addCleanup(browser.close)
         page = self.pond_page(browser, viewport={"width": 1280, "height": 800})
         page_errors = []
         page.on("pageerror", lambda error: page_errors.append(str(error)))
         page.goto(self.base_url, wait_until="networkidle")
-
-        card = page.locator('[class*="profileTilt"]')
-        card_surface = card.locator('[class*="profileLine"]')
-        portrait = page.locator('[class*=profilePortrait]')
-        card.scroll_into_view_if_needed()
-        wait_for_condition(
-            page,
-            "document.querySelector('[class*=profilePortrait]')?.dataset.foilRenderer"
-        )
-        page.wait_for_timeout(700)
-        card_box = card.bounding_box()
-        portrait_box = portrait.bounding_box()
-        canvas_box = portrait.locator("canvas").bounding_box()
-        self.assertIsNotNone(card_box)
-        self.assertIsNotNone(portrait_box)
-        self.assertIsNotNone(canvas_box)
-        self.assertAlmostEqual(portrait_box["width"], portrait_box["height"], delta=0.5)
-        self.assertNotEqual(card_surface.evaluate("element => getComputedStyle(element).clipPath"), "none")
-        self.assertEqual(card_surface.evaluate("element => getComputedStyle(element).backdropFilter"), "none")
-        self.assertEqual(portrait.evaluate("element => getComputedStyle(element).overflow"), "hidden")
-        self.assertEqual(portrait.evaluate("element => getComputedStyle(element).boxSizing"), "border-box")
-        self.assertAlmostEqual(canvas_box["x"] - portrait_box["x"], 3, delta=0.25)
-        self.assertAlmostEqual(canvas_box["y"] - portrait_box["y"], 3, delta=0.25)
-        self.assertAlmostEqual(canvas_box["width"], portrait_box["width"] - 6, delta=0.25)
-        self.assertNotEqual(
-            portrait.evaluate("element => getComputedStyle(element, '::after').boxShadow"),
-            "none",
-        )
-        self.assertIn(portrait.get_attribute("data-foil-renderer"), ("webgl", "fallback"))
-        if portrait.get_attribute("data-foil-renderer") == "webgl":
-            self.assertRegex(portrait.locator("canvas").get_attribute("data-foil-view"), r"^\d\.\d{3},\d\.\d{3}$")
-        foil_background = portrait.evaluate(
-            "element => getComputedStyle(element, '::before').backgroundImage"
-        )
-        self.assertIn("linear-gradient", foil_background)
-        self.assertNotIn("radial-gradient", foil_background)
-        self.assertNotIn("conic-gradient", foil_background)
-        self.assertEqual(card.locator("a, button").count(), 0)
-        self.assertEqual(
-            card.locator("small").first.evaluate("element => getComputedStyle(element.parentElement).userSelect"),
-            "text",
-        )
-
-        def wait_for_tilt():
-            wait_for_condition(page, """() => {
-                const surface = document.querySelector('[class*="profileLine"]');
-                const m = new DOMMatrixReadOnly(getComputedStyle(surface).transform);
-                return Math.abs(m.m13) > 0.02 && Math.abs(m.m23) > 0.01;
-            }""")
-
-        def wait_for_settle():
-            wait_for_condition(page, """() => {
-                const surface = document.querySelector('[class*="profileLine"]');
-                const m = new DOMMatrixReadOnly(getComputedStyle(surface).transform);
-                return Math.abs(m.m13) < 0.001 && Math.abs(m.m23) < 0.001
-                    && Math.abs(m.m11 - 1) < 0.001;
-            }""")
-
-        page.mouse.move(card_box["x"] + 12, card_box["y"] + 12)
-        wait_for_tilt()
-        matrix = card_surface.evaluate("""element => {
-            const m = new DOMMatrixReadOnly(getComputedStyle(element).transform);
-            return [m.m13, m.m23];
-        }""")
-        self.assertGreater(matrix[0], 0)
-        self.assertGreater(matrix[1], 0)
-        self.assertNotEqual(card.evaluate("element => getComputedStyle(element).perspective"), "none")
-        page.mouse.move(card_box["x"] + card_box["width"] + 40, card_box["y"])
-        wait_for_settle()
-        self.assertNotIn(
-            "linear-gradient(112deg",
-            card_surface.evaluate("element => getComputedStyle(element, '::before').backgroundImage"),
-        )
-
-        portrait_box = portrait.bounding_box()
-        page.mouse.move(portrait_box["x"] + portrait_box["width"] / 2,
-                        portrait_box["y"] + portrait_box["height"] / 2)
-        wait_for_condition(page, """() => {
-            const target = document.querySelector('[class*=profilePortrait] canvas').dataset.foilTarget;
-            if (!target) return false;
-            const [x, y] = target.split(',').map(Number);
-            return Math.abs(x - 0.5) < 0.06 && Math.abs(y - 0.5) < 0.06;
-        }""")
-        card.dispatch_event("pointerleave")
-        wait_for_condition(page, """() => document.querySelector('[class*=profilePortrait] canvas')
-            .dataset.foilView === '0.380,0.560'""")
-        wait_for_settle()
-        page.mouse.move(card_box["x"] + card_box["width"] - 12, card_box["y"] + 12)
-        wait_for_tilt()
-        wait_for_condition(page, """() => {
-            const canvas = document.querySelector('[class*=profilePortrait] canvas');
-            return canvas.dataset.foilTarget === '0.380,0.560'
-                && canvas.dataset.foilView === '0.380,0.560';
-        }""")
-        foil_view = portrait.locator("canvas").get_attribute("data-foil-view")
-        page.mouse.move(card_box["x"] + card_box["width"] - 30, card_box["y"] + 20)
-        page.wait_for_timeout(200)
-        self.assertEqual(portrait.locator("canvas").get_attribute("data-foil-view"), foil_view)
-        page.mouse.move(card_box["x"] + card_box["width"] + 40, card_box["y"])
-        wait_for_settle()
-
-        for pointer_type in ("touch", "pen"):
-            for release in ("pointerup", "pointercancel"):
-                card.evaluate("""(element, pointerType) => {
-                    const b = element.getBoundingClientRect();
-                    element.dispatchEvent(new PointerEvent('pointerdown', {
-                        bubbles: true, pointerType, pointerId: 42, button: 0,
-                        clientX: b.left + 12, clientY: b.top + 12,
-                    }));
-                }""", pointer_type)
-                wait_for_tilt()
-                card.evaluate("""(element, args) => element.dispatchEvent(new PointerEvent(args[0], {
-                    bubbles: true, pointerType: args[1], pointerId: 42,
-                }))""", [release, pointer_type])
-                if pointer_type == "pen" and release == "pointerup":
-                    card.dispatch_event("pointerleave")
-                wait_for_settle()
-        self.assertEqual(card.evaluate("element => getComputedStyle(element).touchAction"), "auto")
-
-        page.emulate_media(reduced_motion="reduce")
-        page.reload(wait_until="networkidle")
-        reduced_card = page.locator('[class*="profileTilt"]')
-        reduced_card.scroll_into_view_if_needed()
-        reduced_box = reduced_card.bounding_box()
-        page.mouse.move(reduced_box["x"] + 12, reduced_box["y"] + 12)
-        page.wait_for_timeout(100)
-        self.assertEqual(
-            reduced_card.locator('[class*="profileLine"]').evaluate("element => getComputedStyle(element).transform"),
-            "none",
-        )
+        portrait = page.get_by_role("img", name="Lu's illustrated avatar wearing a pink cap")
+        for reduced in ("no-preference", "reduce"):
+            page.emulate_media(reduced_motion=reduced)
+            portrait.scroll_into_view_if_needed()
+            expect(portrait).to_be_visible()
+            self.assertGreater(portrait.evaluate("image => image.naturalWidth"), 0)
+            box = portrait.bounding_box()
+            self.assertAlmostEqual(box["width"], box["height"], delta=0.5)
+            before = portrait.evaluate("image => getComputedStyle(image).transform")
+            page.mouse.move(box["x"] + 5, box["y"] + 5)
+            page.wait_for_timeout(100)
+            self.assertEqual(portrait.evaluate("image => getComputedStyle(image).transform"), before)
         self.assertEqual(page_errors, [])
-        browser.close()
 
     def test_reduced_motion_preserves_the_ecosystem_at_low_speed(self) -> None:
         browser = self.playwright.chromium.launch()
@@ -2258,7 +2143,7 @@ class SkulletImageTests(BrowserTestCase):
     SKULLET_WATCH = """
 window.__skulletShown = false;
 const markSkullet = () => {
-  if (document.querySelector("[class*=profilePortrait] [skullet-loading]")) window.__skulletShown = true;
+  if (document.querySelector("[class*=heroPortrait] [skullet-loading]")) window.__skulletShown = true;
 };
 const armSkulletWatch = () => {
   if (window.__skulletArmed || !document.documentElement) return;
@@ -2280,7 +2165,7 @@ const armBoneWatch = () => {
   if (window.__boneArmed || !document.documentElement) return;
   window.__boneArmed = true;
   new MutationObserver(() => {
-    const host = document.querySelector("[class*=profilePortrait] [skullet-loading]");
+    const host = document.querySelector("[class*=heroPortrait] [skullet-loading]");
     if (!host) return;
     if (!window.__boneHost) window.__boneHost = host;
     else if (host !== window.__boneHost) window.__boneReplaced = true;
@@ -2316,7 +2201,7 @@ document.addEventListener("readystatechange", armBoneWatch);
         self.assertIn("Permission is hereby granted, free of charge", license_text)
         held = self.hold_matching(page, "lu-avatar.jpg")
         page.goto(f"{self.base_url}/", wait_until="domcontentloaded")
-        page.wait_for_selector("[class*=profilePortrait] [skullet-loading]")
+        page.wait_for_selector("[class*=heroPortrait] [skullet-loading]")
         self.assertIs(page.evaluate("window.__skulletShown"), True)
         image = page.get_by_alt_text(self.HERO_ALT)
         self.assertEqual(image.get_attribute("aria-hidden"), "true")
@@ -2329,9 +2214,9 @@ document.addEventListener("readystatechange", armBoneWatch);
           const box = bar ? bar.getBoundingClientRect() : null;
           return !!(host && host.isConnected && box && box.width > 8 && box.height > 8);
         }"""))
-        self.assertIn("Loading portrait", page.locator("[class*=profilePortrait] [skullet-status]").inner_text())
+        self.assertIn("Loading portrait", page.locator("[class*=heroPortrait] [skullet-status]").inner_text())
         self.release(held)
-        page.wait_for_selector("[class*=profilePortrait] [skullet-loading]", state="detached")
+        page.wait_for_selector("[class*=heroPortrait] [skullet-loading]", state="detached")
         self.assertIsNone(image.get_attribute("aria-hidden"))
         self.assertGreater(image.evaluate("node => node.naturalWidth"), 0)
         browser.close()
@@ -2343,12 +2228,12 @@ document.addEventListener("readystatechange", armBoneWatch);
         page = browser.new_page(viewport={"width": 1440, "height": 900})
         held = self.hold_matching(page, "lu-avatar.jpg")
         page.goto(f"{self.base_url}/", wait_until="domcontentloaded")
-        page.wait_for_selector("[class*=profilePortrait] [skullet-loading]")
+        page.wait_for_selector("[class*=heroPortrait] [skullet-loading]")
         image = page.get_by_alt_text(self.HERO_ALT)
         self.assertEqual(image.get_attribute("aria-hidden"), "true")
         for route in held:
             route.abort()
-        page.wait_for_selector("[class*=profilePortrait] [skullet-loading]", state="detached")
+        page.wait_for_selector("[class*=heroPortrait] [skullet-loading]", state="detached")
         self.assertIsNone(image.get_attribute("aria-hidden"))
         self.assertEqual(image.evaluate("node => node.naturalWidth"), 0)
 
@@ -2382,7 +2267,7 @@ document.addEventListener("readystatechange", armBoneWatch);
         self.assertGreater(image.evaluate("node => node.naturalWidth"), 0)
         self.assertIsNone(image.get_attribute("aria-hidden"))
         self.assertIs(page.evaluate("window.__skulletShown"), False)
-        self.assertEqual(page.locator("[class*=profilePortrait] [skullet-loading]").count(), 0)
+        self.assertEqual(page.locator("[class*=heroPortrait] [skullet-loading]").count(), 0)
         browser.close()
 
     def test_failed_skullet_chunk_still_shows_the_image(self) -> None:

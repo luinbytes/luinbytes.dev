@@ -66,11 +66,11 @@ export const portfolioProjects: PortfolioProject[] = [
     eyebrow: "Live directory / channel 05",
     summary: "Which AI agents can actually use which apps.",
     detail:
-      "A live directory of 60 apps across the major AI agents, with endpoints checked daily and a weekly what-changed newsletter.",
+      "A directory comparing app connections across AI agents, with read and act capabilities, clearly marked inferences, and links to sources.",
     href: "https://connectormap.luinbytes.dev",
     image: "/images/portfolio/connectormap-card.webp",
     imageAlt: "ConnectorMap matrix of AI agents and apps",
-    proof: ["Live directory", "Daily checks", "Newsletter"],
+    proof: ["Read + act", "Marked inferences", "Source links"],
   },
 ];
 

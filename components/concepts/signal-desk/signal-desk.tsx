@@ -9,7 +9,6 @@ import {
   type PortfolioProjectId,
 } from "@/lib/portfolio-content";
 import { PondEnvironment } from "./pond-environment";
-import { ProfileCard } from "./profile-card";
 import { Button } from "@/components/ui/button";
 import { SkulletImage } from "@/components/ui/skullet-image";
 import projectStyles from "./project-explorer.module.css";
@@ -204,7 +203,8 @@ function ProjectExplorer({ reduced, entrance, ready }: { reduced: boolean; entra
         viewport={{ once: true, amount: 0.35 }}
         transition={{ duration: reduced ? 0 : 0.62, ease: EASE_OUT }}
       >
-        <h2 id="work-title">Built where the interesting problems live.</h2>
+        <span className={styles.eyebrow}>01 / Things I’ve made</span>
+        <h2 id="work-title">A few useful obsessions.</h2>
         <p>Native apps, agent infrastructure, Linux systems. Pick a project to inspect the work.</p>
       </motion.div>
 
@@ -258,7 +258,8 @@ export function SignalDesk() {
 
       <header className={styles.header}>
         <a className={styles.brand} href="#top">
-          <ProfileCard reducedMotion={reduced} compact />
+          <span className={styles.brandMark}>lu<span aria-hidden="true">.</span></span>
+          <span className={styles.brandNote}>a little corner of the internet</span>
           <span className={styles.srOnly}>Back to top</span>
         </a>
         <nav aria-label="Portfolio navigation">
@@ -290,14 +291,21 @@ export function SignalDesk() {
             </div>
           </fieldset>
           <div className={styles.heroCopy}>
-            <span className={styles.eyebrow}>Software engineer</span>
-            <h1 id="hero-title">I make stubborn software <em>behave.</em></h1>
+            <div className={styles.introduction}>
+              <span className={styles.heroPortrait}>
+                <SkulletImage frame label="Loading portrait" src="/images/portfolio/lu-avatar.jpg" width={64} height={64} alt="Lu's illustrated avatar wearing a pink cap" loading="eager" fetchPriority="high" />
+              </span>
+              <span className={styles.eyebrow}>@x6c75<br />Software engineer</span>
+            </div>
+            <h1 id="hero-title">Hi, I’m <em>Lu.</em></h1>
+            <h2 className={styles.heroStatement}>I make stubborn<br />software behave.</h2>
             <p>I build native Android apps, agent systems, and Linux tools that do the useful part without making a fuss.</p>
             <div className={styles.heroActions}>
-              <a href="#work">See the work <ArrowDown aria-hidden="true" /></a>
-              <a href={portfolioIdentity.calendar}>Start a conversation <Mail aria-hidden="true" /></a>
+              <a href="#work">Things I’ve made <ArrowDown aria-hidden="true" /></a>
+              <a href={portfolioIdentity.calendar}>Say hello <Mail aria-hidden="true" /></a>
             </div>
           </div>
+          <p className={styles.pondNote}><span aria-hidden="true">↳</span> Stay a while. Feed the fish.<small>Right click the water · double tap on touch</small></p>
         </section>
 
 
@@ -312,7 +320,8 @@ export function SignalDesk() {
             viewport={{ once: true, amount: 0.28 }}
             transition={{ duration: motionValue(reduced, 0.62), ease: EASE_OUT }}
           >
-            <h2 id="about-title">Practical systems. Properly finished.</h2>
+            <span className={styles.eyebrow}>02 / A bit about me</span>
+            <h2 id="about-title">Powered by caffeine<br />and spite.</h2>
             <p>I work across native apps, agent infrastructure, Linux, and the awkward seams between them. I like the problems where “mostly works” is still broken.</p>
           </motion.div>
 
@@ -364,6 +373,7 @@ export function SignalDesk() {
           transition={{ duration: motionValue(reduced, 0.56), ease: EASE_OUT }}
         >
           <div className={styles.contactIntro}>
+            <span className={styles.eyebrow}>03 / Say hello</span>
             <h2 id="contact-title">Got a useful problem?</h2>
             <p>Native apps, agent infrastructure, strange systems, and software that needs to behave.</p>
           </div>
