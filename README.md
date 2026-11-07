@@ -9,14 +9,15 @@ The site has two public routes: `/`, the interactive portfolio, and `/privacy`, 
 The portfolio features [HomeBot](https://github.com/luinbytes/HomeBot), [rakazo-android](https://github.com/luinbytes/rakazo-android), [Linux Sonar](https://github.com/luinbytes/linux-sonar), [bongocat](https://github.com/luinbytes/bongocat), and [cursor-barrier](https://github.com/luinbytes/cursor-barrier).
 
 The interface follows the system light/dark preference. The pond, fish,
-feeding controls, and portrait foil retain their existing behavior in both modes.
+and feeding controls retain their existing behavior in both modes. The static
+illustrated portrait sits beside the personal introduction with an image loading fallback.
 Navigation is available at every screen size, including without JavaScript.
 
 ## Stack
 
 - Vite 8 with React prerendering for GitHub Pages
 - React 19 and TypeScript
-- ui-stack shadcn/Radix components, Lavender Glass tokens, CSS Modules, and Tailwind CSS v4
+- ui-stack shadcn/Radix components, scoped pondside homepage styles, CSS Modules, and Tailwind CSS v4
 - Framer Motion for interface motion
 - Three.js and Yuka for the procedural pond ecosystem
 - Lucide React for interface icons

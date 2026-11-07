@@ -270,6 +270,9 @@
   .projectCopy {
     padding:24px;
   }
+  .projectCopy h3 {
+    font-size:clamp(28px,8vw,36px);
+  }
   .projectCover strong {
     font-size:clamp(2rem,9vw,3rem);
   }

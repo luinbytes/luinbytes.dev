@@ -292,7 +292,9 @@ export function SignalDesk() {
           </fieldset>
           <div className={styles.heroCopy}>
             <div className={styles.introduction}>
-              <img src="/images/portfolio/lu-avatar.jpg" width="80" height="80" alt="Lu's illustrated avatar wearing a pink cap" />
+              <span className={styles.heroPortrait}>
+                <SkulletImage frame label="Loading portrait" src="/images/portfolio/lu-avatar.jpg" width={64} height={64} alt="Lu's illustrated avatar wearing a pink cap" loading="eager" fetchPriority="high" />
+              </span>
               <span className={styles.eyebrow}>@x6c75<br />Software engineer</span>
             </div>
             <h1 id="hero-title">Hi, I’m <em>Lu.</em></h1>
