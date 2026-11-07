@@ -5,6 +5,7 @@
   --line: #c9c9b8;
   --orange: #a94626;
   --green: #344f3d;
+  --header-shadow:0 2px 4px rgb(41 55 46 / .1), 0 10px 24px rgb(41 55 46 / .2);
   position: relative;
   isolation: isolate;
   -webkit-user-select:none;
@@ -58,6 +59,7 @@
   border:1px solid var(--line);
   border-radius:5px;
   background:var(--paper);
+  box-shadow:var(--header-shadow);
 }
 
 .brand {
@@ -527,6 +529,7 @@
     --line:#515e4e;
     --orange:#f0a17b;
     --green:#3d5e45;
+    --header-shadow:0 2px 4px rgb(0 0 0 / .25), 0 10px 28px rgb(0 0 0 / .4);
   }
 }
 
