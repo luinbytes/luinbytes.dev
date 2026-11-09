@@ -177,7 +177,7 @@ export async function startPondRenderer(options: StartOptions) {
       return asset;
     };
     const [pondTexture, waterTexture, koiAtlas, foregroundTexture, pondWaterTexture] = await Promise.all([
-      load("pixel-pond-world.webp"),
+      load(window.matchMedia("(max-width: 720px)").matches ? "pixel-pond-world-mobile.webp" : "pixel-pond-world.webp"),
       load("water-displacement.jpg"),
       load("pixel-koi-atlas.webp"),
       load("pixel-pond-foreground.webp"),

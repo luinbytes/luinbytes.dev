@@ -36,11 +36,12 @@ test("ASCII starts with only the atlas while raster mode still loads its hit map
   const assets = source.slice(source.indexOf("    const koiAtlas ="), source.indexOf("    host.replaceChildren(canvas);"));
   const pixelSource = readFileSync(new URL("../components/concepts/signal-desk/pond-pixel-renderer.ts", import.meta.url), "utf8");
   const pixelAssets = pixelSource.slice(pixelSource.indexOf("    const [pondTexture,"), pixelSource.indexOf("    host.replaceChildren(canvas);"));
-  async function initialize(liveAscii: boolean, fail: (path: string) => boolean, pixel = false) {
+  async function initialize(liveAscii: boolean, fail: (path: string) => boolean, pixel = false, mobile = false) {
     const loaded: string[] = [];
     let reads = 0;
     const initializeAssets = runInNewContext(javascript(`(async () => { ${pixel ? pixelAssets : assets} })`), {
       liveAscii,
+      window: { matchMedia: () => ({ matches: mobile }) },
       load: async (path: string) => {
         loaded.push(path);
         if (fail(path)) throw new Error(`failed ${path}`);
@@ -67,6 +68,10 @@ test("ASCII starts with only the atlas while raster mode still loads its hit map
   const pixel = await initialize(false, () => false, true);
   assert.equal(pixel.loaded.length, 5);
   assert.equal(pixel.reads, 1);
+  assert.ok(pixel.loaded.includes("pixel-pond-world.webp"));
+  const mobilePixel = await initialize(false, () => false, true, true);
+  assert.ok(mobilePixel.loaded.includes("pixel-pond-world-mobile.webp"));
+  assert.equal(mobilePixel.reads, 1);
   await assert.rejects(initialize(false, (path) => path === "water-displacement.jpg"), /failed water-displacement/);
   await assert.rejects(initialize(true, () => true), /failed pixel-koi-atlas/);
 });

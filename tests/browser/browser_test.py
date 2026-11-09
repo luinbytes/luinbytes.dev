@@ -1396,10 +1396,11 @@ class PortfolioTests(BrowserTestCase):
         page.goto(f"{self.base_url}/?pond-seed=e2e-loading", wait_until="domcontentloaded")
         pond = page.locator("[data-renderer]")
         host = page.locator("[data-pond-state]")
+        wait_for_condition(page, "document.querySelector('[data-renderer]')?.dataset.renderer === 'loading'")
         self.assertEqual(pond.get_attribute("data-renderer"), "loading")
         self.assertEqual(host.locator("canvas").count(), 0)
-        self.assertIn(
-            "pixel-pond-world.webp",
+        self.assertEqual(
+            "none",
             pond.locator(":scope > div").first.evaluate(
                 "element => getComputedStyle(element).backgroundImage"
             ),

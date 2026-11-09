@@ -56,6 +56,8 @@ export function PondEnvironment({ reduced, mode = "ascii" }: { reduced: boolean;
       transitionRef.current = null;
     });
     observer.observe(pond, { attributes: true, attributeFilter: ["data-renderer"] });
+    let paintFrame = 0;
+    const startAfterPaint = () => {
     void (mode === "pixel" ? import("./pond-pixel-renderer") : import("./pond-renderer"))
       .then(({ startPondRenderer }) => disposed ? undefined : startPondRenderer({
         pond,
@@ -78,8 +80,11 @@ export function PondEnvironment({ reduced, mode = "ascii" }: { reduced: boolean;
         host.dataset.pondState = "fallback";
         host.dataset.fallbackReason = error instanceof Error ? error.message : "renderer-init-failed";
       });
+    };
+    paintFrame = requestAnimationFrame(() => { paintFrame = requestAnimationFrame(startAfterPaint); });
 
     return () => {
+      cancelAnimationFrame(paintFrame);
       disposed = true;
       observer.disconnect();
       if (!reduced && !reducedRef.current && capture && pond.dataset.renderer === "three") {
