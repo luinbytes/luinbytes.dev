@@ -238,6 +238,20 @@ export function SignalDesk() {
   const { ready, reduced } = useReducedMotionPreference();
   const [pondView, setPondView] = useState<"ascii" | "pixel">("ascii");
   const pageRef = useRef<HTMLDivElement>(null);
+  const [activeSection, setActiveSection] = useState("");
+
+  useEffect(() => {
+    const sync = () => {
+      const sections = ["work", "about", "contact"];
+      const visible = sections.filter(id => (document.getElementById(id)?.getBoundingClientRect().top ?? Infinity) <= 180);
+      const atBottom = window.scrollY > 0 && window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
+      setActiveSection(atBottom ? "contact" : visible.at(-1) ?? "");
+    };
+    window.addEventListener("scroll", sync, { passive: true });
+    window.addEventListener("hashchange", sync);
+    sync();
+    return () => { window.removeEventListener("scroll", sync); window.removeEventListener("hashchange", sync); };
+  }, []);
   const [pondStatus, setPondStatus] = useState<{ mode: string; renderer: string }>({ mode: "ascii", renderer: "loading" });
   const entrance = ready && !reduced;
 
@@ -263,9 +277,9 @@ export function SignalDesk() {
           <span className={styles.srOnly}>Back to top</span>
         </a>
         <nav aria-label="Portfolio navigation">
-          <a href="#work">Work</a>
-          <a href="#about">About</a>
-          <a href="#contact">Contact</a>
+          <a href="#work" aria-current={activeSection === "work" ? "location" : undefined}>Work</a>
+          <a href="#about" aria-current={activeSection === "about" ? "location" : undefined}>About</a>
+          <a href="#contact" aria-current={activeSection === "contact" ? "location" : undefined}>Contact</a>
         </nav>
       </header>
 
