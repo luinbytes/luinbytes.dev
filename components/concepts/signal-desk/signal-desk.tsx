@@ -391,15 +391,11 @@ export function SignalDesk() {
           </motion.div>
         </section>
 
-        <motion.section
+        <section
           key={ready ? "contact-ready" : "contact-server"}
           className={styles.contactSection}
           id="contact"
           aria-labelledby="contact-title"
-          initial={entrance ? { opacity: 0, scale: 0.975, y: 24 } : false}
-          whileInView={{ opacity: 1, scale: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.28 }}
-          transition={{ duration: motionValue(reduced, 0.56), ease: EASE_OUT }}
         >
           <div className={styles.contactIntro}>
             <span className={styles.eyebrow}>03 / Say hello</span>
@@ -415,7 +411,7 @@ export function SignalDesk() {
             </div>
             <a className={styles.contactCta} href={portfolioIdentity.calendar}>Start a conversation <ArrowUpRight aria-hidden="true" /></a>
           </div>
-        </motion.section>
+        </section>
       </div>
 
       <SiteFooter reduced={reduced} entrance={entrance} ready={ready} />
