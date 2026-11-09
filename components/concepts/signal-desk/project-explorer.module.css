@@ -44,7 +44,7 @@
 }
 
 .projectNav small {
-  font-size:10px;
+  font-size:12px;
   line-height:1.4;
 }
 
@@ -148,7 +148,7 @@
 
 .projectEyebrow {
   color:var(--muted);
-  font:11px var(--font-space-mono),monospace;
+  font:12px var(--font-space-mono),monospace;
   line-height:1.6;
 }
 
@@ -184,7 +184,7 @@
 
 .proofRow span {
   color:var(--muted);
-  font-size:11px;
+  font-size:12px;
   line-height:1.4;
 }
 
