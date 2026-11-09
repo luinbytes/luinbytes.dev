@@ -104,16 +104,19 @@ Home, privacy, and the 404 page have separate HTML and client entries. Vite gene
 their stylesheet and preload links. Run `node scripts/measure-page-assets.mjs`
 after a build to inspect each page's initial uncompressed JavaScript and CSS.
 
-Each production page receives a Content Security Policy that allows scripts and
-connections from this site. Inline JavaScript, embedded frames, plugins, and form
-submissions are blocked. Inline styles remain allowed for React and animation
-styles. Blob images remain allowed for local pond textures.
+Each production page contains a meta Content Security Policy that allows scripts
+and connections from this site, plus the approved inline script hash. Other inline
+JavaScript, embedded frames, plugins, and form submissions are blocked. Inline
+styles remain allowed for React and animation styles. Blob images remain allowed for local pond textures.
 
 The preview server also sends `X-Content-Type-Options`, `X-Frame-Options`, and
-`Referrer-Policy`. These server headers apply to local previews. GitHub Pages and
-Cloudflare control the public response headers. In particular, public frame
+`Referrer-Policy`. These server headers apply to local previews. GitHub Pages
+serves the static export through the public Cloudflare edge.
+The sampled public responses lack those headers. In particular, public frame
 embedding restrictions require a response header at the hosting layer; an HTML
-meta policy cannot enforce `frame-ancestors`.
+meta policy cannot enforce `frame-ancestors`. See the
+[public header evidence and hosting decision](docs/security-headers.md) for the
+verified gap, the policy to preserve, and the work that needs a hosting decision.
 
 Pull requests run dependency auditing, lint, unit tests, and the production browser
 suite. Deployment actions use pinned commits, and only the deployment job receives
