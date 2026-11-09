@@ -57,6 +57,7 @@ function SiteFooter({ reduced, entrance, ready }: { reduced: boolean; entrance: 
     >
       <span>© {import.meta.env.BUILD_YEAR} Lu / 6C75</span>
       <div>
+        <a href="/privacy">Privacy</a>
         <a href={portfolioIdentity.github} target="_blank" rel="noreferrer">GitHub</a>
         <a href={portfolioIdentity.x} target="_blank" rel="noreferrer">@x6c75</a>
       </div>

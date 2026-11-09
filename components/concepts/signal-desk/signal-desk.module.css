@@ -642,3 +642,5 @@
 @media(max-width:800px) { .heroActions a { font-size:14px; } }
 
 .header nav a[aria-current="location"] { text-decoration:underline; text-decoration-color:var(--orange); text-decoration-thickness:2px; text-underline-offset:7px; }
+
+@media(max-width:800px) { .footer { flex-wrap:wrap; gap:4px; } }
