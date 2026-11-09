@@ -1185,7 +1185,7 @@ export async function startPondRenderer(options: StartOptions) {
       previousTime = now;
       const frameInterval = 1000 / POND_ASCII_FPS_CAP;
       let stepMs = deltaMs;
-      if (liveAscii && !reduced) {
+      if (liveAscii) {
         const paced = pondFrameBudget(frameBudget, deltaMs, frameInterval);
         frameBudget = paced.budget;
         if (paced.stepMs === 0) {
@@ -1194,7 +1194,7 @@ export async function startPondRenderer(options: StartOptions) {
         }
         stepMs = paced.stepMs;
       }
-      const delta = Math.min(0.08, Math.max(1 / 120, stepMs / 1000));
+      const delta = Math.min(0.08, stepMs / 1000);
       try {
         step(now, delta);
         present();
