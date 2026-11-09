@@ -53,7 +53,21 @@ npm run test:e2e
 
 ## Deployment
 
-Pushes to `master` build and deploy the static export to [luinbytes.dev](https://luinbytes.dev/) through GitHub Pages.
+Pushes to `master` and manual runs deploy the static export through GitHub Pages.
+Before the artifact build, deployment calls `.github/workflows/checks.yml`, the
+same verification used by pull requests: dependency audit, lint, pond tests, and
+the production browser suite, which includes a production build. A failed or
+cancelled verification prevents the artifact build and deployment.
+
+Verification and artifact build both check out the event's immutable
+`github.sha`, including when a branch advances during a run. The local reusable
+workflow reference selects the checks from the caller's commit. Pull requests
+verify their synthetic merge commit; deployment verifies its own push or manual
+run commit again. This gate does not rely on branch protection or an earlier
+PR result. See [GitHub's reusable workflow rules](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows).
+
+Successful local checks do not establish a successful Actions run. Runner
+availability, billing, and the Pages environment can still prevent deployment.
 
 ## Social preview
 
@@ -90,16 +104,19 @@ Home, privacy, and the 404 page have separate HTML and client entries. Vite gene
 their stylesheet and preload links. Run `node scripts/measure-page-assets.mjs`
 after a build to inspect each page's initial uncompressed JavaScript and CSS.
 
-Each production page receives a Content Security Policy that allows scripts and
-connections from this site. Inline JavaScript, embedded frames, plugins, and form
-submissions are blocked. Inline styles remain allowed for React and animation
-styles. Blob images remain allowed for local pond textures.
+Each production page contains a meta Content Security Policy that allows scripts
+and connections from this site, plus the approved inline script hash. Other inline
+JavaScript, embedded frames, plugins, and form submissions are blocked. Inline
+styles remain allowed for React and animation styles. Blob images remain allowed for local pond textures.
 
 The preview server also sends `X-Content-Type-Options`, `X-Frame-Options`, and
-`Referrer-Policy`. These server headers apply to local previews. GitHub Pages and
-Cloudflare control the public response headers. In particular, public frame
+`Referrer-Policy`. These server headers apply to local previews. GitHub Pages
+serves the static export through the public Cloudflare edge.
+The sampled public responses lack those headers. In particular, public frame
 embedding restrictions require a response header at the hosting layer; an HTML
-meta policy cannot enforce `frame-ancestors`.
+meta policy cannot enforce `frame-ancestors`. See the
+[public header evidence and hosting decision](docs/security-headers.md) for the
+verified gap, the policy to preserve, and the work that needs a hosting decision.
 
 Pull requests run dependency auditing, lint, unit tests, and the production browser
 suite. Deployment actions use pinned commits, and only the deployment job receives

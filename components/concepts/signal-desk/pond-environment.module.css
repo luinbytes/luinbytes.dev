@@ -25,7 +25,7 @@
 .pondImage {
   z-index: 0;
   visibility: hidden;
-  background-image: url("/images/portfolio/pixel-pond-world.webp");
+  --pond-fallback:url("/images/portfolio/pixel-pond-world.webp");
   background-position: center;
   background-size: cover;
   transform: scale(1.015);
@@ -34,10 +34,12 @@
 
 .pond[data-renderer="fallback"] .pondImage {
   visibility: visible;
+  background-image:var(--pond-fallback);
 }
 
 :global(html[data-pond-boot="pending"]) .pond[data-renderer="fallback"] .pondImage {
   visibility: hidden;
+  background-image:none;
 }
 
 .pondSkeleton[skullet-reveal] {
@@ -165,3 +167,5 @@
   }
 
 }
+
+@media(max-width:720px) { .pondImage { --pond-fallback:url("/images/portfolio/pixel-pond-world-mobile.webp"); } }

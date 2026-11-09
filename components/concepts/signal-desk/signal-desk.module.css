@@ -82,7 +82,7 @@
 
 .brandNote {
   font-family:var(--font-space-mono),monospace;
-  font-size:10px;
+  font-size:12px;
   max-width:150px;
   line-height:1.6;
 }
@@ -165,7 +165,7 @@
   align-items:center;
   gap:8px;
   font-family:var(--font-space-mono),monospace;
-  font-size:11px;
+  font-size:12px;
   line-height:1.8;
   color:var(--muted);
 }
@@ -213,7 +213,7 @@
   gap:10px;
   align-items:center;
   min-height:46px;
-  font-size:12px;
+  font-size:14px;
   font-weight:700;
   pointer-events:auto;
 }
@@ -249,7 +249,7 @@
   padding:0;
   color:var(--muted);
   font-family:var(--font-space-mono),monospace;
-  font-size:10px;
+  font-size:12px;
 }
 
 .pondChoices {
@@ -305,7 +305,7 @@
 }
 
 .pondCurrent {
-  font-size:10px;
+  font-size:12px;
   color:var(--muted);
 }
 
@@ -330,7 +330,7 @@
 .pondNote small {
   display:block;
   margin-top:7px;
-  font:9px var(--font-space-mono),monospace;
+  font:12px var(--font-space-mono),monospace;
   color:var(--muted);
 }
 
@@ -429,7 +429,7 @@
 }
 
 .moreGrid small {
-  font-size:11px;
+  font-size:12px;
   color:var(--muted);
 }
 
@@ -455,7 +455,7 @@
 }
 
 .contactLabel {
-  font:11px var(--font-space-mono),monospace;
+  font:12px var(--font-space-mono),monospace;
   color:var(--muted);
 }
 
@@ -468,7 +468,7 @@
 .contactFacts {
   display:grid;
   gap:12px;
-  font-size:11px;
+  font-size:12px;
   color:var(--muted);
 }
 
@@ -507,7 +507,7 @@
   padding:16px 24px;
   border-radius:3px;
   background:var(--paper);
-  font:10px var(--font-space-mono),monospace;
+  font:12px var(--font-space-mono),monospace;
 }
 
 .footer > div {
@@ -601,7 +601,7 @@
   .footer {
     width:calc(100% - 32px);
     padding:12px 18px;
-    font-size:9px;
+    font-size:12px;
   }
 }
 
@@ -625,7 +625,7 @@
     gap:10px;
   }
   .heroActions a {
-    font-size:11px;
+    font-size:12px;
   }
   .footer {
     flex-wrap:wrap;
@@ -637,3 +637,14 @@
     border:2px solid Highlight;
   }
 }
+
+.heroActions a:nth-child(2) { text-decoration:underline; text-underline-offset:5px; }
+@media(max-width:800px) { .heroActions a { font-size:14px; } }
+
+.header nav a[aria-current="location"] { text-decoration:underline; text-decoration-color:var(--orange); text-decoration-thickness:2px; text-underline-offset:7px; }
+
+@media(max-width:800px) { .footer { flex-wrap:wrap; gap:4px; } }
+.feedButton { display:block; width:100%; min-height:44px; margin-top:8px; border:1px solid var(--line); border-radius:3px; background:var(--paper); color:var(--ink); font-size:14px; cursor:pointer; }
+.feedButton:disabled { opacity:.6; cursor:wait; }
+
+@media(max-width:800px) { .hero { padding-top:270px; min-height:1050px; } }

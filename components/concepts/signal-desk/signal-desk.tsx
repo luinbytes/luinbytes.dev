@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowDown, ArrowUpRight, AudioLines, Github, Globe2, Mail, MapPin } from "lucide-react";
+import { ArrowDown, ArrowUpRight, Github, Globe2, Mail, MapPin } from "lucide-react";
 
 import {
   portfolioIdentity,
@@ -57,6 +57,7 @@ function SiteFooter({ reduced, entrance, ready }: { reduced: boolean; entrance: 
     >
       <span>© {import.meta.env.BUILD_YEAR} Lu / 6C75</span>
       <div>
+        <a href="/privacy">Privacy</a>
         <a href={portfolioIdentity.github} target="_blank" rel="noreferrer">GitHub</a>
         <a href={portfolioIdentity.x} target="_blank" rel="noreferrer">@x6c75</a>
       </div>
@@ -65,28 +66,35 @@ function SiteFooter({ reduced, entrance, ready }: { reduced: boolean; entrance: 
 }
 
 function ProjectArtwork({ project }: { project: PortfolioProject }) {
-  if (!project.image) {
-    return (
-      <div className={`${projectStyles.projectMedia} ${projectStyles.projectCover}`}>
-        <AudioLines aria-hidden="true" />
-        <strong>{project.name}</strong>
-        <span>{project.category}</span>
-      </div>
-    );
-  }
-
   return (
-    <div className={`${projectStyles.projectMedia} ${projectStyles[`media${project.id.replaceAll("-", "")}`]}`}>
-      <SkulletImage
-        frame
-        label={`Loading ${project.name} artwork`}
-        src={project.image}
-        alt={project.imageAlt ?? `${project.name} project artwork`}
-        style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
-        sizes="(max-width: 820px) 92vw, 48vw"
-        loading={project.id === portfolioProjects[0]?.id ? "eager" : "lazy"}
-        fetchPriority={project.id === portfolioProjects[0]?.id ? "high" : "auto"}
-      />
+    <div className={projectStyles.projectIllustration}>
+      <svg viewBox="0 0 480 360" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+        <path className={projectStyles.artWater} d="M30 292h80m22 0h62m74 0h95m18 0h69M55 310h110m80 0h150M30 68h70m265 0h85" />
+        {project.id === "rakazo-android" && <>
+          <rect x="161" y="40" width="158" height="270" rx="22" fill="var(--paper)" />
+          <path d="M217 60h46M226 289h28" />
+          <path className={projectStyles.artAccent} d="M199 140h82v65h-82zM211 140l-9-15m67 15l9-15M222 158v6m36-6v6M218 186h44" />
+          <path d="M94 120h42v80H94m252-32h40m-13-13l13 13-13 13M94 246h42m210-16h40v40h-40" />
+        </>}
+        {project.id === "linux-sonar" && <>
+          <rect x="65" y="83" width="350" height="192" rx="12" fill="var(--paper)" />
+          {[118,179,240,301,362].map((x,i)=><g key={x}><path d={`M${x} 120v110`} /><rect className={projectStyles.artAccent} x={x-12} y={[150,185,130,165,145][i]} width="24" height="20" rx="3" fill="var(--paper)" /></g>)}
+          <path className={projectStyles.artAccent} d="M174 51v-9m18 18V32m18 19v-9m18 18V22m18 29v-9m18 18V32m18 19v-9" />
+        </>}
+        {project.id === "homebot" && <>
+          <path d="M120 182h75m90 0h75M240 98v44m0 80v42" />
+          <rect x="195" y="142" width="90" height="80" rx="14" fill="var(--paper)" />
+          <path className={projectStyles.artAccent} d="M216 169v8m48-8v8m-45 21h42" />
+          <path fill="var(--paper)" d="M52 115h89v62H79l-27 18zm286 71h89v62h-27l-30 20v-20h-32zM196 40h88v58h-55l-33 19z" />
+          <path d="M70 137h50m-50 18h29m168-94h-50m138 146h51m-51 19h29" />
+        </>}
+        {project.id === "connectormap" && <>
+          <rect x="73" y="70" width="334" height="216" rx="12" fill="var(--paper)" />
+          <path d="M143 70v216M73 124h334M73 178h334M73 232h334m-55-162v216m-70-216v216m-69-216v216" />
+          {[[178,151],[247,205],[317,151],[178,259],[317,259]].map(([x,y])=><path key={`${x}-${y}`} className={projectStyles.artAccent} d={`M${x-9} ${y}l6 6 13-14`} />)}
+          <path d="M97 98h21m-21 53h21m-21 54h21m-21 54h21m60-161h1m68 0h1m69 0h1m68 0h1" />
+        </>}
+      </svg>
     </div>
   );
 }
@@ -238,7 +246,22 @@ export function SignalDesk() {
   const { ready, reduced } = useReducedMotionPreference();
   const [pondView, setPondView] = useState<"ascii" | "pixel">("ascii");
   const pageRef = useRef<HTMLDivElement>(null);
+  const [activeSection, setActiveSection] = useState("");
+
+  useEffect(() => {
+    const sync = () => {
+      const sections = ["work", "about", "contact"];
+      const visible = sections.filter(id => (document.getElementById(id)?.getBoundingClientRect().top ?? Infinity) <= 180);
+      const atBottom = window.scrollY > 0 && window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
+      setActiveSection(atBottom ? "contact" : visible.at(-1) ?? "");
+    };
+    window.addEventListener("scroll", sync, { passive: true });
+    window.addEventListener("hashchange", sync);
+    sync();
+    return () => { window.removeEventListener("scroll", sync); window.removeEventListener("hashchange", sync); };
+  }, []);
   const [pondStatus, setPondStatus] = useState<{ mode: string; renderer: string }>({ mode: "ascii", renderer: "loading" });
+  const [feedStatus, setFeedStatus] = useState("");
   const entrance = ready && !reduced;
 
   useEffect(() => {
@@ -254,7 +277,7 @@ export function SignalDesk() {
   return (
     <div ref={pageRef} className={styles.page} id="top">
       <PondEnvironment reduced={reduced} mode={pondView} />
-      <p className={styles.srOnly}>The decorative pond responds to pointer movement. Right-click open water, or double-tap it on touch devices, to feed the fish.</p>
+      <p className={styles.srOnly}>The decorative pond responds to pointer movement. Right-click open water, or double-tap it on touch devices, to feed the fish, or use the Feed fish button.</p>
 
       <header className={styles.header}>
         <a className={styles.brand} href="#top">
@@ -263,9 +286,9 @@ export function SignalDesk() {
           <span className={styles.srOnly}>Back to top</span>
         </a>
         <nav aria-label="Portfolio navigation">
-          <a href="#work">Work</a>
-          <a href="#about">About</a>
-          <a href="#contact">Contact</a>
+          <a href="#work" aria-current={activeSection === "work" ? "location" : undefined}>Work</a>
+          <a href="#about" aria-current={activeSection === "about" ? "location" : undefined}>About</a>
+          <a href="#contact" aria-current={activeSection === "contact" ? "location" : undefined}>Contact</a>
         </nav>
       </header>
 
@@ -289,8 +312,14 @@ export function SignalDesk() {
                   ? "Pond unavailable. Try the other view."
                   : `Current view: ${pondView === "ascii" ? "ASCII" : "Pixel"}`}
             </div>
+            <button type="button" className={styles.feedButton} disabled={pondStatus.renderer !== "three"} onClick={() => {
+              const surface = pageRef.current?.querySelector("[data-pond-input]");
+              const handled = surface && !surface.dispatchEvent(new Event("pond-feed", { cancelable: true }));
+              setFeedStatus(handled ? "Food dropped in the pond." : "No open water visible. Return to the top and try again.");
+            }}>Feed fish</button>
+            <span className={styles.srOnly} role="status">{feedStatus}</span>
           </fieldset>
-          <div className={styles.heroCopy}>
+          <div className={styles.heroCopy} data-pond-obscures="">
             <div className={styles.introduction}>
               <span className={styles.heroPortrait}>
                 <SkulletImage frame label="Loading portrait" src="/images/portfolio/lu-avatar.jpg" width={64} height={64} alt="Lu's illustrated avatar wearing a pink cap" loading="eager" fetchPriority="high" />
@@ -305,7 +334,7 @@ export function SignalDesk() {
               <a href={portfolioIdentity.calendar}>Say hello <Mail aria-hidden="true" /></a>
             </div>
           </div>
-          <p className={styles.pondNote}><span aria-hidden="true">↳</span> Stay a while. Feed the fish.<small>Right click the water · double tap on touch</small></p>
+          <p className={styles.pondNote} data-pond-obscures=""><span aria-hidden="true">↳</span> Stay a while. Feed the fish.<small>Right click the water · double tap on touch</small></p>
         </section>
 
 
@@ -362,15 +391,11 @@ export function SignalDesk() {
           </motion.div>
         </section>
 
-        <motion.section
+        <section
           key={ready ? "contact-ready" : "contact-server"}
           className={styles.contactSection}
           id="contact"
           aria-labelledby="contact-title"
-          initial={entrance ? { opacity: 0, scale: 0.975, y: 24 } : false}
-          whileInView={{ opacity: 1, scale: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.28 }}
-          transition={{ duration: motionValue(reduced, 0.56), ease: EASE_OUT }}
         >
           <div className={styles.contactIntro}>
             <span className={styles.eyebrow}>03 / Say hello</span>
@@ -386,7 +411,7 @@ export function SignalDesk() {
             </div>
             <a className={styles.contactCta} href={portfolioIdentity.calendar}>Start a conversation <ArrowUpRight aria-hidden="true" /></a>
           </div>
-        </motion.section>
+        </section>
       </div>
 
       <SiteFooter reduced={reduced} entrance={entrance} ready={ready} />

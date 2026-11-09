@@ -1396,10 +1396,11 @@ class PortfolioTests(BrowserTestCase):
         page.goto(f"{self.base_url}/?pond-seed=e2e-loading", wait_until="domcontentloaded")
         pond = page.locator("[data-renderer]")
         host = page.locator("[data-pond-state]")
+        wait_for_condition(page, "document.querySelector('[data-renderer]')?.dataset.renderer === 'loading'")
         self.assertEqual(pond.get_attribute("data-renderer"), "loading")
         self.assertEqual(host.locator("canvas").count(), 0)
-        self.assertIn(
-            "pixel-pond-world.webp",
+        self.assertEqual(
+            "none",
             pond.locator(":scope > div").first.evaluate(
                 "element => getComputedStyle(element).backgroundImage"
             ),
@@ -1524,33 +1525,10 @@ class PortfolioTests(BrowserTestCase):
         }
 
         def assert_homebot_image_fits(panel) -> None:
-            image = panel.get_by_role(
-                "img", name="HomeBot native desktop chat interface", exact=True
-            )
-            wait_for_condition(
-                page,
-                """alt => {
-                    const image = [...document.images].find(candidate => candidate.alt === alt);
-                    return image?.complete && image.naturalWidth > 0;
-                }""",
-                arg="HomeBot native desktop chat interface",
-            )
-            self.assertTrue(image.is_visible())
-            self.assertIn("homebot-chat.png", image.get_attribute("src"))
-            self.assertTrue(
-                image.evaluate(
-                    """element => {
-                        const image = element.getBoundingClientRect();
-                        const media = element.parentElement.getBoundingClientRect();
-                        return media.width > 0 && media.height > 0
-                            && getComputedStyle(element).objectFit === 'contain'
-                            && image.left >= media.left - 1
-                            && image.top >= media.top - 1
-                            && image.right <= media.right + 1
-                            && image.bottom <= media.bottom + 1;
-                    }"""
-                )
-            )
+            illustration = panel.locator('svg[aria-hidden="true"]').first
+            expect(illustration).to_be_visible()
+            self.assertGreater(illustration.bounding_box()["width"], 100)
+            self.assertEqual(panel.locator("video, img").count(), 0)
 
         for project, href in project_hrefs.items():
             button = page.get_by_role("button", name=re.compile(project, re.I))
@@ -1576,16 +1554,7 @@ class PortfolioTests(BrowserTestCase):
                 )).to_be_visible()
                 for tag in ("Read + act", "Marked inferences", "Source links"):
                     expect(panel.locator("[class*='proofRow']").get_by_text(tag, exact=True)).to_be_visible()
-                image = panel.get_by_role("img", name="ConnectorMap matrix of AI agents and apps", exact=True)
-                expect(image).to_be_visible()
-                expect(image).to_have_attribute("src", "/images/portfolio/connectormap-card.webp")
-                wait_for_condition(
-                    page,
-                    """() => {
-                        const image = document.querySelector('img[alt="ConnectorMap matrix of AI agents and apps"]');
-                        return image?.complete && image.naturalWidth > 0;
-                    }"""
-                )
+                expect(panel.locator('svg[aria-hidden="true"]').first).to_be_visible()
                 link = panel.get_by_role("link", name="View project", exact=True)
                 expect(link).to_have_attribute("target", "_blank")
                 expect(link).to_have_attribute("rel", "noreferrer")
@@ -2242,9 +2211,10 @@ document.addEventListener("readystatechange", armBoneWatch);
         page = browser.new_page(viewport={"width": 1440, "height": 900})
         page.add_init_script(self.SKULLET_WATCH)
         held_scripts = []
+        holding_scripts = True
 
         def hold_scripts(route):
-            if route.request.resource_type == "script":
+            if holding_scripts and route.request.resource_type == "script":
                 held_scripts.append(route)
                 return
             route.continue_()
@@ -2258,10 +2228,11 @@ document.addEventListener("readystatechange", armBoneWatch);
             }""",
             arg=self.HERO_ALT,
         )
+        holding_scripts = False
         for route in held_scripts:
             route.continue_()
         page.unroute("**/*", hold_scripts)
-        page.wait_for_load_state("networkidle")
+        wait_for_condition(page, "document.querySelector('[data-view]')?.dataset.view === 'ascii'")
         page.wait_for_timeout(250)
         image = page.get_by_alt_text(self.HERO_ALT)
         self.assertGreater(image.evaluate("node => node.naturalWidth"), 0)

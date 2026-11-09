@@ -201,7 +201,7 @@ export async function startPondRenderer(options: StartOptions) {
       return asset;
     };
     const koiAtlas = await load("pixel-koi-atlas.webp");
-    const colorAssets = await Promise.all([
+    const colorAssets = liveAscii ? null : await Promise.all([
       load("pixel-pond-world.webp"),
       load("water-displacement.jpg"),
       load("pixel-pond-foreground.webp"),
@@ -221,9 +221,9 @@ export async function startPondRenderer(options: StartOptions) {
     const waterTexture = colorAssets ? colorAssets[1] : blankAsset(1024, 1024);
     const foregroundTexture = colorAssets ? colorAssets[2] : blankAsset(1586, 992);
     const pondWaterTexture = colorAssets ? colorAssets[3] : blankAsset(1586, 992);
-    const hitCanvas = document.createElement("canvas");
+    const hitCanvas = colorAssets ? document.createElement("canvas") : null;
     let hitPixels = new Uint8ClampedArray(0);
-    if (colorAssets) {
+    if (hitCanvas) {
       hitCanvas.width = pondWaterTexture.width;
       hitCanvas.height = pondWaterTexture.height;
       const hitContext = hitCanvas.getContext("2d", { willReadFrequently: true });
@@ -326,6 +326,7 @@ export async function startPondRenderer(options: StartOptions) {
       if (diagnostics) host.dataset.pondCard = "none";
     };
     const isPixelWater = (x: number, y: number) => {
+      if (!hitCanvas) return false;
       const pixelX = Math.round(x);
       const pixelY = Math.round(y);
       return pixelX >= 0 && pixelY >= 0 && pixelX < hitCanvas.width && pixelY < hitCanvas.height &&
@@ -1185,7 +1186,7 @@ export async function startPondRenderer(options: StartOptions) {
       previousTime = now;
       const frameInterval = 1000 / POND_ASCII_FPS_CAP;
       let stepMs = deltaMs;
-      if (liveAscii && !reduced) {
+      if (liveAscii) {
         const paced = pondFrameBudget(frameBudget, deltaMs, frameInterval);
         frameBudget = paced.budget;
         if (paced.stepMs === 0) {
@@ -1194,7 +1195,7 @@ export async function startPondRenderer(options: StartOptions) {
         }
         stepMs = paced.stepMs;
       }
-      const delta = Math.min(0.08, Math.max(1 / 120, stepMs / 1000));
+      const delta = Math.min(0.08, stepMs / 1000);
       try {
         step(now, delta);
         present();
