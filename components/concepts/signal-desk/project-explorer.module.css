@@ -292,3 +292,9 @@
     border:2px solid Highlight;
   }
 }
+
+.projectIllustration { display:grid; place-items:center; height:100%; min-height:260px; background:var(--paper); color:var(--green); }
+.projectIllustration svg { display:block; width:100%; max-width:560px; height:auto; }
+.artWater { stroke:var(--line); stroke-width:2; }
+.artAccent { stroke:var(--orange); }
+@media(prefers-color-scheme:dark) { .projectIllustration { color:var(--muted); } }

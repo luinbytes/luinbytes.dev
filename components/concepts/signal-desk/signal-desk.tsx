@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowDown, ArrowUpRight, AudioLines, Github, Globe2, Mail, MapPin } from "lucide-react";
+import { ArrowDown, ArrowUpRight, Github, Globe2, Mail, MapPin } from "lucide-react";
 
 import {
   portfolioIdentity,
@@ -66,28 +66,35 @@ function SiteFooter({ reduced, entrance, ready }: { reduced: boolean; entrance: 
 }
 
 function ProjectArtwork({ project }: { project: PortfolioProject }) {
-  if (!project.image) {
-    return (
-      <div className={`${projectStyles.projectMedia} ${projectStyles.projectCover}`}>
-        <AudioLines aria-hidden="true" />
-        <strong>{project.name}</strong>
-        <span>{project.category}</span>
-      </div>
-    );
-  }
-
   return (
-    <div className={`${projectStyles.projectMedia} ${projectStyles[`media${project.id.replaceAll("-", "")}`]}`}>
-      <SkulletImage
-        frame
-        label={`Loading ${project.name} artwork`}
-        src={project.image}
-        alt={project.imageAlt ?? `${project.name} project artwork`}
-        style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
-        sizes="(max-width: 820px) 92vw, 48vw"
-        loading={project.id === portfolioProjects[0]?.id ? "eager" : "lazy"}
-        fetchPriority={project.id === portfolioProjects[0]?.id ? "high" : "auto"}
-      />
+    <div className={projectStyles.projectIllustration}>
+      <svg viewBox="0 0 480 360" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+        <path className={projectStyles.artWater} d="M30 292h80m22 0h62m74 0h95m18 0h69M55 310h110m80 0h150M30 68h70m265 0h85" />
+        {project.id === "rakazo-android" && <>
+          <rect x="161" y="40" width="158" height="270" rx="22" fill="var(--paper)" />
+          <path d="M217 60h46M226 289h28" />
+          <path className={projectStyles.artAccent} d="M199 140h82v65h-82zM211 140l-9-15m67 15l9-15M222 158v6m36-6v6M218 186h44" />
+          <path d="M94 120h42v80H94m252-32h40m-13-13l13 13-13 13M94 246h42m210-16h40v40h-40" />
+        </>}
+        {project.id === "linux-sonar" && <>
+          <rect x="65" y="83" width="350" height="192" rx="12" fill="var(--paper)" />
+          {[118,179,240,301,362].map((x,i)=><g key={x}><path d={`M${x} 120v110`} /><rect className={projectStyles.artAccent} x={x-12} y={[150,185,130,165,145][i]} width="24" height="20" rx="3" fill="var(--paper)" /></g>)}
+          <path className={projectStyles.artAccent} d="M174 51v-9m18 18V32m18 19v-9m18 18V22m18 29v-9m18 18V32m18 19v-9" />
+        </>}
+        {project.id === "homebot" && <>
+          <path d="M120 182h75m90 0h75M240 98v44m0 80v42" />
+          <rect x="195" y="142" width="90" height="80" rx="14" fill="var(--paper)" />
+          <path className={projectStyles.artAccent} d="M216 169v8m48-8v8m-45 21h42" />
+          <path fill="var(--paper)" d="M52 115h89v62H79l-27 18zm286 71h89v62h-27l-30 20v-20h-32zM196 40h88v58h-55l-33 19z" />
+          <path d="M70 137h50m-50 18h29m168-94h-50m138 146h51m-51 19h29" />
+        </>}
+        {project.id === "connectormap" && <>
+          <rect x="73" y="70" width="334" height="216" rx="12" fill="var(--paper)" />
+          <path d="M143 70v216M73 124h334M73 178h334M73 232h334m-55-162v216m-70-216v216m-69-216v216" />
+          {[[178,151],[247,205],[317,151],[178,259],[317,259]].map(([x,y])=><path key={`${x}-${y}`} className={projectStyles.artAccent} d={`M${x-9} ${y}l6 6 13-14`} />)}
+          <path d="M97 98h21m-21 53h21m-21 54h21m-21 54h21m60-161h1m68 0h1m69 0h1m68 0h1" />
+        </>}
+      </svg>
     </div>
   );
 }
