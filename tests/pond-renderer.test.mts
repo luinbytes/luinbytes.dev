@@ -31,3 +31,42 @@ test("reduced ASCII preserves wall time and pacing at 60, 120, 144 and 240 Hz", 
     assert.ok(reduced.renders <= 61);
   }
 });
+
+test("ASCII starts with only the atlas while raster mode still loads its hit map", async () => {
+  const assets = source.slice(source.indexOf("    const koiAtlas ="), source.indexOf("    host.replaceChildren(canvas);"));
+  const pixelSource = readFileSync(new URL("../components/concepts/signal-desk/pond-pixel-renderer.ts", import.meta.url), "utf8");
+  const pixelAssets = pixelSource.slice(pixelSource.indexOf("    const [pondTexture,"), pixelSource.indexOf("    host.replaceChildren(canvas);"));
+  async function initialize(liveAscii: boolean, fail: (path: string) => boolean, pixel = false) {
+    const loaded: string[] = [];
+    let reads = 0;
+    const initializeAssets = runInNewContext(javascript(`(async () => { ${pixel ? pixelAssets : assets} })`), {
+      liveAscii,
+      load: async (path: string) => {
+        loaded.push(path);
+        if (fail(path)) throw new Error(`failed ${path}`);
+        return { width: 1586, height: 992, texture: {}, image: {} };
+      },
+      loads: { signal: { throwIfAborted: () => {} } },
+      own: (value: unknown) => value,
+      THREE: { Texture: class { needsUpdate = false; } },
+      document: { createElement: () => ({ width: 0, height: 0, getContext: () => ({
+        drawImage: () => {},
+        getImageData: () => { reads += 1; return { data: new Uint8ClampedArray(4) }; },
+      }) }) },
+      Uint8ClampedArray,
+    });
+    await initializeAssets();
+    return { loaded, reads };
+  }
+  const ascii = await initialize(true, (path) => path !== "pixel-koi-atlas.webp");
+  assert.deepEqual(ascii.loaded, ["pixel-koi-atlas.webp"]);
+  assert.equal(ascii.reads, 0);
+  const raster = await initialize(false, () => false);
+  assert.equal(raster.loaded.length, 5);
+  assert.equal(raster.reads, 1);
+  const pixel = await initialize(false, () => false, true);
+  assert.equal(pixel.loaded.length, 5);
+  assert.equal(pixel.reads, 1);
+  await assert.rejects(initialize(false, (path) => path === "water-displacement.jpg"), /failed water-displacement/);
+  await assert.rejects(initialize(true, () => true), /failed pixel-koi-atlas/);
+});
