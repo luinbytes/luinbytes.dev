@@ -109,14 +109,21 @@ and connections from this site, plus the approved inline script hash. Other inli
 JavaScript, embedded frames, plugins, and form submissions are blocked. Inline
 styles remain allowed for React and animation styles. Blob images remain allowed for local pond textures.
 
-The preview server also sends `X-Content-Type-Options`, `X-Frame-Options`, and
-`Referrer-Policy`. These server headers apply to local previews. GitHub Pages
-serves the static export through the public Cloudflare edge.
-The sampled public responses lack those headers. In particular, public frame
-embedding restrictions require a response header at the hosting layer; an HTML
-meta policy cannot enforce `frame-ancestors`. See the
-[public header evidence and hosting decision](docs/security-headers.md) for the
-verified gap, the policy to preserve, and the work that needs a hosting decision.
+The local preview sends the full CSP from `scripts/security-policy.mjs` plus
+`frame-ancestors 'none'`, `X-Frame-Options: DENY`,
+`X-Content-Type-Options: nosniff`, and `Referrer-Policy: no-referrer`.
+It runs over HTTP and sends no HSTS header.
+
+GitHub Pages serves the static export through Cloudflare. On 9 November 2026 at
+09:04:41 UTC, fresh public GET and HEAD samples for `/` and `/privacy` returned
+`Content-Security-Policy: frame-ancestors 'none'`, `X-Frame-Options: DENY`,
+`X-Content-Type-Options: nosniff`, and
+`Strict-Transport-Security: max-age=86400`. Both pages retained the full meta CSP.
+Production therefore has a response CSP limited to framing plus the full meta
+policy, while preview also sends the full policy as a response header.
+The QA report did not record production `Referrer-Policy`, so response header parity
+with preview's `no-referrer` is unverified. See the [dated public header evidence and policy
+differences](docs/security-headers.md) for earlier observations and coverage limits.
 
 Pull requests run dependency auditing, lint, unit tests, and the production browser
 suite. Deployment actions use pinned commits, and only the deployment job receives
