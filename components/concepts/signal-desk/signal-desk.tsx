@@ -261,6 +261,7 @@ export function SignalDesk() {
     return () => { window.removeEventListener("scroll", sync); window.removeEventListener("hashchange", sync); };
   }, []);
   const [pondStatus, setPondStatus] = useState<{ mode: string; renderer: string }>({ mode: "ascii", renderer: "loading" });
+  const [feedStatus, setFeedStatus] = useState("");
   const entrance = ready && !reduced;
 
   useEffect(() => {
@@ -276,7 +277,7 @@ export function SignalDesk() {
   return (
     <div ref={pageRef} className={styles.page} id="top">
       <PondEnvironment reduced={reduced} mode={pondView} />
-      <p className={styles.srOnly}>The decorative pond responds to pointer movement. Right-click open water, or double-tap it on touch devices, to feed the fish.</p>
+      <p className={styles.srOnly}>The decorative pond responds to pointer movement. Right-click open water, or double-tap it on touch devices, to feed the fish, or use the Feed fish button.</p>
 
       <header className={styles.header}>
         <a className={styles.brand} href="#top">
@@ -311,8 +312,14 @@ export function SignalDesk() {
                   ? "Pond unavailable. Try the other view."
                   : `Current view: ${pondView === "ascii" ? "ASCII" : "Pixel"}`}
             </div>
+            <button type="button" className={styles.feedButton} disabled={pondStatus.renderer !== "three"} onClick={() => {
+              const surface = pageRef.current?.querySelector("[data-pond-input]");
+              const handled = surface && !surface.dispatchEvent(new Event("pond-feed", { cancelable: true }));
+              setFeedStatus(handled ? "Food dropped in the pond." : "No open water visible. Return to the top and try again.");
+            }}>Feed fish</button>
+            <span className={styles.srOnly} role="status">{feedStatus}</span>
           </fieldset>
-          <div className={styles.heroCopy}>
+          <div className={styles.heroCopy} data-pond-obscures="">
             <div className={styles.introduction}>
               <span className={styles.heroPortrait}>
                 <SkulletImage frame label="Loading portrait" src="/images/portfolio/lu-avatar.jpg" width={64} height={64} alt="Lu's illustrated avatar wearing a pink cap" loading="eager" fetchPriority="high" />
@@ -327,7 +334,7 @@ export function SignalDesk() {
               <a href={portfolioIdentity.calendar}>Say hello <Mail aria-hidden="true" /></a>
             </div>
           </div>
-          <p className={styles.pondNote}><span aria-hidden="true">↳</span> Stay a while. Feed the fish.<small>Right click the water · double tap on touch</small></p>
+          <p className={styles.pondNote} data-pond-obscures=""><span aria-hidden="true">↳</span> Stay a while. Feed the fish.<small>Right click the water · double tap on touch</small></p>
         </section>
 
 

@@ -113,7 +113,7 @@ export function PondEnvironment({ reduced, mode = "ascii" }: { reduced: boolean;
         <div className={styles.pondGrade} />
         <div className={styles.surfaceLight} />
       </div>
-      <div ref={interactionRef} className={styles.pondInput} aria-hidden="true" />
+      <div ref={interactionRef} data-pond-input="" className={styles.pondInput} aria-hidden="true" />
     </>
   );
 }
