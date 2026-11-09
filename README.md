@@ -53,7 +53,21 @@ npm run test:e2e
 
 ## Deployment
 
-Pushes to `master` build and deploy the static export to [luinbytes.dev](https://luinbytes.dev/) through GitHub Pages.
+Pushes to `master` and manual runs deploy the static export through GitHub Pages.
+Before the artifact build, deployment calls `.github/workflows/checks.yml`, the
+same verification used by pull requests: dependency audit, lint, pond tests, and
+the production browser suite, which includes a production build. A failed or
+cancelled verification prevents the artifact build and deployment.
+
+Verification and artifact build both check out the event's immutable
+`github.sha`, including when a branch advances during a run. The local reusable
+workflow reference selects the checks from the caller's commit. Pull requests
+verify their synthetic merge commit; deployment verifies its own push or manual
+run commit again. This gate does not rely on branch protection or an earlier
+PR result. See [GitHub's reusable workflow rules](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows).
+
+Successful local checks do not establish a successful Actions run. Runner
+availability, billing, and the Pages environment can still prevent deployment.
 
 ## Social preview
 

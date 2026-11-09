@@ -13,7 +13,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  verify:
+    uses: ./.github/workflows/checks.yml
+
   build:
+    needs: verify
     permissions:
       contents: read
       pages: read
@@ -22,6 +26,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
       - name: Setup Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
