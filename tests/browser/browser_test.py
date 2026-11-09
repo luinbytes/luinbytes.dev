@@ -2211,9 +2211,10 @@ document.addEventListener("readystatechange", armBoneWatch);
         page = browser.new_page(viewport={"width": 1440, "height": 900})
         page.add_init_script(self.SKULLET_WATCH)
         held_scripts = []
+        holding_scripts = True
 
         def hold_scripts(route):
-            if route.request.resource_type == "script":
+            if holding_scripts and route.request.resource_type == "script":
                 held_scripts.append(route)
                 return
             route.continue_()
@@ -2227,10 +2228,11 @@ document.addEventListener("readystatechange", armBoneWatch);
             }""",
             arg=self.HERO_ALT,
         )
+        holding_scripts = False
         for route in held_scripts:
             route.continue_()
         page.unroute("**/*", hold_scripts)
-        page.wait_for_load_state("networkidle")
+        wait_for_condition(page, "document.querySelector('[data-view]')?.dataset.view === 'ascii'")
         page.wait_for_timeout(250)
         image = page.get_by_alt_text(self.HERO_ALT)
         self.assertGreater(image.evaluate("node => node.naturalWidth"), 0)
