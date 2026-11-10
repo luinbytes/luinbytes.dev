@@ -100,7 +100,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
   border-radius: var(--site-control-radius);
   color: var(--site-contrast);
   background: var(--site-accent);
-  transform: translateY(calc(-100% - 20px));
+  transform: translateY(calc(-100% - max(12px, env(safe-area-inset-top))));
 }
 .skip-link:focus { transform: none; }
 
