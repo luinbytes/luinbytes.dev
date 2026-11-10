@@ -17,6 +17,8 @@ export type PortfolioProject = {
   secondaryHref?: string;
   secondaryLabel?: string;
   proof?: string[];
+  /** One headline number shown as a figure on the project card. */
+  figure?: { value: string; label: string };
 };
 
 export const portfolioProjects: PortfolioProject[] = [
@@ -33,7 +35,8 @@ export const portfolioProjects: PortfolioProject[] = [
     imageAlt: "Rakazo Android application icon",
     secondaryHref: "https://github.com/elie222/rakazo/pulls?q=is%3Apr+author%3Aluinbytes+is%3Amerged",
     secondaryLabel: "Merged work",
-    proof: ["Native client", "4 highlighted merged PRs", "Reliability + performance"],
+    figure: { value: "4", label: "highlighted merged PRs upstream" },
+    proof: ["Native client", "Reliability + performance"],
   },
   {
     id: "linux-sonar",
@@ -44,7 +47,8 @@ export const portfolioProjects: PortfolioProject[] = [
     detail:
       "A GTK control surface over PipeWire and WirePlumber, with five virtual channels, hardware ChatMix, microphone effects, and systemd lifecycle management.",
     href: "https://github.com/luinbytes/linux-sonar",
-    proof: ["5 virtual channels", "USB-HID ChatMix", "PipeWire + WirePlumber"],
+    figure: { value: "5", label: "virtual audio channels" },
+    proof: ["USB-HID ChatMix", "PipeWire + WirePlumber"],
   },
   {
     id: "homebot",
@@ -75,6 +79,7 @@ export const portfolioProjects: PortfolioProject[] = [
 ];
 
 export const portfolioIdentity = {
+  email: "0x6c75@gmail.com",
   calendar: "https://cal.com/luinbytes",
   github: "https://github.com/luinbytes",
   x: "https://x.com/x6c75",

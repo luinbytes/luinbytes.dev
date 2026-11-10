@@ -13,6 +13,7 @@ type RouteMetadata = {
   image: string;
   imageAlt: string;
   noindex?: boolean;
+  themeColor?: { light: string; dark: string };
 };
 
 export type SiteRoute = {
@@ -23,20 +24,21 @@ export type SiteRoute = {
 };
 
 const homeMetadata: RouteMetadata = {
-  title: "Lu | Software Engineer",
-  socialTitle: "Lu | Software Engineer",
+  title: "Lu — I make stubborn software behave",
+  socialTitle: "Lu — I make stubborn software behave",
   description: "Lu makes stubborn software behave: native Android apps, agent systems, Linux tools, and practical software.",
   socialDescription: "I make stubborn software behave. Native Android, agent systems, Linux tools, and practical software.",
   canonical: siteConfig.siteUrl,
   image: `${siteConfig.siteUrl}/share-cards/luinbytes-dev-pond.png`,
-  imageAlt: "Lu | Software Engineer",
+  imageAlt: "luinbytes.dev share card: the line “I get annoyed, then I build the missing thing.” beside a pixel-art pond with koi, lily pads and stepping stones.",
+  themeColor: { light: "#f5f0e6", dark: "#242d26" },
 };
 
 const notFoundRoute: SiteRoute = {
   path: "/404",
   output: "404.html",
   Component: NotFound,
-  metadata: { ...homeMetadata, noindex: true },
+  metadata: { ...homeMetadata, themeColor: undefined, noindex: true },
 };
 
 export const siteRoutes: readonly SiteRoute[] = [
@@ -52,7 +54,7 @@ export const siteRoutes: readonly SiteRoute[] = [
       socialDescription: "Privacy policy for Lu's personal software on luinbytes.dev.",
       canonical: `${siteConfig.siteUrl}/privacy`,
       image: `${siteConfig.siteUrl}/share-cards/luinbytes-dev-pond.png`,
-      imageAlt: "Lu | Software Engineer",
+      imageAlt: homeMetadata.imageAlt,
       noindex: true,
     },
   },
@@ -71,7 +73,11 @@ export function RouteHead({ route }: { route: SiteRoute }) {
     <>
       <title>{metadata.title}</title>
       <meta name="description" content={metadata.description} />
-      <meta name="keywords" content="Software Engineer,Next.js,TypeScript,Android,Kotlin,AI Agents,HomeBot,Rakazo,Linux,PipeWire,CLI Tool,Open Source" />
+      <meta name="color-scheme" content="light dark" />
+      {metadata.themeColor && <>
+        <meta name="theme-color" media="(prefers-color-scheme: light)" content={metadata.themeColor.light} />
+        <meta name="theme-color" media="(prefers-color-scheme: dark)" content={metadata.themeColor.dark} />
+      </>}
       {metadata.noindex && <meta name="robots" content="noindex" />}
       <link rel="canonical" href={metadata.canonical} />
       <meta property="og:type" content="website" />

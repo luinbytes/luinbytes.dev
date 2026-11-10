@@ -8,45 +8,32 @@ type PondInputOptions = {
   onPrimaryImpact: (screen: PondPoint, world: PondPoint) => void;
   onFoodDrop: (screen: PondPoint, world: PondPoint) => void;
   onAffordance: (screen: PondPoint, visible: boolean) => void;
-  onGesture?: (gesture: "single-tap-impact" | "double-tap-food") => void;
+  onGesture?: (gesture: "tap-food") => void;
 };
-
-type TouchTap = { x: number; y: number; time: number };
 
 function isCompletedTap(touch: { moved: boolean; started: number }, now: number, overWater: boolean) {
   return !touch.moved && now - touch.started <= 430 && overWater;
 }
 
-function isDoubleTap(previous: TouchTap | null, current: PondPoint, now: number) {
-  if (!previous) return false;
-  const elapsed = now - previous.time;
-  return elapsed >= 70 && elapsed <= 430 && Math.hypot(current.x - previous.x, current.y - previous.y) <= 34;
-}
+// A single click or tap on open water splashes and drops food. The browser's
+// context menu is never intercepted.
 
 export function installPondInput(options: PondInputOptions) {
   const { interaction } = options;
   let previousPointer = { x: 0, y: 0, time: 0 };
   let activeTouch: { id: number; x: number; y: number; started: number; moved: boolean } | null = null;
-  let lastTouchTap: TouchTap | null = null;
-  let pendingSingleTap: number | null = null;
   let lastFoodInput = Number.NEGATIVE_INFINITY;
 
-  const point = (event: PointerEvent | MouseEvent) => ({ x: event.clientX, y: event.clientY });
+  const point = (event: PointerEvent) => ({ x: event.clientX, y: event.clientY });
   const validWater = (screen: PondPoint) => options.isWater(screen.x, screen.y);
   const ownsPoint = (screen: PondPoint) => document.elementFromPoint(screen.x, screen.y) === interaction;
-
-  const clearPendingTap = () => {
-    if (pendingSingleTap !== null) window.clearTimeout(pendingSingleTap);
-    pendingSingleTap = null;
-    lastTouchTap = null;
-  };
 
   const dropFood = (screen: PondPoint) => {
     if (!validWater(screen)) return false;
     const now = performance.now();
     if (now - lastFoodInput >= 140) {
       options.onFoodDrop(screen, options.toWorld(screen.x, screen.y));
-      options.onGesture?.("double-tap-food");
+      options.onGesture?.("tap-food");
       lastFoodInput = now;
     }
     return true;
@@ -79,7 +66,6 @@ export function installPondInput(options: PondInputOptions) {
     if (event.pointerType === "touch") {
       if (!event.isPrimary || activeTouch) {
         activeTouch = null;
-        clearPendingTap();
         return;
       }
       activeTouch = {
@@ -94,6 +80,7 @@ export function installPondInput(options: PondInputOptions) {
     }
     if (event.button === 0 && validWater(screen)) {
       options.onPrimaryImpact(screen, options.toWorld(screen.x, screen.y));
+      dropFood(screen);
     }
   };
 
@@ -106,30 +93,12 @@ export function installPondInput(options: PondInputOptions) {
     const screen = point(event);
     if (!validWater(touch) || !isCompletedTap(touch, now, validWater(screen))) return;
 
-    const previous = lastTouchTap;
-    if (isDoubleTap(previous, screen, now)) {
-      clearPendingTap();
-      if (dropFood(screen) && event.cancelable) event.preventDefault();
-      return;
-    }
-
-    lastTouchTap = { ...screen, time: now };
-    if (pendingSingleTap !== null) window.clearTimeout(pendingSingleTap);
-    pendingSingleTap = window.setTimeout(() => {
-      if (lastTouchTap?.time === now) {
-        options.onPrimaryImpact({ x: touch.x, y: touch.y }, options.toWorld(touch.x, touch.y));
-        options.onGesture?.("single-tap-impact");
-      }
-      clearPendingTap();
-    }, 440);
+    options.onPrimaryImpact({ x: touch.x, y: touch.y }, options.toWorld(touch.x, touch.y));
+    if (dropFood(screen) && event.cancelable) event.preventDefault();
   };
 
   const cancel = (event: PointerEvent) => {
     if (activeTouch?.id === event.pointerId) activeTouch = null;
-  };
-
-  const contextMenu = (event: MouseEvent) => {
-    if (dropFood(point(event))) event.preventDefault();
   };
 
   const feedFromControl = (event: Event) => {
@@ -147,24 +116,20 @@ export function installPondInput(options: PondInputOptions) {
 
   const resize = () => {
     activeTouch = null;
-    clearPendingTap();
   };
 
   window.addEventListener("pointermove", move, { passive: true });
   interaction.addEventListener("pointerdown", press, { passive: true });
   interaction.addEventListener("pointerup", release, { passive: false });
   interaction.addEventListener("pointercancel", cancel, { passive: true });
-  interaction.addEventListener("contextmenu", contextMenu);
   interaction.addEventListener("pond-feed", feedFromControl);
   window.addEventListener("resize", resize, { passive: true });
 
   return () => {
-    clearPendingTap();
     window.removeEventListener("pointermove", move);
     interaction.removeEventListener("pointerdown", press);
     interaction.removeEventListener("pointerup", release);
     interaction.removeEventListener("pointercancel", cancel);
-    interaction.removeEventListener("contextmenu", contextMenu);
     interaction.removeEventListener("pond-feed", feedFromControl);
     window.removeEventListener("resize", resize);
   };
