@@ -79,10 +79,10 @@
 .header {
   position:fixed;
   z-index:30;
-  top:20px;
-  left:0;
-  right:0;
-  width:var(--container);
+  top:max(20px, env(safe-area-inset-top));
+  left:max(0px, env(safe-area-inset-left));
+  right:max(0px, env(safe-area-inset-right));
+  width:min(var(--container), calc(100% - max(0px, env(safe-area-inset-left)) - max(0px, env(safe-area-inset-right))));
   margin-inline:auto;
   display:flex;
   justify-content:space-between;
@@ -660,7 +660,7 @@
     --section-gap: 64px;
   }
   .header {
-    top:12px;
+    top:max(12px, env(safe-area-inset-top));
     padding:0 18px;
     min-height:60px;
   }
