@@ -1,15 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { ArrowDown, ArrowUpRight, Github, Globe2, Mail, MapPin } from "lucide-react";
+import { motion } from "framer-motion";
+import { ArrowDown, ArrowUpRight, CalendarDays, Check, Copy, Github, Globe2, Mail, MapPin } from "lucide-react";
 
 import {
   portfolioIdentity,
   portfolioProjects,
   type PortfolioProject,
-  type PortfolioProjectId,
 } from "@/lib/portfolio-content";
 import { PondEnvironment } from "./pond-environment";
-import { Button } from "@/components/ui/button";
 import { SkulletImage } from "@/components/ui/skullet-image";
 import projectStyles from "./project-explorer.module.css";
 import styles from "./signal-desk.module.css";
@@ -25,10 +23,6 @@ const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 
 function motionValue(reduced: boolean, value: number) {
   return reduced ? 0 : value;
-}
-
-function motionExit<T>(reduced: boolean, value: T) {
-  return reduced ? undefined : value;
 }
 
 function useReducedMotionPreference() {
@@ -57,6 +51,7 @@ function SiteFooter({ reduced, entrance, ready }: { reduced: boolean; entrance: 
     >
       <span>© {import.meta.env.BUILD_YEAR} Lu / 6C75</span>
       <div>
+        <a href={`mailto:${portfolioIdentity.email}`}>Email</a>
         <a href="/privacy">Privacy</a>
         <a href={portfolioIdentity.github} target="_blank" rel="noreferrer">GitHub</a>
         <a href={portfolioIdentity.x} target="_blank" rel="noreferrer">@x6c75</a>
@@ -99,108 +94,44 @@ function ProjectArtwork({ project }: { project: PortfolioProject }) {
   );
 }
 
-function ProjectNavigation({
-  activeId,
-  reduced,
-  onSelect,
-}: {
-  activeId: PortfolioProjectId;
-  reduced: boolean;
-  onSelect: (id: PortfolioProjectId) => void;
-}) {
+function ProjectCard({ project }: { project: PortfolioProject }) {
   return (
-    <div className={projectStyles.projectNav} role="group" aria-label="Featured projects">
-      {portfolioProjects.map((project) => {
-        const active = project.id === activeId;
-        return (
-          <Button
-            asChild
-            variant="ghost"
-            key={project.id}
-            className={active ? projectStyles.activeProject : ""}
-          >
-            <motion.button
-              type="button"
-              onClick={() => onSelect(project.id)}
-              aria-pressed={active}
-              whileTap={reduced ? undefined : { scale: 0.985 }}
-              transition={{ duration: 0.1 }}
-            >
-              {active && <motion.i className={projectStyles.projectMarker} layoutId="project-marker" transition={{ duration: reduced ? 0 : 0.24, ease: EASE_OUT }} />}
-              <strong>{project.name}</strong>
-              <small>{project.category}</small>
-            </motion.button>
-          </Button>
-        );
-      })}
-    </div>
-  );
-}
-
-function ProjectPanel({ project, reduced }: { project: PortfolioProject; reduced: boolean }) {
-  return (
-    <motion.div
-      className={projectStyles.projectStage}
-      aria-live="polite"
-      layout="size"
-      transition={{ layout: { duration: motionValue(reduced, 0.42), ease: EASE_OUT } }}
-    >
-      <AnimatePresence mode="wait" initial={false}>
-        <motion.article
-          className={projectStyles.projectPanel}
-          key={project.id}
-          initial={{ opacity: 0, y: motionValue(reduced, 8) }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={motionExit(reduced, { opacity: 0, y: -6 })}
-          transition={{ duration: motionValue(reduced, 0.28), ease: EASE_OUT }}
-        >
-          <motion.div
-            className={projectStyles.projectVisual}
-            initial={{ opacity: 0, scale: 1.015 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={motionExit(reduced, { opacity: 0, scale: 0.99 })}
-            transition={{ duration: motionValue(reduced, 0.34), ease: EASE_OUT }}
-          >
-            <ProjectArtwork project={project} />
-          </motion.div>
-          <motion.div
-            className={projectStyles.projectCopy}
-            initial={{ opacity: 0, x: motionValue(reduced, 14) }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={motionExit(reduced, { opacity: 0, x: -8 })}
-            transition={{ duration: motionValue(reduced, 0.3), delay: motionValue(reduced, 0.035), ease: EASE_OUT }}
-          >
-            <span className={projectStyles.projectEyebrow}>{project.category}</span>
-            <h3>{project.name}</h3>
-            <p className={projectStyles.projectSummary}>{project.summary}</p>
-            <p className={projectStyles.projectDetail}>{project.detail}</p>
-            <div className={projectStyles.proofRow}>
-              {project.proof?.map((item) => <span key={item}>{item}</span>)}
-            </div>
-            <div className={projectStyles.projectActions}>
-              <Button asChild variant="secondary"><a href={project.href} target="_blank" rel="noreferrer">
-                View project <ArrowUpRight aria-hidden="true" />
-              </a></Button>
-              {project.secondaryHref && (
-                <Button asChild variant="outline"><a href={project.secondaryHref} target="_blank" rel="noreferrer">
-                  {project.secondaryLabel} <ArrowUpRight aria-hidden="true" />
-                </a></Button>
-              )}
-            </div>
-          </motion.div>
-        </motion.article>
-      </AnimatePresence>
-    </motion.div>
+    <article className={projectStyles.projectCard} aria-labelledby={`project-${project.id}`}>
+      <div className={projectStyles.projectCopy}>
+        <span className={projectStyles.projectEyebrow}>{project.category}</span>
+        <h3 id={`project-${project.id}`}>{project.name}</h3>
+        {project.figure && (
+          <p className={projectStyles.projectFigure}>
+            <strong>{project.figure.value}</strong>
+            <span>{project.figure.label}</span>
+          </p>
+        )}
+        <p className={projectStyles.projectSummary}>{project.summary}</p>
+        <p className={projectStyles.projectDetail}>{project.detail}</p>
+        {project.proof && project.proof.length > 0 && (
+          <div className={projectStyles.proofRow}>
+            {project.proof.map((item) => <span key={item}>{item}</span>)}
+          </div>
+        )}
+        <div className={projectStyles.projectActions}>
+          <a href={project.href} target="_blank" rel="noreferrer">
+            View project <span className={styles.srOnly}>{project.name}</span> <ArrowUpRight aria-hidden="true" />
+          </a>
+          {project.secondaryHref && (
+            <a href={project.secondaryHref} target="_blank" rel="noreferrer">
+              {project.secondaryLabel} <ArrowUpRight aria-hidden="true" />
+            </a>
+          )}
+        </div>
+      </div>
+      <div className={projectStyles.projectVisual}>
+        <ProjectArtwork project={project} />
+      </div>
+    </article>
   );
 }
 
 function ProjectExplorer({ reduced, entrance, ready }: { reduced: boolean; entrance: boolean; ready: boolean }) {
-  const [activeId, setActiveId] = useState<PortfolioProjectId | undefined>(portfolioProjects[0]?.id);
-  const activeIndex = Math.max(0, portfolioProjects.findIndex((project) => project.id === activeId));
-  const activeProject = portfolioProjects[activeIndex] ?? portfolioProjects[0];
-
-  if (!activeProject) return null;
-
   return (
     <section className={styles.workSection} id="work" aria-labelledby="work-title">
       <motion.div
@@ -213,32 +144,55 @@ function ProjectExplorer({ reduced, entrance, ready }: { reduced: boolean; entra
       >
         <span className={styles.eyebrow}>01 / Things I’ve made</span>
         <h2 id="work-title">A few useful obsessions.</h2>
-        <p>Native apps, agent infrastructure, Linux systems. Pick a project to inspect the work.</p>
+        <p>Four projects, what each one actually does, and where to find it.</p>
       </motion.div>
 
       <motion.div
-        key={ready ? "project-explorer-ready" : "project-explorer-server"}
-        className={projectStyles.projectExplorer}
-        layout="size"
-        initial={entrance ? { opacity: 0, scale: 0.985, y: 22 } : false}
-        whileInView={{ opacity: 1, scale: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.12 }}
-        transition={{ duration: reduced ? 0 : 0.56, ease: EASE_OUT, layout: { duration: reduced ? 0 : 0.42, ease: EASE_OUT } }}
+        key={ready ? "project-grid-ready" : "project-grid-server"}
+        className={projectStyles.projectGrid}
+        initial={entrance ? { opacity: 0, y: 22 } : false}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.08 }}
+        transition={{ duration: reduced ? 0 : 0.56, ease: EASE_OUT }}
       >
-        <ProjectNavigation activeId={activeProject.id} reduced={reduced} onSelect={setActiveId} />
-        <ProjectPanel project={activeProject} reduced={reduced} />
+        {portfolioProjects.map((project) => <ProjectCard key={project.id} project={project} />)}
       </motion.div>
-
-      <noscript>
-        <nav className={projectStyles.noScriptProjects} aria-label="Project links">
-          {portfolioProjects.map((project) => (
-            <a key={project.id} href={project.href} target="_blank" rel="noreferrer">
-              {project.name} <ArrowUpRight aria-hidden="true" />
-            </a>
-          ))}
-        </nav>
-      </noscript>
     </section>
+  );
+}
+
+function CopyEmailButton() {
+  const [copied, setCopied] = useState(false);
+  const [status, setStatus] = useState("");
+
+  useEffect(() => {
+    if (!copied) return;
+    const timer = window.setTimeout(() => setCopied(false), 2400);
+    return () => window.clearTimeout(timer);
+  }, [copied]);
+
+  return (
+    <>
+      <button
+        type="button"
+        className={styles.copyButton}
+        aria-label="Copy email address"
+        onClick={async () => {
+          try {
+            await navigator.clipboard.writeText(portfolioIdentity.email);
+            setCopied(true);
+            setStatus("Email address copied.");
+          } catch {
+            setCopied(false);
+            setStatus("Couldn’t copy automatically. The address can be selected and copied.");
+          }
+        }}
+      >
+        {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
+        {copied ? "Copied" : "Copy"}
+      </button>
+      <span className={styles.srOnly} role="status">{status}</span>
+    </>
   );
 }
 
@@ -277,7 +231,7 @@ export function SignalDesk() {
   return (
     <div ref={pageRef} className={styles.page} id="top">
       <PondEnvironment reduced={reduced} mode={pondView} />
-      <p className={styles.srOnly}>The decorative pond responds to pointer movement. Right-click open water, or double-tap it on touch devices, to feed the fish, or use the Feed fish button.</p>
+      <p className={styles.srOnly}>The decorative pond responds to pointer movement. Click or tap open water to feed the fish, or use the Feed fish button in the pond controls.</p>
 
       <header className={styles.header}>
         <a className={styles.brand} href="#top">
@@ -287,42 +241,17 @@ export function SignalDesk() {
         </a>
         <nav aria-label="Portfolio navigation">
           <a href="#work" aria-current={activeSection === "work" ? "location" : undefined}>Work</a>
-          <a href="#about" aria-current={activeSection === "about" ? "location" : undefined}>About</a>
+          <a href="#about" aria-current={activeSection === "about" ? "location" : undefined}>More</a>
           <a href="#contact" aria-current={activeSection === "contact" ? "location" : undefined}>Contact</a>
         </nav>
       </header>
 
       <div className={styles.content}>
         <section className={styles.hero} aria-labelledby="hero-title">
-          <noscript><style>{`.${styles.pondSwitcher} { display: none; }`}</style></noscript>
-          <fieldset className={styles.pondSwitcher}>
-            <legend>Pond view</legend>
-            <div className={styles.pondChoices}>
-              {(["ascii", "pixel"] as const).map((view) => (
-                <label key={view} className={styles.pondChoice}>
-                  <input type="radio" name="pond-view" value={view} checked={pondView === view} onChange={() => setPondView(view)} />
-                  <span><i aria-hidden="true" className={view === "ascii" ? styles.asciiStone : styles.pixelStone} />{view === "ascii" ? "ASCII" : "Pixel"}</span>
-                </label>
-              ))}
-            </div>
-            <div className={styles.pondCurrent} aria-live="polite">
-              {pondStatus.mode !== pondView || pondStatus.renderer === "loading"
-                ? `Loading ${pondView === "ascii" ? "ASCII" : "Pixel"} view…`
-                : pondStatus.renderer === "fallback"
-                  ? "Pond unavailable. Try the other view."
-                  : `Current view: ${pondView === "ascii" ? "ASCII" : "Pixel"}`}
-            </div>
-            <button type="button" className={styles.feedButton} disabled={pondStatus.renderer !== "three"} onClick={() => {
-              const surface = pageRef.current?.querySelector("[data-pond-input]");
-              const handled = surface && !surface.dispatchEvent(new Event("pond-feed", { cancelable: true }));
-              setFeedStatus(handled ? "Food dropped in the pond." : "No open water visible. Return to the top and try again.");
-            }}>Feed fish</button>
-            <span className={styles.srOnly} role="status">{feedStatus}</span>
-          </fieldset>
           <div className={styles.heroCopy} data-pond-obscures="">
             <div className={styles.introduction}>
               <span className={styles.heroPortrait}>
-                <SkulletImage frame label="Loading portrait" src="/images/portfolio/lu-avatar.jpg" width={64} height={64} alt="Lu's illustrated avatar wearing a pink cap" loading="eager" fetchPriority="high" />
+                <SkulletImage frame label="Loading portrait" src="/images/portfolio/lu-avatar.jpg" width={64} height={64} alt="Lu's illustrated avatar wearing a pink cap" loading="eager" fetchPriority="low" />
               </span>
               <span className={styles.eyebrow}>@x6c75<br />Software engineer</span>
             </div>
@@ -331,10 +260,10 @@ export function SignalDesk() {
             <p>I build native Android apps, agent systems, and Linux tools that do the useful part without making a fuss.</p>
             <div className={styles.heroActions}>
               <a href="#work">Things I’ve made <ArrowDown aria-hidden="true" /></a>
-              <a href={portfolioIdentity.calendar}>Say hello <Mail aria-hidden="true" /></a>
+              <a href={`mailto:${portfolioIdentity.email}`}>Say hello <Mail aria-hidden="true" /></a>
             </div>
           </div>
-          <p className={styles.pondNote} data-pond-obscures=""><span aria-hidden="true">↳</span> Stay a while. Feed the fish.<small>Right click the water · double tap on touch</small></p>
+          <p className={styles.pondNote} data-pond-obscures=""><span aria-hidden="true">↳</span> Stay a while. Feed the fish.<small>Click or tap the water</small></p>
         </section>
 
 
@@ -349,9 +278,9 @@ export function SignalDesk() {
             viewport={{ once: true, amount: 0.28 }}
             transition={{ duration: motionValue(reduced, 0.62), ease: EASE_OUT }}
           >
-            <span className={styles.eyebrow}>02 / A bit about me</span>
-            <h2 id="about-title">Powered by caffeine<br />and spite.</h2>
-            <p>I work across native apps, agent infrastructure, Linux, and the awkward seams between them. I like the problems where “mostly works” is still broken.</p>
+            <span className={styles.eyebrow}>02 / Other work</span>
+            <h2 id="about-title">“Mostly works”<br />is still broken.</h2>
+            <p>That’s the kind of problem I like. Beyond the four projects above, it has also meant automation for an active community and a handful of small open-source tools.</p>
           </motion.div>
 
           <motion.article
@@ -400,19 +329,49 @@ export function SignalDesk() {
           <div className={styles.contactIntro}>
             <span className={styles.eyebrow}>03 / Say hello</span>
             <h2 id="contact-title">Got a useful problem?</h2>
-            <p>Native apps, agent infrastructure, strange systems, and software that needs to behave.</p>
+            <p>If something you’re building only mostly works, I’d like to hear about it. Email is the simplest way in; book a call if you’d rather talk it through.</p>
           </div>
           <div className={styles.contactBooking}>
-            <span className={styles.contactLabel}>Book a call</span>
+            <span className={styles.contactLabel}>Email or book a call</span>
             <h3>Tell me what you’re working on.</h3>
+            <div className={styles.contactEmailRow}>
+              <a className={styles.contactEmail} href={`mailto:${portfolioIdentity.email}`}><Mail aria-hidden="true" /> {portfolioIdentity.email}</a>
+              <CopyEmailButton />
+            </div>
             <div className={styles.contactFacts} aria-label="Booking details">
               <span><Globe2 aria-hidden="true" /> Cal.com / luinbytes</span>
               <span><MapPin aria-hidden="true" /> Europe / London</span>
             </div>
-            <a className={styles.contactCta} href={portfolioIdentity.calendar}>Start a conversation <ArrowUpRight aria-hidden="true" /></a>
+            <a className={styles.contactCta} href={portfolioIdentity.calendar}>Book a call <CalendarDays aria-hidden="true" /></a>
           </div>
         </section>
       </div>
+
+      <noscript><style>{`.${styles.pondSwitcher}, .${styles.copyButton} { display: none; }`}</style></noscript>
+      <fieldset className={styles.pondSwitcher}>
+        <legend className={styles.srOnly}>Pond view</legend>
+        <div className={styles.pondChoices}>
+          {(["ascii", "pixel"] as const).map((view) => (
+            <label key={view} className={styles.pondChoice}>
+              <input type="radio" name="pond-view" value={view} checked={pondView === view} onChange={() => setPondView(view)} />
+              <span><i aria-hidden="true" className={view === "ascii" ? styles.asciiStone : styles.pixelStone} />{view === "ascii" ? "ASCII" : "Pixel"}</span>
+            </label>
+          ))}
+        </div>
+        <button type="button" className={styles.feedButton} aria-label="Feed fish" disabled={pondStatus.renderer !== "three"} onClick={() => {
+          const surface = pageRef.current?.querySelector("[data-pond-input]");
+          const handled = surface && !surface.dispatchEvent(new Event("pond-feed", { cancelable: true }));
+          setFeedStatus(handled ? "Food dropped in the pond." : "No open water visible. Return to the top and try again.");
+        }}><span aria-hidden="true">🐟</span> Feed</button>
+        <div className={styles.srOnly} aria-live="polite">
+          {pondStatus.mode !== pondView || pondStatus.renderer === "loading"
+            ? `Loading ${pondView === "ascii" ? "ASCII" : "Pixel"} view…`
+            : pondStatus.renderer === "fallback"
+              ? "Pond unavailable. Try the other view."
+              : `Current view: ${pondView === "ascii" ? "ASCII" : "Pixel"}`}
+        </div>
+        <span className={styles.srOnly} role="status">{feedStatus}</span>
+      </fieldset>
 
       <SiteFooter reduced={reduced} entrance={entrance} ready={ready} />
     </div>

@@ -1,3 +1,32 @@
+/* Glass tokens are local to the 404 page; the homepage uses its own paper/green palette. */
+.page {
+  --glass-fill: rgb(37 28 53 / .3);
+  --glass-top: rgb(226 211 255 / .14);
+  --glass-bottom: rgb(20 15 32 / .05);
+  --glass-edge: rgb(235 223 255 / .2);
+  --glass-rim: rgb(243 234 255 / .37);
+  --glass-selected: rgb(153 132 207 / .22);
+  --site-shadow: 0 12px 30px rgb(13 7 28 / .2), 0 2px 5px rgb(13 7 28 / .12);
+  --glass-shadow: var(--site-shadow), inset 0 1px 0 var(--glass-rim), inset 0 -1px 1px rgb(15 8 25 / .2);
+  --glass-panel-shadow: var(--site-shadow), inset 0 1px 1px rgb(243 234 255 / .3), inset 0 -1px 1px rgb(15 8 25 / .2);
+  --site-panel-bg: linear-gradient(135deg, rgb(69 54 90 / .93), rgb(37 28 53 / .94));
+}
+
+@media (prefers-color-scheme: light) {
+  .page {
+    --glass-fill: rgb(255 255 255 / .16);
+    --glass-top: rgb(255 255 255 / .46);
+    --glass-bottom: rgb(255 255 255 / .05);
+    --glass-edge: rgb(91 65 113 / .18);
+    --glass-rim: rgb(255 255 255 / .8);
+    --glass-selected: rgb(153 132 207 / .18);
+    --site-shadow: 0 12px 30px rgb(70 40 95 / .08), 0 2px 5px rgb(63 40 80 / .04);
+    --glass-shadow: var(--site-shadow), inset 0 1px 0 var(--glass-rim), inset 0 -1px 1px rgb(71 47 87 / .1);
+    --glass-panel-shadow: var(--site-shadow), inset 0 1px 1px rgb(255 255 255 / .88), inset 0 -1px 1px rgb(71 47 87 / .09);
+    --site-panel-bg: linear-gradient(135deg, rgb(249 245 253 / .96), rgb(238 232 243 / .94));
+  }
+}
+
 .page {
   position: relative;
   display: grid;
