@@ -283,8 +283,8 @@
 .pondSwitcher {
   position:fixed;
   z-index:20;
-  right:16px;
-  bottom:16px;
+  right:max(16px, env(safe-area-inset-right));
+  bottom:max(16px, env(safe-area-inset-bottom));
   display:flex;
   align-items:center;
   gap:4px;
@@ -627,6 +627,14 @@
 }
 
 @media (prefers-color-scheme:dark) {
+  :global(html):has(.page) {
+    --site-bg:#123a34;
+    --site-text:#f1ebdd;
+    --site-muted:#7fa587;
+    --site-accent:#3d5e45;
+    --site-contrast:#fff9ee;
+    scrollbar-color:#7fa587 #123a34;
+  }
   :global(html):has(.page) :global(.skip-link) {
     border-color:#7fa587;
   }
@@ -713,8 +721,8 @@
     padding:12px 18px;
   }
   .pondSwitcher {
-    right:12px;
-    bottom:12px;
+    right:max(12px, env(safe-area-inset-right));
+    bottom:max(12px, env(safe-area-inset-bottom));
   }
 }
 
