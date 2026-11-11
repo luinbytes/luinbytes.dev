@@ -350,28 +350,6 @@
   border-radius:50%;
 }
 
-.feedButton {
-  display:inline-flex;
-  align-items:center;
-  gap:6px;
-  min-width:44px;
-  min-height:44px;
-  margin:0 0 0 2px;
-  padding:0 12px;
-  border:1px solid var(--line-strong);
-  border-radius:2px;
-  background:var(--paper);
-  color:var(--ink);
-  font-size:14px;
-  font-weight:650;
-  cursor:pointer;
-}
-
-.feedButton:disabled {
-  opacity:.6;
-  cursor:wait;
-}
-
 .pondNote {
   position:absolute;
   right:20px;
@@ -750,9 +728,6 @@
   }
   .pondChoice span {
     padding:0 8px;
-  }
-  .feedButton {
-    padding:0 9px;
   }
 }
 
