@@ -43,7 +43,7 @@ LEGACY_ROUTES = (
 )
 PORTFOLIO_NAV_LINKS = (
     ("Work", "#work"),
-    ("About", "#about"),
+    ("More", "#about"),
     ("Contact", "#contact"),
 )
 
@@ -291,7 +291,7 @@ class ShareCardStaticExportTests(unittest.TestCase):
         "/share-cards/luinbytes-dev-pond.png": "f2f09d3711b27c857c74eb34d8420354dfec2635e30153fe884d3095d24b3583",
     }
     route_alts = {
-        "/": "Lu | Software Engineer",
+        "/": "luinbytes.dev share card: the line “I get annoyed, then I build the missing thing.” beside a pixel-art pond with koi, lily pads and stepping stones.",
     }
 
     def test_editable_source_contains_the_original_card_copy(self) -> None:
@@ -767,7 +767,7 @@ class PondProductionTests(BrowserTestCase):
         wait_for_condition(page, "before => document.querySelector('[data-pond-state]')?.dataset.fishPositions !== before", arg=positions)
         x, y = find_open_water(page, pond)
         before = int(pond.get_attribute("data-food-dropped-count"))
-        page.mouse.click(x, y, button="right")
+        page.mouse.click(x, y)
         wait_for_condition(page, "before => Number(document.querySelector('[data-pond-state]')?.dataset.foodDroppedCount) > before", arg=before)
         self.assertGreater(int(pond.get_attribute("data-food-count")), 0)
         page.evaluate("""() => {
@@ -1029,6 +1029,21 @@ class PortfolioTests(BrowserTestCase):
         expect(page.locator("footer")).to_contain_text(expected)
         self.assertEqual(issues, [])
 
+    def test_display_font_loads_under_the_production_security_policy(self) -> None:
+        browser = self.playwright.chromium.launch()
+        self.addCleanup(browser.close)
+        page = browser.new_page()
+        issues = []
+        page.on("console", lambda message: record_console_issue(issues, message))
+        page.goto(self.base_url, wait_until="networkidle")
+        loaded = page.evaluate("""async () => {
+            const faces = await document.fonts.load('46px "Instrument Serif"', 'Lu');
+            return faces.length === 1 && faces[0].status === 'loaded';
+        }""")
+        self.assertTrue(loaded)
+        self.assertIn('Instrument Serif', page.locator('#hero-title').evaluate('element => getComputedStyle(element).fontFamily'))
+        self.assertEqual(issues, [])
+
     def test_homepage_is_responsive_and_routes_featured_work(self) -> None:
         for viewport_name, viewport in (
             ("desktop", {"width": 1440, "height": 900}),
@@ -1046,34 +1061,18 @@ class PortfolioTests(BrowserTestCase):
                     ).is_visible()
                 )
                 expect(page.locator("#hero-title")).to_have_css("clip-path", "none")
+                cards = page.locator("#work article")
+                self.assertEqual(cards.count(), 4)
                 for project in ("Rakazo", "linux-sonar", "HomeBot", "ConnectorMap"):
-                    self.assertTrue(
-                        page.get_by_role("button", name=re.compile(project, re.I)).is_visible()
-                    )
-
-                wait_for_condition(
-                    page,
-                    "document.querySelector('[data-pond-state]')?.dataset.pondState === 'running'"
-                )
-                impact_count = page.locator("[data-pond-state]").get_attribute(
-                    "data-primary-impact-count"
-                )
-                self.assertTrue(
-                    page.get_by_role("group", name="Featured projects").is_visible()
-                )
-                page.get_by_role("button", name=re.compile("Rakazo", re.I)).click()
-                self.assertEqual(
-                    page.locator("[data-pond-state]").get_attribute(
-                        "data-primary-impact-count"
-                    ),
-                    impact_count,
-                )
-                proof = page.get_by_text("4 highlighted merged PRs", exact=True)
-                proof.wait_for(state="visible")
-                self.assertTrue(proof.is_visible())
-                self.assertTrue(
-                    page.get_by_role("link", name="Merged work").is_visible()
-                )
+                    expect(cards.get_by_role("heading", name=project, exact=True)).to_be_visible()
+                wait_for_condition(page, "document.querySelector('[data-pond-state]')?.dataset.pondState === 'running'")
+                impact_count = page.locator("[data-pond-state]").get_attribute("data-primary-impact-count")
+                cards.first.scroll_into_view_if_needed()
+                cards.first.get_by_role("heading").click()
+                self.assertEqual(page.locator("[data-pond-state]").get_attribute("data-primary-impact-count"), impact_count)
+                expect(cards.first.locator("[class*=projectFigure] strong")).to_have_text("4")
+                expect(cards.first.get_by_text("highlighted merged PRs upstream", exact=True)).to_be_visible()
+                expect(cards.first.get_by_role("link", name="Merged work")).to_be_visible()
                 self.assertLessEqual(
                     page.evaluate("document.documentElement.scrollWidth"),
                     viewport["width"],
@@ -1087,46 +1086,28 @@ class PortfolioTests(BrowserTestCase):
                 )
                 browser.close()
 
-    def test_project_marker_is_centered_for_every_selection(self) -> None:
+    def test_project_grid_shows_every_card_without_selection(self) -> None:
         browser = self.playwright.chromium.launch()
         self.addCleanup(browser.close)
         for width, height in ((1440, 900), (390, 844), (320, 800)):
             with self.subTest(width=width):
                 page = browser.new_page(viewport={"width": width, "height": height})
                 page.goto(self.base_url, wait_until="networkidle")
-                buttons = page.get_by_role("group", name="Featured projects").get_by_role("button")
-                for index in range(4):
-                    button = buttons.nth(index)
-                    button.click()
-                    page.wait_for_timeout(400)
-                    self.assertEqual(button.get_attribute("aria-pressed"), "true")
-                    centers = button.evaluate("""async button => {
-                        const marker = button.querySelector('i');
-                        let previous = null;
-                        let stable = 0;
-                        const deadline = performance.now() + 5000;
-                        while (performance.now() < deadline) {
-                            await new Promise(requestAnimationFrame);
-                            const bounds = button.getBoundingClientRect();
-                            const dot = marker.getBoundingClientRect();
-                            const centers = [bounds.y + bounds.height / 2, dot.y + dot.height / 2];
-                            stable = previous && centers.every((value, index) => Math.abs(value - previous[index]) < 0.05) ? stable + 1 : 0;
-                            if (stable >= 3) return centers;
-                            previous = centers;
-                        }
-                        throw new Error('Project marker did not settle');
-                    }""")
-                    self.assertAlmostEqual(centers[0], centers[1], delta=0.75)
-                    if width <= 390:
-                        heading = page.locator("#work article h3")
-                        expect(heading).to_have_text(button.locator("strong").inner_text())
-                        heading.scroll_into_view_if_needed()
-                        self.assertTrue(heading.evaluate("""element => {
-                            const range = document.createRange();
-                            range.selectNodeContents(element);
-                            const lines = [...range.getClientRects()];
-                            return lines.length === 1 && lines[0].width <= element.clientWidth;
-                        }"""), f"Project heading wraps at {width}px")
+                cards = page.locator("#work article")
+                self.assertEqual(cards.count(), 4)
+                self.assertEqual(page.locator("#work [aria-pressed]").count(), 0)
+                for index, project in enumerate(("Rakazo", "linux-sonar", "HomeBot", "ConnectorMap")):
+                    card = cards.nth(index)
+                    heading = card.get_by_role("heading", name=project, exact=True)
+                    card.scroll_into_view_if_needed()
+                    expect(heading).to_be_visible()
+                    expect(card.get_by_role("link", name=f"View project {project}", exact=True)).to_be_visible()
+                    self.assertTrue(heading.evaluate("""element => {
+                        const range = document.createRange();
+                        range.selectNodeContents(element);
+                        return [...range.getClientRects()].every(line => line.width <= element.clientWidth + 1);
+                    }"""), f"Project heading overflows at {width}px")
+                page.screenshot(path=SCREENSHOTS / f"project-grid-{width}.png", full_page=True)
                 page.close()
 
     def test_mobile_navigation_hero_viewport_and_system_color_modes(self) -> None:
@@ -1268,9 +1249,9 @@ class PortfolioTests(BrowserTestCase):
                         const heading = document.querySelector('#hero-title').getBoundingClientRect();
                         const header = document.querySelector('header').getBoundingClientRect();
                         const pond = document.querySelector('[data-renderer]').getBoundingClientRect();
-                        const buttons = [...document.querySelectorAll('[aria-label="Featured projects"] button')]
+                        const buttons = [...document.querySelectorAll('#work article [class*="projectActions"] a:first-child')]
                             .map(element => element.getBoundingClientRect());
-                        const projectNames = [...document.querySelectorAll('[aria-label="Featured projects"] strong')];
+                        const projectNames = [...document.querySelectorAll('#work article h3')];
                         const aboutCards = [...document.querySelectorAll('#about > article, #about > div:last-child')];
                         const layoutWidth = document.documentElement.clientWidth;
                         const fish = document.querySelector('[data-pond-state]').dataset.fishPositions
@@ -1281,11 +1262,16 @@ class PortfolioTests(BrowserTestCase):
                             headerInside: header.left >= -1 && header.right <= width + 1,
                             pondFits: Math.abs(pond.width - width) < 1 && Math.abs(pond.height - height) < 1,
                             projectTargets: buttons.length === 4 && buttons.every(button => button.width >= 44 && button.height >= 44),
-                            projectDistribution: width <= 430 || (buttons.length === 4 && Math.abs(buttons[3].right - document.querySelector('[aria-label="Featured projects"]').getBoundingClientRect().right) < 2),
+                            projectDistribution: (() => {
+                                const cards = [...document.querySelectorAll('#work article')].map(card => card.getBoundingClientRect());
+                                return cards.length === 4 && (width <= 900
+                                    ? cards.every((card, index) => index === 0 || card.top >= cards[index - 1].bottom)
+                                    : Math.abs(cards[0].top - cards[1].top) < 1 && cards[1].left >= cards[0].right && cards[2].top >= cards[0].bottom);
+                            })(),
                             projectNamesFit: width > 430 || projectNames.every(element => {
                                 const range = document.createRange();
                                 range.selectNodeContents(element);
-                                return range.getBoundingClientRect().width <= element.getBoundingClientRect().width + 1;
+                                return [...range.getClientRects()].every(line => line.width <= element.getBoundingClientRect().width + 1);
                             }),
                             aboutCardsCentered: width > 430 || aboutCards.every(element => {
                                 const bounds = element.getBoundingClientRect();
@@ -1432,7 +1418,7 @@ class PortfolioTests(BrowserTestCase):
         self.assertEqual(host.evaluate("element => getComputedStyle(element).opacity"), "1")
         browser.close()
 
-    def test_hero_copy_does_not_block_pointer_water_reaction(self) -> None:
+    def test_hero_copy_is_selectable_and_blocks_pond_input(self) -> None:
         browser = self.playwright.chromium.launch()
         page = self.pond_page(browser, viewport={"width": 1280, "height": 800})
         page.goto(f"{self.base_url}/?pond-seed=e2e-hero-pointer", wait_until="networkidle")
@@ -1453,7 +1439,12 @@ class PortfolioTests(BrowserTestCase):
                     box["y"] + box["height"] * vertical,
                 )
                 responsive |= pond.get_attribute("data-food-affordance") == "true"
-        self.assertTrue(responsive)
+        self.assertFalse(responsive)
+        self.assertEqual(page.locator('#hero-title').evaluate('element => getComputedStyle(element).userSelect'), 'auto')
+        before_food = pond.get_attribute("data-food-dropped-count")
+        page.get_by_role("heading", name="I make stubborn software behave.").click()
+        page.wait_for_timeout(200)
+        self.assertEqual(pond.get_attribute("data-food-dropped-count"), before_food)
 
         action = page.get_by_role("link", name="Things I’ve made").bounding_box()
         page.mouse.move(
@@ -1497,12 +1488,12 @@ class PortfolioTests(BrowserTestCase):
             navigation.evaluate_all(
                 "elements => elements.map(element => [element.textContent.trim(), element.getAttribute('href')])"
             ),
-            [["Work", "#work"], ["About", "#about"], ["Contact", "#contact"]],
+            [["Work", "#work"], ["More", "#about"], ["Contact", "#contact"]],
         )
         expect(hero.get_by_role("img", name="Lu's illustrated avatar wearing a pink cap")).to_be_visible()
         expect(hero.get_by_role("heading", level=1)).to_have_text("Hi, I’m Lu.")
         expect(page.locator("header a[href='#top']")).to_be_visible()
-        category_labels = page.locator("[aria-label='Featured projects'] button small")
+        category_labels = page.locator("#work article [class*=projectEyebrow]")
         self.assertEqual(category_labels.count(), 4)
         self.assertTrue(
             category_labels.evaluate_all(
@@ -1525,21 +1516,19 @@ class PortfolioTests(BrowserTestCase):
         }
 
         def assert_homebot_image_fits(panel) -> None:
-            illustration = panel.locator('svg[aria-hidden="true"]').first
+            illustration = panel.locator('[class*=projectIllustration] > svg')
             expect(illustration).to_be_visible()
             self.assertGreater(illustration.bounding_box()["width"], 100)
             self.assertEqual(panel.locator("video, img").count(), 0)
 
         for project, href in project_hrefs.items():
-            button = page.get_by_role("button", name=re.compile(project, re.I))
-            button.click()
-            self.assertEqual(button.get_attribute("aria-pressed"), "true")
             panel = page.locator("article").filter(
                 has=page.get_by_role("heading", name=project, exact=True)
             )
+            panel.scroll_into_view_if_needed()
             panel.wait_for(state="visible")
             self.assertEqual(
-                panel.get_by_role("link", name="View project", exact=True).get_attribute(
+                panel.get_by_role("link", name=f"View project {project}", exact=True).get_attribute(
                     "href"
                 ),
                 href,
@@ -1554,18 +1543,16 @@ class PortfolioTests(BrowserTestCase):
                 )).to_be_visible()
                 for tag in ("Read + act", "Marked inferences", "Source links"):
                     expect(panel.locator("[class*='proofRow']").get_by_text(tag, exact=True)).to_be_visible()
-                expect(panel.locator('svg[aria-hidden="true"]').first).to_be_visible()
-                link = panel.get_by_role("link", name="View project", exact=True)
+                expect(panel.locator('[class*=projectIllustration] > svg')).to_be_visible()
+                link = panel.get_by_role("link", name=f"View project {project}", exact=True)
                 expect(link).to_have_attribute("target", "_blank")
                 expect(link).to_have_attribute("rel", "noreferrer")
 
         page.set_viewport_size({"width": 390, "height": 844})
-        homebot_button = page.get_by_role("button", name=re.compile("HomeBot", re.I))
-        homebot_button.click()
-        self.assertEqual(homebot_button.get_attribute("aria-pressed"), "true")
         homebot_panel = page.locator("article").filter(
             has=page.get_by_role("heading", name="HomeBot", exact=True)
         )
+        homebot_panel.scroll_into_view_if_needed()
         homebot_panel.wait_for(state="visible")
         assert_homebot_image_fits(homebot_panel)
         browser.close()
@@ -1586,8 +1573,9 @@ class PortfolioTests(BrowserTestCase):
 
         self.assertEqual(
             page.evaluate("getComputedStyle(document.querySelector('#top')).userSelect"),
-            "none",
+            "auto",
         )
+        self.assertEqual(page.locator('[data-pond-state]').evaluate('element => getComputedStyle(element).userSelect'), 'none')
         self.assertEqual(page.get_by_text("Touch the water", exact=True).count(), 0)
 
         pond = page.locator("[data-pond-state]")
@@ -1716,15 +1704,15 @@ class PortfolioTests(BrowserTestCase):
             }, { once: true })"""
         )
         page.mouse.click(fish_x, fish_y, button="right")
+        self.assertEqual(page.locator("html").get_attribute("data-pond-context-prevented"), "false")
+        self.assertEqual(int(pond.get_attribute("data-food-dropped-count")), food_before)
+        page.mouse.click(fish_x, fish_y)
         wait_for_condition(
             page,
             "initial => Number(document.querySelector('[data-pond-state]')?.dataset.foodDroppedCount) > initial",
             arg=food_before,
         )
-        self.assertEqual(
-            page.locator("html").get_attribute("data-pond-context-prevented"),
-            "true",
-        )
+        self.assertEqual(int(pond.get_attribute("data-food-dropped-count")), food_before + 1)
         camera_x, camera_y, scale_x, scale_y = (
             float(value) for value in pond.get_attribute("data-pond-camera").split(",")
         )
@@ -1825,7 +1813,7 @@ class PortfolioTests(BrowserTestCase):
             for point in pond.get_attribute("data-fish-positions").split(";")
         ]
         fish_x, fish_y = find_open_water(page, pond, fish_points)
-        page.mouse.click(fish_x, fish_y, button="right")
+        page.mouse.click(fish_x, fish_y)
         wait_for_condition(
             page,
             "Number(document.querySelector('[data-pond-state]')?.dataset.foodDroppedCount) > 0"
@@ -1852,52 +1840,14 @@ class PortfolioTests(BrowserTestCase):
             for point in pond.get_attribute("data-fish-positions").split(";")
         ]
         fish_x, fish_y = find_open_water(page, pond, fish_points)
-        page.evaluate("""() => {
-            window.__pondTouchEvents = [];
-            for (const type of ['pointerdown', 'pointerup', 'pointercancel']) {
-                document.addEventListener(type, event => {
-                    if (event.pointerType === 'touch') window.__pondTouchEvents.push({
-                        type, time: performance.now(), x: event.clientX, y: event.clientY,
-                        target: event.target?.tagName,
-                    });
-                }, true);
-            }
-        }""")
         impacts_before = int(pond.get_attribute("data-primary-impact-count"))
+        food_before = int(pond.get_attribute("data-food-dropped-count"))
         page.touchscreen.tap(fish_x, fish_y)
-        wait_for_condition(
-            page,
-            "document.querySelector('[data-pond-state]')?.dataset.touchGesture === 'single-tap-impact'"
-        )
-        self.assertEqual(
-            int(pond.get_attribute("data-primary-impact-count")),
-            impacts_before + 1,
-        )
+        wait_for_condition(page, "document.querySelector('[data-pond-state]')?.dataset.touchGesture === 'tap-food'")
+        wait_for_condition(page, "before => Number(document.querySelector('[data-pond-state]').dataset.foodDroppedCount) === before + 1", arg=food_before)
+        self.assertEqual(int(pond.get_attribute("data-primary-impact-count")), impacts_before + 1)
         self.assertGreater(int(pond.get_attribute("data-ring-count")), 0)
-        self.assertEqual(int(pond.get_attribute("data-food-dropped-count")), 0)
-        impacts_before_food = int(pond.get_attribute("data-primary-impact-count"))
-        touch_session = context.new_cdp_session(page)
-
-        def double_tap(x, y):
-            touch_session.send("Input.synthesizeTapGesture", {
-                "x": x, "y": y, "duration": 100,
-                "tapCount": 2, "gestureSourceType": "touch",
-            })
-
-        double_tap(fish_x, fish_y)
-        try:
-            wait_for_condition(
-                page,
-                "Number(document.querySelector('[data-pond-state]')?.dataset.foodDroppedCount) > 0"
-            )
-        except PlaywrightTimeoutError:
-            detail = pond.evaluate(
-                "element => ({ gesture: element.dataset.touchGesture, requested: element.dataset.foodRequestedAt, frame: element.dataset.frame, state: element.dataset.pondState })"
-            )
-            detail["touch_events"] = page.evaluate("window.__pondTouchEvents")
-            context.close()
-            browser.close()
-            self.fail(f"Double-tap did not commit food: {detail}")
+        self.assertEqual(int(pond.get_attribute("data-food-dropped-count")), food_before + 1)
         camera_x, camera_y, scale_x, scale_y = (
             float(value) for value in pond.get_attribute("data-pond-camera").split(",")
         )
@@ -1913,15 +1863,18 @@ class PortfolioTests(BrowserTestCase):
         page.wait_for_timeout(500)
         self.assertEqual(
             int(pond.get_attribute("data-primary-impact-count")),
-            impacts_before_food,
+            impacts_before + 1,
         )
         dropped_count = int(pond.get_attribute("data-food-dropped-count"))
-        project_button = page.get_by_role("button", name=re.compile("Rakazo", re.I))
-        project_button.scroll_into_view_if_needed()
-        box = project_button.bounding_box()
-        double_tap(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+        project_link = page.get_by_role("link", name="Things I’ve made", exact=True)
+        project_link.scroll_into_view_if_needed()
+        box = project_link.bounding_box()
+        page.touchscreen.tap(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
         page.wait_for_timeout(500)
         self.assertEqual(int(pond.get_attribute("data-food-dropped-count")), dropped_count)
+
+        page.evaluate("window.scrollTo(0, 0)")
+        fish_x, fish_y = find_open_water(page, pond)
 
         def pointer_sequence(events):
             page.evaluate(
@@ -1970,7 +1923,7 @@ class PortfolioTests(BrowserTestCase):
         self.assertEqual(int(pond.get_attribute("data-food-dropped-count")), dropped_count)
         self.assertEqual(
             int(pond.get_attribute("data-primary-impact-count")),
-            impacts_before_food,
+            impacts_before + 1,
         )
         self.assertGreaterEqual(int(pond.get_attribute("data-fish-count")), 8)
         context.close()

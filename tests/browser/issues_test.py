@@ -24,7 +24,7 @@ class HomepageIssueTests(BrowserTestCase):
                 self.assertGreaterEqual(link.evaluate('e=>parseFloat(getComputedStyle(e).fontSize)'),14)
                 self.assertGreaterEqual(link.bounding_box()['height'],44)
             expect(page.locator('footer').get_by_role('link',name='Privacy')).to_have_attribute('href','/privacy')
-            for section in ('Work','About','Contact'):
+            for section in ('Work','More','Contact'):
                 page.get_by_role('navigation',name='Portfolio navigation').get_by_role('link',name=section,exact=True).click()
                 expect(page.locator('header [aria-current="location"]')).to_have_text(section)
             self.assertEqual(page.locator('#contact').evaluate('e=>getComputedStyle(e).opacity'),'1')
