@@ -101,19 +101,6 @@ export function installPondInput(options: PondInputOptions) {
     if (activeTouch?.id === event.pointerId) activeTouch = null;
   };
 
-  const feedFromControl = (event: Event) => {
-    for (const y of [0.5, 0.3, 0.7, 0.15, 0.85, 0.05, 0.95]) {
-      for (const x of [0.5, 0.3, 0.7, 0.15, 0.85, 0.05, 0.95]) {
-        const screen = { x: innerWidth * x, y: innerHeight * y };
-        const obscured = [...document.querySelectorAll("[data-pond-obscures]")].some(element => {
-          const box = element.getBoundingClientRect();
-          return screen.x >= box.left && screen.x <= box.right && screen.y >= box.top && screen.y <= box.bottom;
-        });
-        if (!obscured && ownsPoint(screen) && dropFood(screen)) { event.preventDefault(); return; }
-      }
-    }
-  };
-
   const resize = () => {
     activeTouch = null;
   };
@@ -122,7 +109,6 @@ export function installPondInput(options: PondInputOptions) {
   interaction.addEventListener("pointerdown", press, { passive: true });
   interaction.addEventListener("pointerup", release, { passive: false });
   interaction.addEventListener("pointercancel", cancel, { passive: true });
-  interaction.addEventListener("pond-feed", feedFromControl);
   window.addEventListener("resize", resize, { passive: true });
 
   return () => {
@@ -130,7 +116,6 @@ export function installPondInput(options: PondInputOptions) {
     interaction.removeEventListener("pointerdown", press);
     interaction.removeEventListener("pointerup", release);
     interaction.removeEventListener("pointercancel", cancel);
-    interaction.removeEventListener("pond-feed", feedFromControl);
     window.removeEventListener("resize", resize);
   };
 }
