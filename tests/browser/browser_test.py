@@ -1069,6 +1069,8 @@ class PortfolioTests(BrowserTestCase):
                 impact_count = page.locator("[data-pond-state]").get_attribute("data-primary-impact-count")
                 heading = cards.first.get_by_role("heading")
                 heading.evaluate("element => element.scrollIntoView({ block: 'center', behavior: 'instant' })")
+                expect(cards.first.locator("..")).to_have_css("transform", "none")
+                heading.evaluate("element => element.scrollIntoView({ block: 'center', behavior: 'instant' })")
                 heading.click()
                 self.assertEqual(page.locator("[data-pond-state]").get_attribute("data-primary-impact-count"), impact_count)
                 expect(cards.first.locator("[class*=projectFigure] strong")).to_have_text("4")
