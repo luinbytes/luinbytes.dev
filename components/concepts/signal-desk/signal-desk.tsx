@@ -215,7 +215,6 @@ export function SignalDesk() {
     return () => { window.removeEventListener("scroll", sync); window.removeEventListener("hashchange", sync); };
   }, []);
   const [pondStatus, setPondStatus] = useState<{ mode: string; renderer: string }>({ mode: "ascii", renderer: "loading" });
-  const [feedStatus, setFeedStatus] = useState("");
   const entrance = ready && !reduced;
 
   useEffect(() => {
@@ -231,7 +230,7 @@ export function SignalDesk() {
   return (
     <div ref={pageRef} className={styles.page} id="top">
       <PondEnvironment reduced={reduced} mode={pondView} />
-      <p className={styles.srOnly}>The decorative pond responds to pointer movement. Click or tap open water to feed the fish, or use the Feed fish button next to the pond view options to drop food with the keyboard.</p>
+      <p className={styles.srOnly}>The decorative pond responds to pointer movement. Click or tap open water to feed the fish.</p>
 
       <header className={styles.header}>
         <a className={styles.brand} href="#top">
@@ -358,14 +357,6 @@ export function SignalDesk() {
             </label>
           ))}
         </div>
-        {/* Visually hidden: the pond surface is aria-hidden, so this is the
-            keyboard and screen reader route to feeding. Pointer users click
-            or tap the water instead. */}
-        <button type="button" className={styles.feedControl} disabled={pondStatus.renderer !== "three"} onClick={() => {
-          const surface = pageRef.current?.querySelector("[data-pond-input]");
-          const handled = surface && !surface.dispatchEvent(new Event("pond-feed", { cancelable: true }));
-          setFeedStatus(handled ? "Food dropped in the pond." : "No open water visible. Return to the top and try again.");
-        }}>Feed fish</button>
         <div className={styles.srOnly} aria-live="polite">
           {pondStatus.mode !== pondView || pondStatus.renderer === "loading"
             ? `Loading ${pondView === "ascii" ? "ASCII" : "Pixel"} view…`
@@ -373,7 +364,6 @@ export function SignalDesk() {
               ? "Pond unavailable. Try the other view."
               : `Current view: ${pondView === "ascii" ? "ASCII" : "Pixel"}`}
         </div>
-        <span className={styles.srOnly} role="status">{feedStatus}</span>
       </fieldset>
 
       <SiteFooter reduced={reduced} entrance={entrance} ready={ready} />
