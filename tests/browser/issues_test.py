@@ -1,5 +1,5 @@
 """Behaviour checks for the ready homepage issue batch."""
-from browser_test import BrowserTestCase, expect, wait_for_condition
+from browser_test import BrowserTestCase, expect, wait_for_condition, find_open_water
 
 class HomepageIssueTests(BrowserTestCase):
     def test_skip_link_is_first_and_focuses_main(self):
@@ -35,7 +35,7 @@ class HomepageIssueTests(BrowserTestCase):
             self.assertEqual(page.locator('#contact').evaluate('e=>getComputedStyle(e).opacity'),'1')
             page.close()
 
-    def test_feed_button_keyboard_and_ascii_without_unused_rasters(self):
+    def test_pointer_feeding_without_feed_control_or_unused_ascii_rasters(self):
         browser = self.playwright.chromium.launch()
         self.addCleanup(browser.close)
         page = self.pond_page(browser)
@@ -47,9 +47,11 @@ class HomepageIssueTests(BrowserTestCase):
         for mode in ('ASCII','Pixel'):
             page.get_by_label(mode,exact=True).check()
             wait_for_condition(page, "document.querySelector('[data-pond-state]')?.dataset.pondState==='running'")
-            feed=page.get_by_role('button',name='Feed fish',exact=True)
-            expect(feed).to_be_enabled()
-            before=int(page.locator('[data-pond-state]').get_attribute('data-food-dropped-count'))
-            feed.focus();page.keyboard.press('Enter')
-            wait_for_condition(page, "before=>Number(document.querySelector('[data-pond-state]').dataset.foodDroppedCount)>before",arg=before)
-            expect(page.get_by_role('status',name='').filter(has_text='Food dropped')).to_be_visible()
+            self.assertEqual(page.get_by_role('button',name='Feed fish',exact=True,include_hidden=True).count(),0)
+            self.assertEqual(page.locator('[class*="feedControl"], [class*="feedButton"]').count(),0)
+            pond=page.locator('[data-pond-state]')
+            before=int(pond.get_attribute('data-food-dropped-count'))
+            x,y=find_open_water(page,pond)
+            page.mouse.click(x,y)
+            wait_for_condition(page, "before=>Number(document.querySelector('[data-pond-state]').dataset.foodDroppedCount)===before+1",arg=before)
+            self.assertEqual(int(pond.get_attribute('data-food-dropped-count')),before+1)
