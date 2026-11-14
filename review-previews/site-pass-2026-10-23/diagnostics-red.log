@@ -6,7 +6,7 @@ test_pond_animates_without_test_diagnostics (tests.browser.browser_test.PondProd
 FAIL: test_pond_animates_without_test_diagnostics (tests.browser.browser_test.PondProductionTests.test_pond_animates_without_test_diagnostics) (path='/', motion='no-preference')
 ----------------------------------------------------------------------
 Traceback (most recent call last):
-  File "/Users/luinbytes/.t3/worktrees/luinbytes.dev/t3-c6a04f3b/tests/browser/browser_test.py", line 1062, in test_pond_animates_without_test_diagnostics
+  File "REDACTED_WORKSPACE_ROOT/tests/browser/browser_test.py", line 1062, in test_pond_animates_without_test_diagnostics
     self.assertEqual(mutations, [])
     ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
 AssertionError: Lists differ: ['data-wake-count', 'data-wake-count', 'da[12033 chars]unt'] != []
@@ -21,7 +21,7 @@ Diff is 13774 characters long. Set self.maxDiff to None to see it.
 FAIL: test_pond_animates_without_test_diagnostics (tests.browser.browser_test.PondProductionTests.test_pond_animates_without_test_diagnostics) (path='/missing/nested/page', motion='reduce')
 ----------------------------------------------------------------------
 Traceback (most recent call last):
-  File "/Users/luinbytes/.t3/worktrees/luinbytes.dev/t3-c6a04f3b/tests/browser/browser_test.py", line 1062, in test_pond_animates_without_test_diagnostics
+  File "REDACTED_WORKSPACE_ROOT/tests/browser/browser_test.py", line 1062, in test_pond_animates_without_test_diagnostics
     self.assertEqual(mutations, [])
     ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
 AssertionError: Lists differ: ['data-fish-positions', 'data-fish-world-p[8017 chars]set'] != []

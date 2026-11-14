@@ -4,7 +4,7 @@ Status: completed
 
 **Choose three explicit client entries and HTML templates for this three-page site.** They give Vite ownership of production CSS links and avoid custom manifest traversal. Keep the existing route registry for server rendering, metadata, aliases, and output filenames.
 
-Source review confirms the static page imports in [routes.tsx](/Users/luinbytes/.t3/worktrees/luinbytes.dev/t3-c6a04f3b/app/routes.tsx:3) and the single-template export in [prerender.mjs](/Users/luinbytes/.t3/worktrees/luinbytes.dev/t3-c6a04f3b/scripts/prerender.mjs:5).
+Source review confirms the static page imports in [routes.tsx](REDACTED_WORKSPACE_ROOT/app/routes.tsx:3) and the single-template export in [prerender.mjs](REDACTED_WORKSPACE_ROOT/scripts/prerender.mjs:5).
 
 1. **Styled HTML and hydration.** Both designs can work. Explicit entries let Vite attach styles from each entry’s static imports to its HTML. Each entry hydrates its known page through the same `App` and `RootLayout` used by SSR. Candidate2 must await the selected loader before both `renderToString` and `hydrateRoot`. Using `React.lazy` with the current synchronous rendering approach introduces fallback and hydration hazards.
 
@@ -12,9 +12,9 @@ Source review confirms the static page imports in [routes.tsx](/Users/luinbytes/
 
 3. **Maintainable diff.** Explicit entries add two small templates and entry files. They avoid async rendering changes, glob lookup validation, manifest-key coupling, and custom preload ordering. This is the Laziness Protocol choice. For three fixed routes, a few repeated template lines carry less maintenance risk than another asset-linking system.
 
-4. **Lazy animation.** Preserve the existing dynamic imports in [PondEnvironment](/Users/luinbytes/.t3/worktrees/luinbytes.dev/t3-c6a04f3b/components/concepts/signal-desk/pond-environment.tsx:45) and [PipWebSearchDemo](/Users/luinbytes/.t3/worktrees/luinbytes.dev/t3-c6a04f3b/components/pip/pip-web-search-demo.tsx:292). Keep their fallback markup, cleanup, visibility, and reduced-motion behavior. Neither architecture should preload renderer chunks or Three.js through generated links.
+4. **Lazy animation.** Preserve the existing dynamic imports in [PondEnvironment](REDACTED_WORKSPACE_ROOT/components/concepts/signal-desk/pond-environment.tsx:45) and [PipWebSearchDemo](REDACTED_WORKSPACE_ROOT/components/pip/pip-web-search-demo.tsx:292). Keep their fallback markup, cleanup, visibility, and reduced-motion behavior. Neither architecture should preload renderer chunks or Three.js through generated links.
 
-5. **Development parity.** The [dev middleware](/Users/luinbytes/.t3/worktrees/luinbytes.dev/t3-c6a04f3b/vite.config.ts:18) must select the matching template before calling `transformIndexHtml`. Both alternatives need deliberate CSS handling for styled development HTML without JavaScript. Client-side CSS imports alone are insufficient. Emit direct stylesheet links for global/font styles and the selected page’s transitive CSS modules, with matching SSR class names. Preserve clean URLs, `.html` aliases, and 404 status handling.
+5. **Development parity.** The [dev middleware](REDACTED_WORKSPACE_ROOT/vite.config.ts:18) must select the matching template before calling `transformIndexHtml`. Both alternatives need deliberate CSS handling for styled development HTML without JavaScript. Client-side CSS imports alone are insufficient. Emit direct stylesheet links for global/font styles and the selected page’s transitive CSS modules, with matching SSR class names. Preserve clean URLs, `.html` aliases, and 404 status handling.
 
 The compact architecture is three page-specific entries calling one shared `hydratePage(Page)` helper. Server rendering retains the existing route resolver and synchronous render function. Prerendering reads each route’s own Vite-built HTML before inserting metadata and content. No client router is needed.
 
