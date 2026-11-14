@@ -6,7 +6,7 @@
 > luinbytes-site@0.1.0 prebuild
 > node scripts/generate-sitemap.js
 
-Generated sitemap with 2 URLs to /Users/luinbytes/src/luinbytes.dev/public/sitemap.xml
+Generated sitemap with 2 URLs to REDACTED_WORKSPACE_ROOT/public/sitemap.xml
 
 > luinbytes-site@0.1.0 build
 > tsc --noEmit && vite build && vite build --ssr app/entry-server.tsx && node scripts/prerender.mjs

@@ -1,5 +1,5 @@
 {
-  "root": "/Users/luinbytes/.t3/worktrees/luinbytes.dev/t3-c6a04f3b/out",
+  "root": "REDACTED_WORKSPACE_ROOT/out",
   "pages": {
     "404.html": {
       "initialJavaScriptBytes": 260139,

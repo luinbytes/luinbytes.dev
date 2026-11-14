@@ -53,7 +53,7 @@ test_homepage_preserves_layout_and_world_state_across_viewport_matrix (browser_t
     ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
   File "/usr/local/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/case.py", line 615, in _callTestMethod
     result = method()
-  File "/Users/luinbytes/src/luinbytes.dev/tests/browser/browser_test.py", line 936, in test_homepage_preserves_layout_and_world_state_across_viewport_matrix
+  File "REDACTED_WORKSPACE_ROOT/tests/browser/browser_test.py", line 936, in test_homepage_preserves_layout_and_world_state_across_viewport_matrix
     page.wait_for_function(
     ~~~~~~~~~~~~~~~~~~~~~~^
         "frame => document.querySelector('[data-pixi-state]')?.dataset.frame !== frame",

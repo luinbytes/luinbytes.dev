@@ -6,7 +6,7 @@
 > luinbytes-site@0.1.0 prebuild
 > node scripts/generate-sitemap.js
 
-Generated sitemap with 2 URLs to /Users/luinbytes/src/luinbytes.dev/public/sitemap.xml
+Generated sitemap with 2 URLs to REDACTED_WORKSPACE_ROOT/public/sitemap.xml
 
 > luinbytes-site@0.1.0 build
 > tsc --noEmit && vite build && vite build --ssr app/entry-server.tsx && node scripts/prerender.mjs
@@ -77,7 +77,7 @@ test_every_scoped_route_exports_a_production_large_image_card (browser_test.Shar
 FAIL: test_loading_shows_only_the_pond_then_fades_in_the_live_ecosystem (browser_test.PortfolioTests.test_loading_shows_only_the_pond_then_fades_in_the_live_ecosystem)
 ----------------------------------------------------------------------
 Traceback (most recent call last):
-  File "/Users/luinbytes/src/luinbytes.dev/tests/browser/browser_test.py", line 1014, in test_loading_shows_only_the_pond_then_fades_in_the_live_ecosystem
+  File "REDACTED_WORKSPACE_ROOT/tests/browser/browser_test.py", line 1014, in test_loading_shows_only_the_pond_then_fades_in_the_live_ecosystem
     self.assertEqual(host.evaluate("element => getComputedStyle(element).opacity"), "1")
     ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 AssertionError: '0.998914' != '1'
@@ -89,7 +89,7 @@ AssertionError: '0.998914' != '1'
 FAIL: test_mobile_navigation_hero_viewport_and_system_color_modes (browser_test.PortfolioTests.test_mobile_navigation_hero_viewport_and_system_color_modes) (viewport=390)
 ----------------------------------------------------------------------
 Traceback (most recent call last):
-  File "/Users/luinbytes/src/luinbytes.dev/tests/browser/browser_test.py", line 696, in test_mobile_navigation_hero_viewport_and_system_color_modes
+  File "REDACTED_WORKSPACE_ROOT/tests/browser/browser_test.py", line 696, in test_mobile_navigation_hero_viewport_and_system_color_modes
     self.assertGreaterEqual(contrast, 4.5)
     ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
 AssertionError: 4.08431551828909 not greater than or equal to 4.5
@@ -98,7 +98,7 @@ AssertionError: 4.08431551828909 not greater than or equal to 4.5
 FAIL: test_navigation_and_bordered_controls_keep_their_visual_hierarchy (browser_test.PortfolioTests.test_navigation_and_bordered_controls_keep_their_visual_hierarchy)
 ----------------------------------------------------------------------
 Traceback (most recent call last):
-  File "/Users/luinbytes/src/luinbytes.dev/tests/browser/browser_test.py", line 1104, in test_navigation_and_bordered_controls_keep_their_visual_hierarchy
+  File "REDACTED_WORKSPACE_ROOT/tests/browser/browser_test.py", line 1104, in test_navigation_and_bordered_controls_keep_their_visual_hierarchy
     self.assertTrue(
     ~~~~~~~~~~~~~~~^
         proof_labels.evaluate_all(
