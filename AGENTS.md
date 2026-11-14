@@ -13,8 +13,10 @@ Use Node 22 and a repo-local Python environment for browser tests:
 npm ci
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements-test.txt
-.venv/bin/python -m playwright install --with-deps chromium
+npx playwright install chromium
 ```
+
+CI's `.github/workflows/checks.yml` uses `--with-deps` to install system packages through sudo apt on the runner. Local/CLI setup must not use `--with-deps`. If Chromium still cannot start because system libraries are missing, those libraries are a host prerequisite; do not install them with sudo or apt as part of repo commands.
 
 ## Workflow and completion
 - Work on a task branch; never commit to `master`.
@@ -43,5 +45,7 @@ npm run preview
 ```
 
 The build runs TypeScript checking, Vite client/SSR builds, and prerendering. Preview serves `out/` at http://127.0.0.1:3004 with real 404 responses; browser tests use this production export.
+
+`npm run build` runs `prebuild` (`node scripts/generate-sitemap.js`), which rewrites the `lastmod` values in tracked `public/sitemap.xml`. This also happens during `npm run test:e2e`, since it runs the build. Commit the sitemap change only when the task is to update the sitemap; otherwise, revert it before finishing with `git restore -- public/sitemap.xml`.
 
 The default branch is `master`. Pushes to `master` run checks, then build and deploy to GitHub Pages.
