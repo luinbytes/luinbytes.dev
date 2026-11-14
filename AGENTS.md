@@ -13,10 +13,10 @@ Use Node 22 and a repo-local Python environment for browser tests:
 npm ci
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements-test.txt
-npx playwright install chromium
+.venv/bin/python -m playwright install chromium
 ```
 
-CI's `.github/workflows/checks.yml` uses `--with-deps` to install system packages through sudo apt on the runner. Local/CLI setup must not use `--with-deps`. If Chromium still cannot start because system libraries are missing, those libraries are a host prerequisite; do not install them with sudo or apt as part of repo commands.
+CI's `.github/workflows/checks.yml` runs the same Python command with the runner-only `--with-deps` addition: `.venv/bin/python -m playwright install --with-deps chromium`. This installs system packages through sudo apt on the runner. Local/CLI setup must not use `--with-deps`. If Chromium still cannot start because system libraries are missing, those libraries are a host prerequisite; do not install them with sudo or apt as part of repo commands.
 
 ## Workflow and completion
 - Work on a task branch; never commit to `master`.
