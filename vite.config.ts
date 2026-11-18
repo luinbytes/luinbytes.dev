@@ -17,7 +17,7 @@ function prerenderDevelopment(): Plugin {
         try {
           const { renderPage, routeForPath } = await server.ssrLoadModule("/app/entry-server.tsx");
           const route = routeForPath(pathname);
-          const template = await readFile(fileURLToPath(new URL(route.output, import.meta.url)), "utf8");
+          const template = await readFile(new URL(route.output, import.meta.url), "utf8");
           const html = await server.transformIndexHtml(url, renderPage(template, pathname));
           response.statusCode = route.path === "/404" ? 404 : 200;
           response.setHeader("Content-Type", "text/html; charset=utf-8");

@@ -5,7 +5,7 @@ import {
   createPondRandom,
   pondAngleDelta,
   type PondPoint,
-} from "./pond-model.ts";
+} from "./pond-shared-model.ts";
 import {
   createPondSimulation,
   type FishDefinition,

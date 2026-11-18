@@ -1,4 +1,4 @@
-import type { PondPoint } from "./pond-model.ts";
+import type { PondPoint } from "./pond-shared-model.ts";
 
 type PondInputOptions = {
   interaction: HTMLElement;

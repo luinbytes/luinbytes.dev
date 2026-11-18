@@ -35,4 +35,4 @@ ${urlElements}
 const sitemap = generateSitemap();
 fs.writeFileSync(outputPath, sitemap);
 
-console.log(`Generated sitemap with ${sitemap.split('<url>').length - 1} URLs to ${outputPath}`);
+console.log(`Generated sitemap with ${staticPages.length} URLs to ${outputPath}`);
