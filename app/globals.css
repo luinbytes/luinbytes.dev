@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@source not "../vendor/picomatch";
 
 /* Fonts are bundled by Vite from app/fonts and served under the same origin CSP. */
 @font-face {

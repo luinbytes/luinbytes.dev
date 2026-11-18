@@ -23,14 +23,18 @@ export type SiteRoute = {
   metadata: RouteMetadata;
 };
 
+const shareCard = {
+  image: `${siteConfig.siteUrl}/share-cards/luinbytes-dev-pond.png`,
+  imageAlt: "luinbytes.dev share card: the line “I get annoyed, then I build the missing thing.” beside a pixel-art pond with koi, lily pads and stepping stones.",
+};
+
 const homeMetadata: RouteMetadata = {
   title: "Lu — I make stubborn software behave",
   socialTitle: "Lu — I make stubborn software behave",
   description: "Lu makes stubborn software behave: native Android apps, agent systems, Linux tools, and practical software.",
   socialDescription: "I make stubborn software behave. Native Android, agent systems, Linux tools, and practical software.",
   canonical: siteConfig.siteUrl,
-  image: `${siteConfig.siteUrl}/share-cards/luinbytes-dev-pond.png`,
-  imageAlt: "luinbytes.dev share card: the line “I get annoyed, then I build the missing thing.” beside a pixel-art pond with koi, lily pads and stepping stones.",
+  ...shareCard,
   themeColor: { light: "#f5f0e6", dark: "#242d26" },
 };
 
@@ -41,6 +45,8 @@ const notFoundRoute: SiteRoute = {
   metadata: { ...homeMetadata, themeColor: undefined, noindex: true },
 };
 
+const privacyDescription = "Privacy policy for Lu's personal software on luinbytes.dev.";
+
 export const siteRoutes: readonly SiteRoute[] = [
   { path: "/", output: "index.html", Component: Home, metadata: homeMetadata },
   {
@@ -50,11 +56,10 @@ export const siteRoutes: readonly SiteRoute[] = [
     metadata: {
       title: "Privacy Policy | Lu",
       socialTitle: "Privacy Policy",
-      description: "Privacy policy for Lu's personal software on luinbytes.dev.",
-      socialDescription: "Privacy policy for Lu's personal software on luinbytes.dev.",
+      description: privacyDescription,
+      socialDescription: privacyDescription,
       canonical: `${siteConfig.siteUrl}/privacy`,
-      image: `${siteConfig.siteUrl}/share-cards/luinbytes-dev-pond.png`,
-      imageAlt: homeMetadata.imageAlt,
+      ...shareCard,
       noindex: true,
     },
   },
