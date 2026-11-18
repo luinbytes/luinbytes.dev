@@ -1,0 +1,12 @@
+{
+  "name": "@luinbytes/picomatch",
+  "version": "4.0.7-luinbytes.1",
+  "private": true,
+  "description": "Blazing fast and accurate glob matcher written in JavaScript, with no dependencies and full support for standard and extended Bash glob features, including braces, extglobs, POSIX brackets, and regular expressions.",
+  "main": "index.js",
+  "engines": {
+    "node": ">=12"
+  },
+  "license": "MIT",
+  "sideEffects": false
+}

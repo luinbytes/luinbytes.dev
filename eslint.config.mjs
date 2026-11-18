@@ -4,7 +4,7 @@ import reactHooks from "eslint-plugin-react-hooks";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: [".prerender/**", ".next*/**", ".venv/**", "out/**", "build/**", "workers/**", "review-previews/**"] },
+  { ignores: [".prerender/**", ".next*/**", ".venv/**", "out/**", "build/**", "workers/**", "review-previews/**", "vendor/picomatch/**"] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
