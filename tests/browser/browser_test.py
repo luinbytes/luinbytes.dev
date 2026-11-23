@@ -1062,8 +1062,8 @@ class PortfolioTests(BrowserTestCase):
                 )
                 expect(page.locator("#hero-title")).to_have_css("clip-path", "none")
                 cards = page.locator("#work article")
-                self.assertEqual(cards.count(), 4)
-                for project in ("Rakazo", "linux-sonar", "HomeBot", "ConnectorMap"):
+                self.assertEqual(cards.count(), 5)
+                for project in ("Rakazo", "linux-sonar", "HomeBot", "ConnectorMap", "Spectra Browser"):
                     expect(cards.get_by_role("heading", name=project, exact=True)).to_be_visible()
                 wait_for_condition(page, "document.querySelector('[data-pond-state]')?.dataset.pondState === 'running'")
                 impact_count = page.locator("[data-pond-state]").get_attribute("data-primary-impact-count")
@@ -1097,9 +1097,9 @@ class PortfolioTests(BrowserTestCase):
                 page = browser.new_page(viewport={"width": width, "height": height})
                 page.goto(self.base_url, wait_until="networkidle")
                 cards = page.locator("#work article")
-                self.assertEqual(cards.count(), 4)
+                self.assertEqual(cards.count(), 5)
                 self.assertEqual(page.locator("#work [aria-pressed]").count(), 0)
-                for index, project in enumerate(("Rakazo", "linux-sonar", "HomeBot", "ConnectorMap")):
+                for index, project in enumerate(("Rakazo", "linux-sonar", "HomeBot", "ConnectorMap", "Spectra Browser")):
                     card = cards.nth(index)
                     heading = card.get_by_role("heading", name=project, exact=True)
                     card.scroll_into_view_if_needed()
@@ -1264,10 +1264,10 @@ class PortfolioTests(BrowserTestCase):
                             headingInside: heading.left >= -1 && heading.right <= width + 1 && heading.width > 120,
                             headerInside: header.left >= -1 && header.right <= width + 1,
                             pondFits: Math.abs(pond.width - width) < 1 && Math.abs(pond.height - height) < 1,
-                            projectTargets: buttons.length === 4 && buttons.every(button => button.width >= 44 && button.height >= 44),
+                            projectTargets: buttons.length === 5 && buttons.every(button => button.width >= 44 && button.height >= 44),
                             projectDistribution: (() => {
                                 const cards = [...document.querySelectorAll('#work article')].map(card => card.getBoundingClientRect());
-                                return cards.length === 4 && (width <= 900
+                                return cards.length === 5 && (width <= 900
                                     ? cards.every((card, index) => index === 0 || card.top >= cards[index - 1].bottom)
                                     : Math.abs(cards[0].top - cards[1].top) < 1 && cards[1].left >= cards[0].right && cards[2].top >= cards[0].bottom);
                             })(),
@@ -1497,7 +1497,7 @@ class PortfolioTests(BrowserTestCase):
         expect(hero.get_by_role("heading", level=1)).to_have_text("Hi, I’m Lu.")
         expect(page.locator("header a[href='#top']")).to_be_visible()
         category_labels = page.locator("#work article [class*=projectEyebrow]")
-        self.assertEqual(category_labels.count(), 4)
+        self.assertEqual(category_labels.count(), 5)
         self.assertTrue(
             category_labels.evaluate_all(
                 "elements => elements.every(element => parseFloat(getComputedStyle(element).fontSize) >= 10)"
@@ -1516,6 +1516,7 @@ class PortfolioTests(BrowserTestCase):
             "linux-sonar": "https://github.com/luinbytes/linux-sonar",
             "HomeBot": "https://github.com/luinbytes/HomeBot",
             "ConnectorMap": "https://connectormap.luinbytes.dev",
+            "Spectra Browser": "https://github.com/luinbytes/spectra-linux",
         }
 
         def assert_homebot_image_fits(panel) -> None:
