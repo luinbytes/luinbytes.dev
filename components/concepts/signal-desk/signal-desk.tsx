@@ -89,22 +89,28 @@ function ProjectArtwork({ project }: { project: PortfolioProject }) {
           {[[178,151],[247,205],[317,151],[178,259],[317,259]].map(([x,y])=><path key={`${x}-${y}`} className={projectStyles.artAccent} d={`M${x-9} ${y}l6 6 13-14`} />)}
           <path d="M97 98h21m-21 53h21m-21 54h21m-21 54h21m60-161h1m68 0h1m69 0h1m68 0h1" />
         </>}
-        {project.id === "spectra-linux" && <>
-          <rect x="73" y="70" width="334" height="216" rx="12" fill="var(--paper)" />
-          <path d="M73 112h334M94 91h2m14 0h2m14 0h2m30 0h168" />
-          <path d="m240 143 45 78h-90zM153 182l64 1" />
-          <path className={projectStyles.artAccent} d="m264 184 63-19m-60 26 65 1m-61 6 56 18" />
-        </>}
+        {project.id === "spectra" && (
+          <g strokeWidth="7">
+            <rect x="45" y="61" width="390" height="228" rx="16" fill="var(--paper)" />
+            <path d="M45 115h390M69 88h2m19 0h2m19 0h2" />
+            <path className={projectStyles.artAccent} d="M186 88h108" />
+            <rect x="102" y="150" width="276" height="102" rx="9" />
+            <path d="M130 181h102m-102 23h75m-75 23h126" />
+            <path className={projectStyles.artAccent} d="m304 205 14 13 30-34" />
+          </g>
+        )}
       </svg>
     </div>
   );
 }
 
-function ProjectCard({ project }: { project: PortfolioProject }) {
+function ProjectCard({ project, channel }: { project: PortfolioProject; channel: number }) {
   return (
-    <article className={projectStyles.projectCard} aria-labelledby={`project-${project.id}`}>
+    <article id={project.id} className={projectStyles.projectCard} aria-labelledby={`project-${project.id}`} tabIndex={-1}>
       <div className={projectStyles.projectCopy}>
-        <span className={projectStyles.projectEyebrow}>{project.category}</span>
+        <span className={projectStyles.projectEyebrow}>
+          {project.category} / channel {String(channel).padStart(2, "0")}
+        </span>
         <h3 id={`project-${project.id}`}>{project.name}</h3>
         {project.figure && (
           <p className={projectStyles.projectFigure}>
@@ -158,10 +164,10 @@ function ProjectExplorer({ reduced, entrance, ready }: { reduced: boolean; entra
         className={projectStyles.projectGrid}
         initial={entrance ? { opacity: 0, y: 22 } : false}
         whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.08 }}
+        viewport={{ once: true, amount: "some" }}
         transition={{ duration: reduced ? 0 : 0.56, ease: EASE_OUT }}
       >
-        {portfolioProjects.map((project) => <ProjectCard key={project.id} project={project} />)}
+        {portfolioProjects.map((project, index) => <ProjectCard key={project.id} project={project} channel={index + 1} />)}
       </motion.div>
     </section>
   );
@@ -262,10 +268,13 @@ export function SignalDesk() {
             </div>
             <h1 id="hero-title">Hi, I’m <em>Lu.</em></h1>
             <h2 className={styles.heroStatement}>I make stubborn<br />software behave.</h2>
-            <p>I build native Android apps, agent systems, and Linux tools that do the useful part without making a fuss.</p>
+            <p>I build a Linux-first browser, native Android apps, agent systems, and Linux tools that do the useful part without making a fuss.</p>
             <div className={styles.heroActions}>
               <a href="#work">Things I’ve made <ArrowDown aria-hidden="true" /></a>
               <a href={`mailto:${portfolioIdentity.email}`}>Say hello <Mail aria-hidden="true" /></a>
+            </div>
+            <div className={styles.nowBuilding}>
+              <a href="#spectra">Now building: <strong>Spectra</strong></a>
             </div>
           </div>
           <p className={styles.pondNote} data-pond-obscures=""><span aria-hidden="true">↳</span> Stay a while. Feed the fish.<small>Click or tap the water</small></p>

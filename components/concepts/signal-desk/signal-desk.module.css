@@ -32,6 +32,7 @@
   --header-shadow:0 2px 4px rgb(41 55 46 / .1), 0 10px 24px rgb(41 55 46 / .2);
   --container: min(calc(100% - 96px), 1200px);
   --section-gap: clamp(72px, 9vw, 128px);
+  --section-scroll-margin: calc(114px + env(safe-area-inset-top));
   --site-bg: var(--pond-deep);
   --site-accent: var(--green);
   --site-contrast: var(--on-green);
@@ -273,6 +274,21 @@
   text-underline-offset:5px;
 }
 
+.nowBuilding {
+  margin-top:16px;
+  border-top:1px solid var(--line);
+}
+
+.nowBuilding a {
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  min-height:44px;
+  font:14px var(--font-space-mono),monospace;
+  text-decoration:underline;
+  text-underline-offset:4px;
+}
+
 .heroActions svg, .contactCta svg, .copyButton svg, .contactEmail svg {
   width:16px;
   height:16px;
@@ -383,7 +399,7 @@
   background:var(--paper);
   border:1px solid var(--line);
   border-radius:4px;
-  scroll-margin-top:calc(114px + env(safe-area-inset-top));
+  scroll-margin-top:var(--section-scroll-margin);
 }
 
 .sectionIntro {

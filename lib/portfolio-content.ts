@@ -1,15 +1,14 @@
 export type PortfolioProjectId =
+  | "spectra"
   | "rakazo-android"
   | "linux-sonar"
   | "homebot"
-  | "connectormap"
-  | "spectra-linux";
+  | "connectormap";
 
 export type PortfolioProject = {
   id: PortfolioProjectId;
   name: string;
   category: string;
-  eyebrow?: string;
   summary: string;
   detail: string;
   href: string;
@@ -24,10 +23,21 @@ export type PortfolioProject = {
 
 export const portfolioProjects: PortfolioProject[] = [
   {
+    id: "spectra",
+    name: "Spectra",
+    category: "Linux-first browser",
+    summary: "A Linux-first browser with AI designed into the whole stack.",
+    detail:
+      "Built on Helium and Chromium, Spectra is designed for full browser extension support, Arc-style Spaces, and AI that can see page context, think across tabs, organise them, and act in a tab. The design puts AI in the page and the command centre, with no AI sidebar. Spectra is early and in active development. There are no releases yet.",
+    href: "https://github.com/luinbytes/spectra",
+    secondaryHref: "https://github.com/luinbytes/spectra-linux",
+    secondaryLabel: "Linux packaging",
+    figure: { value: "4", label: "planned AI capabilities" },
+  },
+  {
     id: "rakazo-android",
     name: "Rakazo",
     category: "Android + upstream",
-    eyebrow: "Open source / channel 02",
     summary: "A native Android client, plus the upstream work needed to make it honest.",
     detail:
       "I built the community Android client and landed upstream fixes for delegated replies, Android parity, scheduled group work, and long-chat performance.",
@@ -43,7 +53,6 @@ export const portfolioProjects: PortfolioProject[] = [
     id: "linux-sonar",
     name: "linux-sonar",
     category: "Linux audio",
-    eyebrow: "Systems / channel 03",
     summary: "Per-app audio routing, ChatMix, and microphone effects for Linux.",
     detail:
       "A GTK control surface over PipeWire and WirePlumber, with five virtual channels, hardware ChatMix, microphone effects, and systemd lifecycle management.",
@@ -55,7 +64,6 @@ export const portfolioProjects: PortfolioProject[] = [
     id: "homebot",
     name: "HomeBot",
     category: "Agent systems",
-    eyebrow: "Personal system / channel 04",
     summary: "An open-source home for persistent AI teammates.",
     detail:
       "A Rust server, native desktop client, and Android app built around durable conversations, tools, routines, permissions, checkpoints, and user-owned state.",
@@ -68,7 +76,6 @@ export const portfolioProjects: PortfolioProject[] = [
     id: "connectormap",
     name: "ConnectorMap",
     category: "Agent directory",
-    eyebrow: "Live directory / channel 05",
     summary: "Which AI agents can actually use which apps.",
     detail:
       "A directory comparing app connections across AI agents, with read and act capabilities, clearly marked inferences, and links to sources.",
@@ -76,16 +83,6 @@ export const portfolioProjects: PortfolioProject[] = [
     image: "/images/portfolio/connectormap-card.webp",
     imageAlt: "ConnectorMap matrix of AI agents and apps",
     proof: ["Read + act", "Marked inferences", "Source links"],
-  },
-  {
-    id: "spectra-linux",
-    name: "Spectra Browser",
-    category: "Linux browser",
-    summary: "Linux builds and packaging for Spectra Browser.",
-    detail:
-      "A fork of Helium for Linux with tooling to build and package the browser as an AppImage or a binary tarball.",
-    href: "https://github.com/luinbytes/spectra-linux",
-    proof: ["Helium fork", "AppImage + tarball"],
   },
 ];
 
