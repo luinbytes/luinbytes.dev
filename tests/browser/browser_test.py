@@ -1110,6 +1110,24 @@ class PortfolioTests(BrowserTestCase):
                 )
                 browser.close()
 
+    def test_spectra_hero_link_reveals_the_card_in_short_viewports(self) -> None:
+        browser = self.playwright.chromium.launch()
+        self.addCleanup(browser.close)
+        for width, height in ((667, 320), (320, 345)):
+            with self.subTest(width=width, height=height):
+                page = browser.new_page(
+                    viewport={"width": width, "height": height},
+                    reduced_motion="no-preference",
+                )
+                self.addCleanup(page.close)
+                page.goto(self.base_url)
+                expect(page.locator("[data-pond-state]")).to_have_attribute("data-motion", "full")
+                page.get_by_role("link", name="Now building: Spectra", exact=True).click()
+                expect(page).to_have_url(f"{self.base_url}/#spectra")
+                spectra = page.get_by_role("article", name="Spectra", exact=True)
+                expect(spectra.locator("..")).to_have_css("opacity", "1")
+                expect(spectra.get_by_role("heading", name="Spectra", exact=True)).to_be_in_viewport()
+
     def test_project_grid_shows_every_card_without_selection(self) -> None:
         browser = self.playwright.chromium.launch()
         self.addCleanup(browser.close)

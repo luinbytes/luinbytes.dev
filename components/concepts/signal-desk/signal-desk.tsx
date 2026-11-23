@@ -164,7 +164,7 @@ function ProjectExplorer({ reduced, entrance, ready }: { reduced: boolean; entra
         className={projectStyles.projectGrid}
         initial={entrance ? { opacity: 0, y: 22 } : false}
         whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.08 }}
+        viewport={{ once: true, amount: "some" }}
         transition={{ duration: reduced ? 0 : 0.56, ease: EASE_OUT }}
       >
         {portfolioProjects.map((project, index) => <ProjectCard key={project.id} project={project} channel={index + 1} />)}
