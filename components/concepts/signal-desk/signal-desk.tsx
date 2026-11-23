@@ -89,6 +89,12 @@ function ProjectArtwork({ project }: { project: PortfolioProject }) {
           {[[178,151],[247,205],[317,151],[178,259],[317,259]].map(([x,y])=><path key={`${x}-${y}`} className={projectStyles.artAccent} d={`M${x-9} ${y}l6 6 13-14`} />)}
           <path d="M97 98h21m-21 53h21m-21 54h21m-21 54h21m60-161h1m68 0h1m69 0h1m68 0h1" />
         </>}
+        {project.id === "spectra-linux" && <>
+          <rect x="73" y="70" width="334" height="216" rx="12" fill="var(--paper)" />
+          <path d="M73 112h334M94 91h2m14 0h2m14 0h2m30 0h168" />
+          <path d="m240 143 45 78h-90zM153 182l64 1" />
+          <path className={projectStyles.artAccent} d="m264 184 63-19m-60 26 65 1m-61 6 56 18" />
+        </>}
       </svg>
     </div>
   );
@@ -144,7 +150,7 @@ function ProjectExplorer({ reduced, entrance, ready }: { reduced: boolean; entra
       >
         <span className={styles.eyebrow}>01 / Things I’ve made</span>
         <h2 id="work-title">A few useful obsessions.</h2>
-        <p>Four projects, what each one actually does, and where to find it.</p>
+        <p>What each project does and where to find it.</p>
       </motion.div>
 
       <motion.div
@@ -279,7 +285,7 @@ export function SignalDesk() {
           >
             <span className={styles.eyebrow}>02 / Other work</span>
             <h2 id="about-title">“Mostly works”<br />is still broken.</h2>
-            <p>That’s the kind of problem I like. Beyond the four projects above, it has also meant automation for an active community and a handful of small open-source tools.</p>
+            <p>That’s the kind of problem I like. Beyond the projects above, it has also meant automation for an active community and a handful of small open-source tools.</p>
           </motion.div>
 
           <motion.article

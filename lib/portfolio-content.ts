@@ -2,7 +2,8 @@ export type PortfolioProjectId =
   | "rakazo-android"
   | "linux-sonar"
   | "homebot"
-  | "connectormap";
+  | "connectormap"
+  | "spectra-linux";
 
 export type PortfolioProject = {
   id: PortfolioProjectId;
@@ -75,6 +76,16 @@ export const portfolioProjects: PortfolioProject[] = [
     image: "/images/portfolio/connectormap-card.webp",
     imageAlt: "ConnectorMap matrix of AI agents and apps",
     proof: ["Read + act", "Marked inferences", "Source links"],
+  },
+  {
+    id: "spectra-linux",
+    name: "Spectra Browser",
+    category: "Linux browser",
+    summary: "Linux builds and packaging for Spectra Browser.",
+    detail:
+      "A fork of Helium for Linux with tooling to build and package the browser as an AppImage or a binary tarball.",
+    href: "https://github.com/luinbytes/spectra-linux",
+    proof: ["Helium fork", "AppImage + tarball"],
   },
 ];
 
