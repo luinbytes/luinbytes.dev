@@ -13,6 +13,35 @@
   border-radius:3px;
   background:var(--paper);
   overflow:hidden;
+  scroll-margin-top:var(--section-scroll-margin);
+}
+
+.projectCard[id="spectra"] {
+  grid-column:1/-1;
+  border-color:var(--control-edge);
+}
+
+.projectCard[id="spectra"] .projectIllustration {
+  background:var(--art-bg);
+}
+
+@media(min-width:901px) {
+  .projectCard[id="spectra"] {
+    display:grid;
+    grid-template-columns:minmax(0,3fr) minmax(0,2fr);
+  }
+
+  .projectCard[id="spectra"] .projectVisual {
+    display:grid;
+    align-items:center;
+    margin-top:0;
+    border-top:0;
+    border-left:1px solid var(--line);
+  }
+
+  .projectCard[id="spectra"] .projectIllustration {
+    height:270px;
+  }
 }
 
 .projectCopy {

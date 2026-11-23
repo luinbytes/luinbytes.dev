@@ -935,6 +935,7 @@ class PondProductionTests(BrowserTestCase):
         expect(pond).to_have_attribute("data-pond-state", "running")
         page.get_by_role("radio", name="Pixel").check()
         expect(page.locator("[data-view]")).to_have_attribute("data-view", "pixel")
+        expect(pond).to_have_attribute("data-pond-state", "running")
         points = page.evaluate("""async () => {
             const image = new Image();
             image.src = '/images/portfolio/pixel-pond-water-layer.webp';
@@ -1015,6 +1016,14 @@ class PondProductionTests(BrowserTestCase):
 
 
 class PortfolioTests(BrowserTestCase):
+    PROJECTS = (
+        ("Spectra", "Linux-first browser"),
+        ("Rakazo", "Android + upstream"),
+        ("linux-sonar", "Linux audio"),
+        ("HomeBot", "Agent systems"),
+        ("ConnectorMap", "Agent directory"),
+    )
+
     def test_copyright_year_hydrates_when_the_visitors_clock_differs(self) -> None:
         browser = self.playwright.chromium.launch()
         self.addCleanup(browser.close)
@@ -1061,21 +1070,33 @@ class PortfolioTests(BrowserTestCase):
                     ).is_visible()
                 )
                 expect(page.locator("#hero-title")).to_have_css("clip-path", "none")
-                cards = page.locator("#work article")
-                self.assertEqual(cards.count(), 5)
-                for project in ("Rakazo", "linux-sonar", "HomeBot", "ConnectorMap", "Spectra Browser"):
-                    expect(cards.get_by_role("heading", name=project, exact=True)).to_be_visible()
+                hero = page.get_by_role("region", name="Hi, I’m Lu.")
+                expect(hero.get_by_text("I build a Linux-first browser", exact=False)).to_be_visible()
+                building_link = hero.get_by_role("link", name="Now building: Spectra", exact=True)
+                expect(building_link).to_have_attribute("href", "#spectra")
+                spectra = page.locator("#work article").first
+                expect(spectra).to_have_attribute("id", "spectra")
+                building_link.click()
+                expect(page).to_have_url(f"{self.base_url}/#spectra")
+                expect(spectra).to_be_focused()
+                expect(spectra.get_by_role("heading", name="Spectra", exact=True)).to_be_in_viewport()
                 wait_for_condition(page, "document.querySelector('[data-pond-state]')?.dataset.pondState === 'running'")
                 impact_count = page.locator("[data-pond-state]").get_attribute("data-primary-impact-count")
-                heading = cards.first.get_by_role("heading")
+                heading = spectra.get_by_role("heading")
                 heading.evaluate("element => element.scrollIntoView({ block: 'center', behavior: 'instant' })")
-                expect(cards.first.locator("..")).to_have_css("transform", "none")
+                expect(spectra.locator("..")).to_have_css("transform", "none")
                 heading.evaluate("element => element.scrollIntoView({ block: 'center', behavior: 'instant' })")
                 heading.click()
                 self.assertEqual(page.locator("[data-pond-state]").get_attribute("data-primary-impact-count"), impact_count)
-                expect(cards.first.locator("[class*=projectFigure] strong")).to_have_text("4")
-                expect(cards.first.get_by_text("highlighted merged PRs upstream", exact=True)).to_be_visible()
-                expect(cards.first.get_by_role("link", name="Merged work")).to_be_visible()
+                expect(spectra.locator("[class*=projectFigure] strong")).to_have_text("4")
+                expect(spectra.get_by_text("planned AI capabilities", exact=True)).to_be_visible()
+                expect(spectra.get_by_text("There are no releases yet.", exact=False)).to_be_visible()
+                expect(spectra.get_by_role("link", name="Linux packaging", exact=True)).to_have_attribute(
+                    "href", "https://github.com/luinbytes/spectra-linux"
+                )
+                rakazo = page.get_by_role("article", name="Rakazo", exact=True)
+                expect(rakazo.get_by_text("highlighted merged PRs upstream", exact=True)).to_be_visible()
+                expect(rakazo.get_by_role("link", name="Merged work")).to_be_visible()
                 self.assertLessEqual(
                     page.evaluate("document.documentElement.scrollWidth"),
                     viewport["width"],
@@ -1099,11 +1120,12 @@ class PortfolioTests(BrowserTestCase):
                 cards = page.locator("#work article")
                 self.assertEqual(cards.count(), 5)
                 self.assertEqual(page.locator("#work [aria-pressed]").count(), 0)
-                for index, project in enumerate(("Rakazo", "linux-sonar", "HomeBot", "ConnectorMap", "Spectra Browser")):
+                for index, (project, category) in enumerate(self.PROJECTS):
                     card = cards.nth(index)
                     heading = card.get_by_role("heading", name=project, exact=True)
                     card.scroll_into_view_if_needed()
                     expect(heading).to_be_visible()
+                    expect(card.get_by_text(f"{category} / channel {index + 1:02}", exact=True)).to_be_visible()
                     expect(card.get_by_role("link", name=f"View project {project}", exact=True)).to_be_visible()
                     self.assertTrue(heading.evaluate("""element => {
                         const range = document.createRange();
@@ -1267,9 +1289,17 @@ class PortfolioTests(BrowserTestCase):
                             projectTargets: buttons.length === 5 && buttons.every(button => button.width >= 44 && button.height >= 44),
                             projectDistribution: (() => {
                                 const cards = [...document.querySelectorAll('#work article')].map(card => card.getBoundingClientRect());
-                                return cards.length === 5 && (width <= 900
-                                    ? cards.every((card, index) => index === 0 || card.top >= cards[index - 1].bottom)
-                                    : Math.abs(cards[0].top - cards[1].top) < 1 && cards[1].left >= cards[0].right && cards[2].top >= cards[0].bottom);
+                                if (cards.length !== 5) return false;
+                                if (width <= 900) return cards.every((card, index) => index === 0 || card.top >= cards[index - 1].bottom);
+                                const [lead, firstLeft, firstRight, secondLeft, secondRight] = cards;
+                                return Math.abs(lead.left - firstLeft.left) < 1
+                                    && Math.abs(lead.right - firstRight.right) < 1
+                                    && firstLeft.top >= lead.bottom
+                                    && Math.abs(firstLeft.top - firstRight.top) < 1
+                                    && firstRight.left >= firstLeft.right
+                                    && secondLeft.top >= firstLeft.bottom
+                                    && Math.abs(secondLeft.top - secondRight.top) < 1
+                                    && secondRight.left >= secondLeft.right;
                             })(),
                             projectNamesFit: width > 430 || projectNames.every(element => {
                                 const range = document.createRange();
@@ -1512,11 +1542,11 @@ class PortfolioTests(BrowserTestCase):
         )
 
         project_hrefs = {
+            "Spectra": "https://github.com/luinbytes/spectra",
             "Rakazo": "https://github.com/luinbytes/rakazo-android",
             "linux-sonar": "https://github.com/luinbytes/linux-sonar",
             "HomeBot": "https://github.com/luinbytes/HomeBot",
             "ConnectorMap": "https://connectormap.luinbytes.dev",
-            "Spectra Browser": "https://github.com/luinbytes/spectra-linux",
         }
 
         def assert_homebot_image_fits(panel) -> None:

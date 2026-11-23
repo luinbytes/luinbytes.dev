@@ -6,7 +6,7 @@ The homepage focuses on Lu's selected public projects and an interactive procedu
 
 The site has two public routes: `/`, the interactive portfolio, and `/privacy`, a short personal-use privacy policy. Retired concept and product URLs resolve to the pond-themed 404.
 
-The portfolio features [HomeBot](https://github.com/luinbytes/HomeBot), [rakazo-android](https://github.com/luinbytes/rakazo-android), [Linux Sonar](https://github.com/luinbytes/linux-sonar), [bongocat](https://github.com/luinbytes/bongocat), and [cursor-barrier](https://github.com/luinbytes/cursor-barrier).
+The portfolio features [Spectra](https://github.com/luinbytes/spectra), [Rakazo](https://github.com/luinbytes/rakazo-android), [Linux Sonar](https://github.com/luinbytes/linux-sonar), [HomeBot](https://github.com/luinbytes/HomeBot), and [ConnectorMap](https://connectormap.luinbytes.dev).
 
 The interface follows the system light/dark preference. The pond, fish,
 and feeding controls retain their existing behavior in both modes. The static
