@@ -1,0 +1,41 @@
+{
+  "$schema": "https://api.capy.ai/schemas/setup.v1.json",
+  "format_version": 1,
+  "scripts": {
+    "initialize": "set -euo pipefail\npython3 -m venv .venv\nnpm install --prefix .venv/toolchain --no-save --no-package-lock node@22\nexport PATH=\"$PWD/.venv/toolchain/node_modules/node/bin:$PWD/.venv/bin:$PATH\"\nnpm ci\npython -m pip install -r requirements-test.txt\npython -m playwright install chromium\ngit ls-tree -r HEAD -- package.json package-lock.json .npmrc vendor requirements-test.txt | git hash-object --stdin > .venv/setup-inputs",
+    "refresh": "set -euo pipefail\ninputs=$(git ls-tree -r HEAD -- package.json package-lock.json .npmrc vendor requirements-test.txt | git hash-object --stdin)\nif [[ -d node_modules && -x .venv/toolchain/node_modules/node/bin/node && -x .venv/bin/python && -f .venv/setup-inputs && $(cat .venv/setup-inputs) == \"$inputs\" ]]; then exit 0; fi\nset -euo pipefail\npython3 -m venv .venv\nnpm install --prefix .venv/toolchain --no-save --no-package-lock node@22\nexport PATH=\"$PWD/.venv/toolchain/node_modules/node/bin:$PWD/.venv/bin:$PATH\"\nnpm ci\npython -m pip install -r requirements-test.txt\npython -m playwright install chromium\ngit ls-tree -r HEAD -- package.json package-lock.json .npmrc vendor requirements-test.txt | git hash-object --stdin > .venv/setup-inputs"
+  },
+  "startup": [
+    {
+      "name": "dev",
+      "port": 5173,
+      "command": "set -eu\nexport PATH=\"$PWD/.venv/toolchain/node_modules/node/bin:$PWD/.venv/bin:$PATH\"\nexec npm run dev -- --host 0.0.0.0 --port 5173 --strictPort"
+    }
+  ],
+  "commands": [
+    {
+      "name": "audit",
+      "command": "export PATH=\"$PWD/.venv/toolchain/node_modules/node/bin:$PWD/.venv/bin:$PATH\"\nnpm audit --audit-level=high"
+    },
+    {
+      "name": "lint",
+      "command": "export PATH=\"$PWD/.venv/toolchain/node_modules/node/bin:$PWD/.venv/bin:$PATH\"\nnpm run lint"
+    },
+    {
+      "name": "typecheck",
+      "command": "export PATH=\"$PWD/.venv/toolchain/node_modules/node/bin:$PWD/.venv/bin:$PATH\"\nnpm run check"
+    },
+    {
+      "name": "pond",
+      "command": "export PATH=\"$PWD/.venv/toolchain/node_modules/node/bin:$PWD/.venv/bin:$PATH\"\nnpm run test:pond"
+    },
+    {
+      "name": "e2e",
+      "command": "export PATH=\"$PWD/.venv/toolchain/node_modules/node/bin:$PWD/.venv/bin:$PATH\"\nnpm run test:e2e"
+    },
+    {
+      "name": "build",
+      "command": "export PATH=\"$PWD/.venv/toolchain/node_modules/node/bin:$PWD/.venv/bin:$PATH\"\nnpm run build"
+    }
+  ]
+}
